@@ -99,17 +99,6 @@ function CoreIntelligence() {
             </div>
             <div className="agnostic-graphic">
               <img src={lineGraphic} alt="" className="agnostic-line-bg" />
-              <div className="cluster-nodes">
-                <div className="node node-left">
-                  <div className="node-icon icon-cloud"></div>
-                </div>
-                <div className="node node-center">
-                  <div className="node-icon icon-central"></div>
-                </div>
-                <div className="node node-right">
-                  <div className="node-icon icon-db"></div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
