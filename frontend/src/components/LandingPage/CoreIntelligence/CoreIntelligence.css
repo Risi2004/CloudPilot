@@ -138,6 +138,49 @@
 .terminal-line.exec { color: #cbd5e1; }
 .terminal-line.ok { color: #cbd5e1; }
 
+/* Typing Animation classes */
+.terminal-body.animate-typing .terminal-line {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.terminal-body.animate-typing .terminal-line:nth-child(1) {
+  animation: revealLine 1s steps(30, end) forwards;
+  animation-delay: 0.2s;
+}
+
+.terminal-body.animate-typing .terminal-line:nth-child(2) {
+  animation: revealLine 1.2s steps(40, end) forwards;
+  animation-delay: 1.5s;
+}
+
+.terminal-body.animate-typing .terminal-line:nth-child(3) {
+  animation: revealLine 1.2s steps(40, end) forwards;
+  animation-delay: 3s;
+}
+
+.terminal-body.animate-typing .terminal-line:nth-child(4) {
+  animation: revealLine 0.8s steps(25, end) forwards;
+  animation-delay: 4.5s;
+}
+
+@keyframes revealLine {
+  0% {
+    opacity: 0;
+    width: 0;
+  }
+  1% {
+    opacity: 1;
+    width: 0;
+  }
+  100% {
+    opacity: 1;
+    width: 100%;
+  }
+}
+
 /* Auto Deploy Graphic */
 .deploy-graphic {
   background: #050814;

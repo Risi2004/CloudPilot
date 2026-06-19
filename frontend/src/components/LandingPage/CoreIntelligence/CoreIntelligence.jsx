@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './CoreIntelligence.css';
 import deepAiScanIcon from '../../../assets/deep-ai-scan.svg';
 import autoDeployIcon from '../../../assets/auto-deploy.svg';
@@ -6,6 +6,29 @@ import selfHealingIcon from '../../../assets/self-healing.svg';
 import lineGraphic from '../../../assets/decorative-connecting-lines.svg';
 
 function CoreIntelligence() {
+  const terminalRef = useRef(null);
+  const [startTyping, setStartTyping] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setStartTyping(true);
+          observer.unobserve(entry.target);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (terminalRef.current) {
+      observer.observe(terminalRef.current);
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   return (
     <section className="core-intelligence" id="core-intelligence">
       <div className="section-container">
@@ -23,11 +46,11 @@ function CoreIntelligence() {
             <p className="card-description">
               Real-time behavioral analysis of your microservices. CloudPilot identifies latent inefficiencies and resource leaks with 99.9% accuracy.
             </p>
-            <div className="terminal-window">
+            <div className="terminal-window" ref={terminalRef}>
               <div className="terminal-header">
                 <span className="terminal-title">terminal output</span>
               </div>
-              <div className="terminal-body">
+              <div className={`terminal-body ${startTyping ? 'animate-typing' : ''}`}>
                 <div className="terminal-line"><span className="time">09:42:12</span> <span className="tag-scan">[SCAN]</span> Analyzing pod-a2-west...</div>
                 <div className="terminal-line alert"><span className="time">09:42:15</span> <span className="tag-alert">[ALERT]</span> High latency detected in auth-service.</div>
                 <div className="terminal-line exec"><span className="time">09:42:16</span> <span className="tag-exec">[EXEC]</span> Applying load balancer redistribution.</div>
