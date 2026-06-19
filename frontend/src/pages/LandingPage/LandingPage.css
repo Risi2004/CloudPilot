@@ -1,0 +1,13 @@
+.landing-page-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #030712;
+  overflow-x: hidden;
+}
+
+.landing-main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
