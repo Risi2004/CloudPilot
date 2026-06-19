@@ -1,6 +1,7 @@
 * {
     margin: 0px;
     padding: 0px;
+    box-sizing: border-box;
 }
 
 body {
@@ -10,4 +11,11 @@ body {
     font-style: normal;
     color: white;
     background-color: #030712;
+}
+
+#core-intelligence,
+#how-it-works,
+#pricing,
+#faq {
+    scroll-margin-top: 50px;
 }
