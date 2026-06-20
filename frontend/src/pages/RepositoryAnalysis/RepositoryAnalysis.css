@@ -1,0 +1,222 @@
+.repo-analysis-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  width: 100%;
+  padding: 80px 24px;
+  background-color: #030712;
+  box-sizing: border-box;
+}
+
+.repo-analysis-content {
+  max-width: 800px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.repo-title {
+  font-size: 48px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 16px 0;
+  letter-spacing: -0.02em;
+  text-shadow: 0 0 30px rgba(0, 212, 255, 0.15);
+}
+
+.repo-subtitle {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #64748b;
+  margin: 0 0 48px 0;
+  max-width: 600px;
+}
+
+.repo-form-card {
+  background: rgba(5, 20, 36, 0.40);
+  border: 1px solid rgba(60, 73, 78, 0.25);
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 0 40px rgba(0, 212, 255, 0.02);
+  backdrop-filter: blur(12px);
+  width: 100%;
+  max-width: 680px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.repo-input-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  width: 100%;
+}
+
+.repo-url-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  height: 46px;
+  flex: 1;
+}
+
+.repo-url-input-container:focus-within {
+  border-color: #00d4ff;
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.15);
+}
+
+.repo-url-prefix-icon {
+  padding-left: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+}
+
+.repo-url-input-container:focus-within .repo-url-prefix-icon {
+  color: #00d4ff;
+}
+
+.repo-url-input {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 0 14px;
+  color: #f1f5f9;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  width: 100%;
+}
+
+.repo-url-input::placeholder {
+  color: rgba(255, 255, 255, 0.15);
+}
+
+.analyze-btn {
+  background: rgba(0, 212, 255, 0.06);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  border-radius: 8px;
+  height: 46px;
+  padding: 0 24px;
+  color: #a8e8ff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.analyze-btn:hover {
+  background: rgba(0, 212, 255, 0.12);
+  border-color: #00d4ff;
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
+}
+
+.analyze-btn-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.repo-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 28px 0;
+  position: relative;
+}
+
+.repo-divider::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.05);
+  z-index: 1;
+}
+
+.repo-divider-text {
+  background-color: #051424;
+  padding: 0 16px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  letter-spacing: 0.05em;
+  z-index: 2;
+  position: relative;
+}
+
+.connect-github-btn {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  height: 44px;
+  padding: 0 28px;
+  color: #e2e8f0;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0 auto;
+  align-self: center;
+}
+
+.connect-github-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.github-btn-icon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+}
+
+.connect-github-btn:hover .github-btn-icon {
+  opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .repo-title {
+    font-size: 36px;
+  }
+  
+  .repo-form-card {
+    padding: 32px 20px;
+  }
+
+  .repo-input-row {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .repo-url-input-container {
+    width: 100%;
+  }
+
+  .analyze-btn {
+    width: 100%;
+  }
+}

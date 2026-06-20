@@ -1,0 +1,17 @@
+.db-layout-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  background-color: #030712;
+  box-sizing: border-box;
+}
+
+.db-layout-main-content {
+  flex: 1;
+  padding-top: 70px; /* Accounts for fixed navbar height */
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
