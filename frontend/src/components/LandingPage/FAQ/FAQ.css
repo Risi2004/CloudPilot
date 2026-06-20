@@ -1,0 +1,123 @@
+.faq {
+  width: 100%;
+  background-color: #030712;
+  display: flex;
+  justify-content: center;
+  padding: 80px 24px;
+}
+
+.faq .section-container {
+  width: 100%;
+  max-width: 800px;
+  text-align: center;
+}
+
+.faq .section-title {
+  font-size: 36px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 12px;
+}
+
+.faq .section-subtitle {
+  font-size: 16px;
+  color: #9ca3af;
+  margin-bottom: 48px;
+}
+
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: left;
+}
+
+.faq-item {
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.faq-item:hover {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.faq-item.open {
+  border-color: rgba(0, 212, 255, 0.25);
+  background: rgba(0, 212, 255, 0.01);
+}
+
+.faq-question {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 24px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  outline: none;
+}
+
+.faq-question-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  padding-right: 16px;
+  transition: color 0.3s ease;
+}
+
+.faq-item:hover .faq-question-text {
+  color: #00d4ff;
+}
+
+.faq-item.open .faq-question-text {
+  color: #00d4ff;
+}
+
+.faq-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.faq-arrow-icon {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.faq-arrow-icon path {
+  transition: stroke 0.3s ease;
+}
+
+.faq-item.open .faq-arrow-icon {
+  transform: rotate(180deg);
+}
+
+.faq-item.open .faq-arrow-icon path {
+  stroke: #00d4ff;
+}
+
+.faq-answer-container {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.faq-item.open .faq-answer-container {
+  max-height: 200px;
+}
+
+.faq-answer {
+  padding: 0 24px 24px 24px;
+}
+
+.faq-answer p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #9ca3af;
+}
