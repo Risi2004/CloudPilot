@@ -4,6 +4,7 @@ import './RepositoryAnalysis.css';
 
 // SVG Assets
 import analyzeRepositoryIcon from '../../assets/analyze-repository.svg';
+import githubIcon from '../../assets/github.svg';
 
 function RepositoryAnalysis() {
   const [repoUrl, setRepoUrl] = useState('');
@@ -54,11 +55,7 @@ function RepositoryAnalysis() {
             </div>
 
             <button type="button" className="connect-github-btn" onClick={() => console.log('Connect GitHub')}>
-              {/* Terminal inline SVG */}
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#BBC9CF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="github-btn-icon">
-                <rect x="2" y="3" width="20" height="18" rx="2" ry="2"></rect>
-                <path d="M7 8l5 4-5 4M13 16h5"></path>
-              </svg>
+              <img src={githubIcon} alt="GitHub" className="github-btn-icon" />
               Connect GitHub
             </button>
           </div>
