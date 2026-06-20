@@ -1,0 +1,83 @@
+.integrations {
+  width: 100%;
+  background-color: #030712;
+  display: flex;
+  justify-content: center;
+  padding: 60px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.integrations .section-container {
+  width: 100%;
+  max-width: 1200px;
+  text-align: center;
+}
+
+.integrations-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: #4b5563;
+  margin-bottom: 32px;
+}
+
+.integrations-grid {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.integration-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.integration-badge:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.integration-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
+}
+
+.integration-badge:hover .integration-icon {
+  opacity: 1;
+}
+
+.integration-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  transition: color 0.3s ease;
+}
+
+.integration-badge:hover .integration-name {
+  color: #ffffff;
+}
+
+@media (max-width: 640px) {
+  .integrations-grid {
+    gap: 12px;
+  }
+  .integration-badge {
+    padding: 10px 16px;
+  }
+}
