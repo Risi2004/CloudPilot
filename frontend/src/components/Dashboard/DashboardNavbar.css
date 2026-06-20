@@ -1,12 +1,15 @@
 .db-navbar {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 1200px;
   height: 70px;
+  border-radius: 30px;
+  border-bottom: 1px solid rgba(60, 73, 78, 0.30);
   background: rgba(5, 20, 36, 0.60);
-  border-bottom: 1px solid rgba(60, 73, 78, 0.20);
-  box-shadow: 0 2px 20px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 15px 0 rgba(0, 212, 255, 0.10);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   display: flex;

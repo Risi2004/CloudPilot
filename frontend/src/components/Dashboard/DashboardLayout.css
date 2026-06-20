@@ -9,7 +9,7 @@
 
 .db-layout-main-content {
   flex: 1;
-  padding-top: 70px; /* Accounts for fixed navbar height */
+  padding-top: 102px; /* Accounts for fixed navbar height + top offset */
   width: 100%;
   display: flex;
   flex-direction: column;
