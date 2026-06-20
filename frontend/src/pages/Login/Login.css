@@ -131,32 +131,9 @@
 }
 
 .commander-avatars {
-  display: flex;
-  align-items: center;
-}
-
-.avatar-circle {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: #0b0f19;
-  border: 2px solid #030712;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: -12px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-  transition: transform 0.2s ease;
-}
-
-.avatar-circle:hover {
-  transform: translateY(-2px);
-  z-index: 10;
-}
-
-.avatar-circle svg {
-  width: 16px;
-  height: 16px;
+  height: 40px;
+  width: auto;
+  display: block;
 }
 
 .social-proof-text {

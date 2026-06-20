@@ -5,6 +5,7 @@ import '../../pages/Login/Login.css'; // Uses common auth styles
 // SVG Assets
 import fleetManagementIcon from '../../assets/fleet-management.svg';
 import controlPlaneIcon from '../../assets/control-plane.svg';
+import avatarIcon from '../../assets/avatar.svg';
 
 function AuthLayout({ children }) {
   const navigate = useNavigate();
@@ -50,23 +51,7 @@ function AuthLayout({ children }) {
           </div>
 
           <div className="auth-social-proof">
-            <div className="commander-avatars">
-              <div className="avatar-circle av-1">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.33 4 18V20H20V18C20 15.33 14.67 14 12 14Z" fill="#00D4FF"/>
-                </svg>
-              </div>
-              <div className="avatar-circle av-2">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.33 4 18V20H20V18C20 15.33 14.67 14 12 14Z" fill="#3B82F6"/>
-                </svg>
-              </div>
-              <div className="avatar-circle av-3">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.33 4 18V20H20V18C20 15.33 14.67 14 12 14Z" fill="#10B981"/>
-                </svg>
-              </div>
-            </div>
+            <img src={avatarIcon} alt="Fleet Commanders" className="commander-avatars" />
             <span className="social-proof-text">Trusted by 2,400+ Fleet Commanders</span>
           </div>
         </div>
