@@ -114,18 +114,101 @@
   border: 1px solid #051424;
 }
 
-@media (max-width: 992px) {
-  .db-navbar-links {
-    gap: 16px;
-  }
-  
-  .db-nav-link {
-    font-size: 13px;
-  }
+.db-menu-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
 }
 
-@media (max-width: 768px) {
+.db-menu-icon-img {
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+
+/* Mobile Overlay Menu Styles */
+.db-navbar-mobile-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #030712;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.db-navbar-mobile-overlay.active {
+  transform: translateX(0);
+}
+
+.db-overlay-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 64px;
+}
+
+.db-close-btn {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.db-close-btn:hover {
+  color: #ffffff;
+}
+
+.db-overlay-links {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+
+.db-overlay-link {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.db-overlay-link:hover {
+  color: #ffffff;
+}
+
+.db-overlay-link.active {
+  color: #ffffff;
+}
+
+@media (max-width: 1024px) {
+  .db-navbar-container {
+    padding: 0 16px;
+  }
+  
   .db-navbar-links {
-    display: none; /* In real projects, we might have a mobile menu, but for now we keep it simple */
+    display: none;
+  }
+  
+  .db-menu-btn {
+    display: flex;
   }
 }
