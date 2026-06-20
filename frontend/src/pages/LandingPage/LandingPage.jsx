@@ -6,6 +6,7 @@ import HowItWorks from '../../components/LandingPage/HowItWorks/HowItWorks';
 import Integrations from '../../components/LandingPage/Integrations/Integrations';
 import Pricing from '../../components/LandingPage/Pricing/Pricing';
 import FAQ from '../../components/LandingPage/FAQ/FAQ';
+import Contact from '../../components/LandingPage/Contact/Contact';
 import Footer from '../../components/LandingPage/Footer/Footer';
 import './LandingPage.css';
 
@@ -20,6 +21,7 @@ function LandingPage() {
                 <Integrations />
                 <Pricing />
                 <FAQ />
+                <Contact />
             </main>
             <Footer />
         </div>

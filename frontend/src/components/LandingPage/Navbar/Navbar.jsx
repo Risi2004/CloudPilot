@@ -10,7 +10,7 @@ function Navbar() {
   const [activeSection, setActiveSection] = useState('home');
 
   useEffect(() => {
-    const sections = ['core-intelligence', 'how-it-works', 'pricing', 'faq'];
+    const sections = ['core-intelligence', 'how-it-works', 'pricing', 'faq', 'contact'];
     
     const observerOptions = {
       root: null,
@@ -72,6 +72,7 @@ function Navbar() {
             <button onClick={() => handleLinkClick('how-it-works')} className={`nav-link ${activeSection === 'how-it-works' ? 'active' : ''}`}>HowItWorks</button>
             <button onClick={() => handleLinkClick('pricing')} className={`nav-link ${activeSection === 'pricing' ? 'active' : ''}`}>Pricings</button>
             <button onClick={() => handleLinkClick('faq')} className={`nav-link ${activeSection === 'faq' ? 'active' : ''}`}>FAQ</button>
+            <button onClick={() => handleLinkClick('contact')} className={`nav-link ${activeSection === 'contact' ? 'active' : ''}`}>Contact</button>
           </div>
           
           <div className="navbar-actions">
@@ -101,6 +102,7 @@ function Navbar() {
           <button onClick={() => handleLinkClick('how-it-works')} className={`overlay-link ${activeSection === 'how-it-works' ? 'active' : ''}`}>HowItWorks</button>
           <button onClick={() => handleLinkClick('pricing')} className={`overlay-link ${activeSection === 'pricing' ? 'active' : ''}`}>Pricings</button>
           <button onClick={() => handleLinkClick('faq')} className={`overlay-link ${activeSection === 'faq' ? 'active' : ''}`}>FAQ</button>
+          <button onClick={() => handleLinkClick('contact')} className={`overlay-link ${activeSection === 'contact' ? 'active' : ''}`}>Contact</button>
           <button onClick={() => { setIsOverlayOpen(false); navigate('/login'); }} className="overlay-signin-btn">Sign In</button>
         </div>
       </div>
