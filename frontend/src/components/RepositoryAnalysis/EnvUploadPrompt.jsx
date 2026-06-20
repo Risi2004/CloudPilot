@@ -4,31 +4,52 @@ import './EnvUploadPrompt.css';
 function EnvUploadPrompt({ repoUrl, envVariables, onComplete }) {
   const [dragActive, setDragActive] = useState(false);
   const [fileName, setFileName] = useState('');
-  const [envValues, setEnvValues] = useState({});
+  const [variables, setVariables] = useState([]);
   const [parsingError, setParsingError] = useState('');
 
   // Extract keys from envVariables (e.g. "DATABASE_URL (Postgres link)" -> "DATABASE_URL")
   const envKeys = envVariables.map(v => v.split(' ')[0]);
 
   useEffect(() => {
-    // Initialize empty values
-    const initial = {};
-    envKeys.forEach(k => {
-      initial[k] = '';
+    // Initialize state from template prop variables
+    const initialVars = envVariables.map(v => {
+      const key = v.split(' ')[0];
+      const desc = v.includes('(') ? v.substring(v.indexOf('(')) : '';
+      return { key, value: '', desc };
     });
-    setEnvValues(initial);
+    setVariables(initialVars);
     setFileName('');
     setParsingError('');
-  }, [repoUrl]);
+  }, [repoUrl, envVariables]);
 
-  const handleInputChange = (key, value) => {
-    setEnvValues(prev => ({ ...prev, [key]: value }));
+  const handleKeyChange = (index, newKey) => {
+    setVariables(prev => {
+      const updated = [...prev];
+      updated[index].key = newKey;
+      return updated;
+    });
+  };
+
+  const handleValueChange = (index, newValue) => {
+    setVariables(prev => {
+      const updated = [...prev];
+      updated[index].value = newValue;
+      return updated;
+    });
+  };
+
+  const handleDeleteVar = (index) => {
+    setVariables(prev => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleAddVar = () => {
+    setVariables(prev => [...prev, { key: 'NEW_VARIABLE', value: '', desc: '(Custom)' }]);
   };
 
   const parseEnvContent = (text) => {
     try {
       const lines = text.split('\n');
-      const parsed = { ...envValues };
+      const parsedVars = [...variables];
       let matchCount = 0;
 
       lines.forEach(line => {
@@ -39,17 +60,20 @@ function EnvUploadPrompt({ repoUrl, envVariables, onComplete }) {
             const key = parts[0].trim();
             const val = parts.slice(1).join('=').trim().replace(/^['"]|['"]$/g, ''); // strip quotes
             
-            // If the key is one we are looking for (case-insensitive check)
-            const matchedKey = envKeys.find(k => k.toLowerCase() === key.toLowerCase());
-            if (matchedKey) {
-              parsed[matchedKey] = val;
-              matchCount++;
+            // Check if this key already exists in our list
+            const existingIdx = parsedVars.findIndex(v => v.key.toLowerCase() === key.toLowerCase());
+            if (existingIdx !== -1) {
+              parsedVars[existingIdx].value = val;
+            } else {
+              // It is a new custom key from the file! Add it!
+              parsedVars.push({ key, value: val, desc: '(Uploaded)' });
             }
+            matchCount++;
           }
         }
       });
 
-      setEnvValues(parsed);
+      setVariables(parsedVars);
       setParsingError('');
       return matchCount;
     } catch (err) {
@@ -98,23 +122,26 @@ function EnvUploadPrompt({ repoUrl, envVariables, onComplete }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // In production, we would save envValues
-    console.log('Environment configured successfully:', envValues);
+    console.log('Environment configured successfully:', variables);
     onComplete();
   };
 
   const autoFillDemo = () => {
-    const dummy = { ...envValues };
-    envKeys.forEach(k => {
-      if (k.includes('URL')) {
-        dummy[k] = 'postgresql://admin:secret_pass@database.cloudpilot.internal:5432/production';
-      } else if (k.includes('KEY') || k.includes('SECRET')) {
-        dummy[k] = 'sk_live_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      } else {
-        dummy[k] = 'production_env_val_' + Math.random().toString(36).substring(2, 7);
-      }
-    });
-    setEnvValues(dummy);
+    setVariables(prev => 
+      prev.map(v => {
+        let value = v.value;
+        if (!value) {
+          if (v.key.includes('URL')) {
+            value = 'postgresql://admin:secret_pass@database.cloudpilot.internal:5432/production';
+          } else if (v.key.includes('KEY') || v.key.includes('SECRET')) {
+            value = 'sk_live_' + Math.random().toString(36).substring(2, 15);
+          } else {
+            value = 'production_env_val_' + Math.random().toString(36).substring(2, 7);
+          }
+        }
+        return { ...v, value };
+      })
+    );
   };
 
   return (
@@ -171,26 +198,57 @@ function EnvUploadPrompt({ repoUrl, envVariables, onComplete }) {
         {/* Input fields form */}
         <form onSubmit={handleSubmit} className="env-fields-form">
           <div className="env-fields-grid">
-            {envVariables.map((v, idx) => {
-              const key = v.split(' ')[0];
-              const desc = v.includes('(') ? v.substring(v.indexOf('(')) : '';
-              return (
-                <div key={idx} className="env-field-group">
-                  <div className="env-field-label-row">
-                    <label className="env-field-label font-mono">{key}</label>
-                    {desc && <span className="env-field-desc">{desc}</span>}
-                  </div>
+            {variables.map((v, idx) => (
+              <div key={idx} className="env-var-row">
+                <div className="env-var-key-col">
                   <input
                     type="text"
-                    className="env-field-input"
-                    placeholder={`Enter value for ${key}`}
-                    value={envValues[key] || ''}
-                    onChange={(e) => handleInputChange(key, e.target.value)}
+                    className="env-var-key-input font-mono"
+                    value={v.key}
+                    onChange={(e) => handleKeyChange(idx, e.target.value)}
+                    placeholder="VARIABLE_NAME"
                     required
                   />
+                  {v.desc && <span className="env-var-desc-badge">{v.desc}</span>}
                 </div>
-              );
-            })}
+                <div className="env-var-value-col">
+                  <input
+                    type="text"
+                    className="env-var-value-input"
+                    placeholder={`Enter value`}
+                    value={v.value || ''}
+                    onChange={(e) => handleValueChange(idx, e.target.value)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="env-var-delete-btn"
+                  onClick={() => handleDeleteVar(idx)}
+                  title="Delete variable"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="env-actions-row">
+            <button
+              type="button"
+              className="env-add-var-btn"
+              onClick={handleAddVar}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '6px' }}>
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Add Custom Variable
+            </button>
           </div>
 
           <button type="submit" className="env-submit-btn">

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function TabCloudInfrastructure({ data }) {
+  const navigate = useNavigate();
   const [infraTab, setInfraTab] = useState('costs');
   const [copied, setCopied] = useState(false);
 
@@ -33,6 +35,41 @@ function TabCloudInfrastructure({ data }) {
             <h4 className="infra-spec-card-title">RECOMMENDED CLOUD PLATFORM</h4>
             <div className="infra-spec-card-val provider">{data.iac?.provider}</div>
             <p className="infra-spec-card-desc">Selected for optimal docker integration and serverless database scaling options.</p>
+            <button
+              type="button"
+              className="infra-action-cta-btn"
+              onClick={() => navigate(`/architecture-recommendation?url=${encodeURIComponent(data.url)}`)}
+              style={{
+                marginTop: '12px',
+                background: 'rgba(0, 212, 255, 0.08)',
+                border: '1px solid rgba(0, 212, 255, 0.25)',
+                borderRadius: '6px',
+                color: '#00d4ff',
+                fontFamily: 'inherit',
+                fontSize: '12px',
+                fontWeight: '600',
+                padding: '8px 14px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                alignSelf: 'flex-start'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = 'rgba(0, 212, 255, 0.15)';
+                e.currentTarget.style.borderColor = '#00d4ff';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = 'rgba(0, 212, 255, 0.08)';
+                e.currentTarget.style.borderColor = 'rgba(0, 212, 255, 0.25)';
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: 6 }}>
+                <polygon points="12 2 2 22 22 22"></polygon>
+              </svg>
+              View Visual Architecture Plan →
+            </button>
           </div>
 
           <div className="infra-spec-card">

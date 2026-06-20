@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './AnalysisHeader.css';
 
 // SVG Assets
@@ -6,6 +7,7 @@ import analyzeRepositoryIcon from '../../assets/analyze-repository.svg';
 
 function AnalysisHeader({ currentUrl, onAnalyzeNew }) {
   const [newUrl, setNewUrl] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -23,6 +25,16 @@ function AnalysisHeader({ currentUrl, onAnalyzeNew }) {
           <span className="repo-label">TARGET:</span>
           <span className="repo-val" title={currentUrl}>{currentUrl}</span>
         </p>
+        <button
+          type="button"
+          className="header-suggest-architecture-btn"
+          onClick={() => navigate(`/architecture-recommendation?url=${encodeURIComponent(currentUrl)}`)}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: 6 }}>
+            <polygon points="12 2 2 22 22 22"></polygon>
+          </svg>
+          Suggest Architecture Plan
+        </button>
       </div>
 
       <form onSubmit={handleSubmit} className="header-search-form">

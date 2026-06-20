@@ -16,6 +16,30 @@
   max-width: 50%;
 }
 
+.header-suggest-architecture-btn {
+  background: linear-gradient(135deg, #00d4ff 0%, #0082ff 100%);
+  border: none;
+  border-radius: 8px;
+  color: #030712;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 8px 16px;
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  margin-top: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2);
+}
+
+.header-suggest-architecture-btn:hover {
+  background: linear-gradient(135deg, #3ee2ff 0%, #0096ff 100%);
+  box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4);
+  transform: translateY(-1px);
+}
+
 .header-title {
   font-size: 32px;
   font-weight: 700;

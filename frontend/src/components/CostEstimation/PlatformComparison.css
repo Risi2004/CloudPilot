@@ -1,0 +1,189 @@
+.platform-comparison-card {
+  background: rgba(5, 20, 36, 0.4);
+  border: 1px solid rgba(60, 73, 78, 0.25);
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.comparison-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 16px;
+}
+
+.comparison-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 6px 0;
+}
+
+.comparison-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.comparison-col-card {
+  background: rgba(13, 27, 42, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 24px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  transition: all 0.3s ease;
+}
+
+.comparison-col-card:hover {
+  transform: translateY(-2px);
+  background: rgba(13, 27, 42, 0.45);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.comparison-col-card.recommended {
+  background: rgba(0, 212, 255, 0.02);
+  border-color: rgba(0, 212, 255, 0.3);
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.05);
+}
+
+.comparison-col-card.recommended:hover {
+  border-color: #00d4ff;
+  box-shadow: 0 0 30px rgba(0, 212, 255, 0.15);
+  background: rgba(0, 212, 255, 0.04);
+}
+
+.recommended-badge {
+  position: absolute;
+  top: -12px;
+  left: 20px;
+  background: #00d4ff;
+  color: #030712;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 100px;
+  box-shadow: 0 2px 8px rgba(0, 212, 255, 0.4);
+  letter-spacing: 0.05em;
+}
+
+.provider-info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.provider-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.provider-cost-wrap {
+  display: flex;
+  align-items: baseline;
+  margin-top: 4px;
+}
+
+.provider-cost {
+  font-size: 24px;
+  font-weight: 800;
+  color: #00d4ff;
+}
+
+.provider-period {
+  font-size: 11px;
+  color: #64748b;
+  margin-left: 4px;
+}
+
+.provider-desc {
+  font-size: 12.5px;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.provider-metrics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.provider-metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.metric-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.metric-val {
+  font-size: 12px;
+  color: #e2e8f0;
+  font-weight: 700;
+}
+
+.provider-pros-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 16px;
+}
+
+.provider-pros-section .section-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #475569;
+  letter-spacing: 0.08em;
+  margin: 0;
+}
+
+.pro-advantage-bullet {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.advantage-bullet-icon {
+  color: #10b981;
+  font-weight: bold;
+}
+
+.advantage-text {
+  font-size: 12px;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+@media (max-width: 968px) {
+  .comparison-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  
+  .recommended-badge {
+    top: -10px;
+  }
+}

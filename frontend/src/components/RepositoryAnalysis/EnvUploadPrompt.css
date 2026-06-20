@@ -195,51 +195,137 @@
 .env-fields-grid {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
-.env-field-group {
+.env-var-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(13, 27, 42, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 10px 14px;
+  transition: all 0.2s ease;
+}
+
+.env-var-row:hover {
+  background: rgba(13, 27, 42, 0.5);
+  border-color: rgba(0, 212, 255, 0.2);
+}
+
+.env-var-key-col {
+  flex: 1.2;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
-.env-field-label-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 10px;
+.env-var-key-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.15);
+  color: #00d4ff;
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 4px 0;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.2s;
 }
 
-.env-field-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: #e2e8f0;
-  letter-spacing: 0.02em;
+.env-var-key-input:focus {
+  border-bottom-color: #00d4ff;
 }
 
-.env-field-desc {
-  font-size: 11px;
+.env-var-desc-badge {
+  font-size: 10px;
   color: #64748b;
-  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.env-field-input {
+.env-var-value-col {
+  flex: 1.8;
+}
+
+.env-var-value-input {
   background: rgba(0, 0, 0, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 0 16px;
+  border-radius: 6px;
+  padding: 0 12px;
   color: #ffffff;
   outline: none;
   font-family: inherit;
   font-size: 13px;
-  height: 40px;
+  height: 36px;
+  width: 100%;
+  box-sizing: border-box;
   transition: all 0.2s ease;
 }
 
-.env-field-input:focus {
+.env-var-value-input:focus {
   border-color: #00d4ff;
-  box-shadow: 0 0 10px rgba(0, 212, 255, 0.15);
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.15);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.env-var-delete-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.env-var-delete-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.env-actions-row {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 4px;
+}
+
+.env-add-var-btn {
+  background: rgba(0, 212, 255, 0.05);
+  border: 1px dashed rgba(0, 212, 255, 0.3);
+  border-radius: 6px;
+  color: #00d4ff;
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.env-add-var-btn:hover {
+  background: rgba(0, 212, 255, 0.1);
+  border-color: #00d4ff;
+  color: #ffffff;
+}
+
+@media (max-width: 540px) {
+  .env-var-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .env-var-delete-btn {
+    align-self: flex-end;
+  }
 }
 
 .env-submit-btn {

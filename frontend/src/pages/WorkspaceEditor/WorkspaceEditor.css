@@ -405,12 +405,30 @@
   color: #cbd5e1;
 }
 
-.ws-kw { color: #c792ea; }
-.ws-fn { color: #82aaff; }
-.ws-str { color: #c3e88d; }
-.ws-prop { color: #f78c6c; }
-.ws-comment { color: #546e7a; font-style: italic; }
-.ws-num { color: #f78c6c; }
+.ws-kw {
+  color: #c792ea;
+}
+
+.ws-fn {
+  color: #82aaff;
+}
+
+.ws-str {
+  color: #c3e88d;
+}
+
+.ws-prop {
+  color: #f78c6c;
+}
+
+.ws-comment {
+  color: #546e7a;
+  font-style: italic;
+}
+
+.ws-num {
+  color: #f78c6c;
+}
 
 /* ── Right column: AI Assistant ── */
 .ws-assistant-panel {

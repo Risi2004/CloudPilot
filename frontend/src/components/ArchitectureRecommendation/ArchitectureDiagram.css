@@ -1,0 +1,84 @@
+.diag-wrapper {
+  background: rgba(5, 20, 36, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.diag-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.diag-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.diag-badge {
+  font-size: 9px;
+  font-weight: 700;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, 0.05);
+  border: 1px solid rgba(0, 212, 255, 0.15);
+  border-radius: 4px;
+  padding: 2px 8px;
+  letter-spacing: 0.05em;
+}
+
+.diag-canvas {
+  width: 100%;
+  background: rgba(3, 7, 18, 0.60);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  padding: 16px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.diag-svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Animations for connection flows */
+@keyframes dash {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+.diag-svg path[stroke-dasharray] {
+  animation: dash 2.5s linear infinite;
+}
+
+/* Pulse animation for the glowing dot */
+@keyframes pulse {
+  0% {
+    r: 3px;
+    opacity: 0.5;
+  }
+  50% {
+    r: 6px;
+    opacity: 1;
+  }
+  100% {
+    r: 3px;
+    opacity: 0.5;
+  }
+}
+
+.diag-svg circle[filter] {
+  animation: pulse 2s ease-in-out infinite;
+}
