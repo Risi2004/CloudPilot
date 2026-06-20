@@ -46,6 +46,17 @@ function Navbar() {
     };
   }, []);
 
+  useEffect(() => {
+    if (isOverlayOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOverlayOpen]);
+
   const handleLinkClick = (id) => {
     setIsOverlayOpen(false);
     if (id === 'home') {

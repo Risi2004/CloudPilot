@@ -58,7 +58,7 @@ function Contact() {
           </div>
           <h2 className="contact-title">Contact Fleet Control</h2>
           <p className="contact-subtitle">
-            Have questions about our autonomous cloud engine? Establish a transmission payload with our engineering team.
+            Have questions about our autonomous cloud engine? Establish a message with our engineering team.
           </p>
         </div>
 
@@ -176,7 +176,7 @@ function Contact() {
 
                 {/* Message field */}
                 <div className="contact-input-group contact-message-group">
-                  <label htmlFor="message" className="contact-label">TRANSMISSION PAYLOAD</label>
+                  <label htmlFor="message" className="contact-label">MESSAGE</label>
                   <div className={`contact-input-container contact-textarea-container ${errors.message ? 'input-error' : ''}`}>
                     <div className="contact-icon-prefix contact-textarea-icon">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -199,7 +199,7 @@ function Contact() {
               </div>
 
               <button type="submit" className="contact-submit-btn">
-                <span>Transmit Secure Payload</span>
+                <span>Submit</span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="submit-arrow">
                   <line x1="5" y1="12" x2="19" y2="12"></line>
                   <polyline points="12 5 19 12 12 19"></polyline>
