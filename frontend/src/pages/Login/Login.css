@@ -314,6 +314,16 @@
   width: 100%;
 }
 
+/* Autofill styling to prevent Chrome light-blue/white background */
+.auth-input-element:-webkit-autofill,
+.auth-input-element:-webkit-autofill:hover, 
+.auth-input-element:-webkit-autofill:focus, 
+.auth-input-element:-webkit-autofill:active {
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: #f1f5f9 !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 .auth-input-element::placeholder {
   color: rgba(255, 255, 255, 0.15);
 }

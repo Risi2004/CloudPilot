@@ -6,6 +6,7 @@ function Contact() {
     name: '',
     email: '',
     phone: '',
+    company: '',
     message: ''
   });
   
@@ -41,7 +42,7 @@ function Contact() {
       setErrors(validationErrors);
     } else {
       setIsSubmitted(true);
-      setFormData({ name: '', email: '', phone: '', message: '' });
+      setFormData({ name: '', email: '', phone: '', company: '', message: '' });
       setErrors({});
     }
   };
@@ -151,7 +152,29 @@ function Contact() {
                   {errors.phone && <span className="contact-error-msg">{errors.phone}</span>}
                 </div>
 
-                {/* Placeholder to balance the grid or make the layout nice */}
+                {/* Company Name (Optional) field */}
+                <div className="contact-input-group">
+                  <label htmlFor="company" className="contact-label">COMPANY NAME (OPTIONAL)</label>
+                  <div className="contact-input-container">
+                    <div className="contact-icon-prefix">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                      </svg>
+                    </div>
+                    <input
+                      type="text"
+                      id="company"
+                      name="company"
+                      placeholder="e.g. CloudPilot Inc."
+                      value={formData.company}
+                      onChange={handleChange}
+                      className="contact-input-element"
+                    />
+                  </div>
+                </div>
+
+                {/* Message field */}
                 <div className="contact-input-group contact-message-group">
                   <label htmlFor="message" className="contact-label">TRANSMISSION PAYLOAD</label>
                   <div className={`contact-input-container contact-textarea-container ${errors.message ? 'input-error' : ''}`}>

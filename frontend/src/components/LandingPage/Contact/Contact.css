@@ -177,6 +177,16 @@
   color: rgba(255, 255, 255, 0.15);
 }
 
+/* Autofill styling to prevent Chrome light-blue/white background */
+.contact-input-element:-webkit-autofill,
+.contact-input-element:-webkit-autofill:hover, 
+.contact-input-element:-webkit-autofill:focus, 
+.contact-input-element:-webkit-autofill:active {
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: #f1f5f9 !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 .contact-textarea-container {
   height: auto;
   align-items: flex-start;
