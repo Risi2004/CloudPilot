@@ -6,7 +6,7 @@
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 0 24px 120px;
+  padding: 0 24px 40px;
   box-sizing: border-box;
   color: #e2e8f0;
   font-family: "Space Grotesk", -apple-system, BlinkMacSystemFont, sans-serif;
@@ -405,12 +405,30 @@
   color: #cbd5e1;
 }
 
-.ws-kw { color: #c792ea; }
-.ws-fn { color: #82aaff; }
-.ws-str { color: #c3e88d; }
-.ws-prop { color: #f78c6c; }
-.ws-comment { color: #546e7a; font-style: italic; }
-.ws-num { color: #f78c6c; }
+.ws-kw {
+  color: #c792ea;
+}
+
+.ws-fn {
+  color: #82aaff;
+}
+
+.ws-str {
+  color: #c3e88d;
+}
+
+.ws-prop {
+  color: #f78c6c;
+}
+
+.ws-comment {
+  color: #546e7a;
+  font-style: italic;
+}
+
+.ws-num {
+  color: #f78c6c;
+}
 
 /* ── Right column: AI Assistant ── */
 .ws-assistant-panel {
@@ -618,11 +636,6 @@
 
 /* ── Bottom action bar ── */
 .ws-action-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 900;
   background: rgba(5, 20, 36, 0.95);
   border-top: 1px solid rgba(60, 73, 78, 0.3);
   backdrop-filter: blur(12px);
