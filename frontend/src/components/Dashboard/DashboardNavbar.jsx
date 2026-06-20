@@ -71,7 +71,6 @@ function DashboardNavbar() {
         <div className="db-navbar-actions">
           <button className="db-action-btn notification-btn" onClick={() => console.log('View notifications')}>
             <img src={notificationIcon} alt="Notifications" className="db-action-icon" />
-            <span className="notification-dot"></span>
           </button>
           <button className="db-action-btn profile-btn" onClick={() => navigate('/dashboard')}>
             <img src={profileIcon} alt="Profile" className="db-action-icon" />
