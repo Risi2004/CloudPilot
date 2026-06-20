@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Navbar.css';
 import logo from '../../../assets/logo-without-background.svg';
 import menuIcon from '../../../assets/menu.svg';
 
 function Navbar() {
+  const navigate = useNavigate();
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
 
@@ -73,7 +75,7 @@ function Navbar() {
           </div>
           
           <div className="navbar-actions">
-            <button className="signin-btn">Sign In</button>
+            <button className="signin-btn" onClick={() => navigate('/login')}>Sign In</button>
             <button className="menu-btn" onClick={() => setIsOverlayOpen(true)}>
               <img src={menuIcon} alt="Menu" className="menu-icon-img" />
             </button>
@@ -99,7 +101,7 @@ function Navbar() {
           <button onClick={() => handleLinkClick('how-it-works')} className={`overlay-link ${activeSection === 'how-it-works' ? 'active' : ''}`}>HowItWorks</button>
           <button onClick={() => handleLinkClick('pricing')} className={`overlay-link ${activeSection === 'pricing' ? 'active' : ''}`}>Pricings</button>
           <button onClick={() => handleLinkClick('faq')} className={`overlay-link ${activeSection === 'faq' ? 'active' : ''}`}>FAQ</button>
-          <button onClick={() => setIsOverlayOpen(false)} className="overlay-signin-btn">Sign In</button>
+          <button onClick={() => { setIsOverlayOpen(false); navigate('/login'); }} className="overlay-signin-btn">Sign In</button>
         </div>
       </div>
     </>
