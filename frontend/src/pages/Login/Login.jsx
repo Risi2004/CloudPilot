@@ -19,6 +19,7 @@ function Login() {
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('Initiating login with:', { email, password });
+    navigate('/dashboard');
   };
 
   const emergencyResetLink = (

@@ -1,0 +1,60 @@
+.dashboard-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100%;
+  background-color: #030712;
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  box-sizing: border-box;
+  padding: 24px;
+}
+
+.dashboard-card {
+  text-align: center;
+  background: rgba(5, 20, 36, 0.4);
+  border: 1px solid rgba(60, 73, 78, 0.25);
+  border-radius: 16px;
+  padding: 48px;
+  box-shadow: 0 0 30px rgba(0, 212, 255, 0.03);
+  backdrop-filter: blur(12px);
+  max-width: 480px;
+  width: 100%;
+}
+
+.dashboard-title {
+  font-size: 32px;
+  font-weight: 800;
+  color: #00d4ff;
+  letter-spacing: -0.01em;
+  margin: 0 0 12px 0;
+  text-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
+}
+
+.dashboard-subtitle {
+  font-size: 15px;
+  color: #94a3b8;
+  margin: 0 0 32px 0;
+}
+
+.dashboard-home-btn {
+  background: #00d4ff;
+  border: none;
+  border-radius: 8px;
+  height: 44px;
+  padding: 0 24px;
+  color: #030712;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2);
+}
+
+.dashboard-home-btn:hover {
+  background: #3ee2ff;
+  box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4);
+  transform: translateY(-1px);
+}

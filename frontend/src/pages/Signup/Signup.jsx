@@ -24,6 +24,7 @@ function Signup() {
       return;
     }
     console.log('Registering user with:', { email, password });
+    navigate('/dashboard');
   };
 
   return (
