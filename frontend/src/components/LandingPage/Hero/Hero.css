@@ -1,7 +1,7 @@
 .hero {
   position: relative;
   width: 100%;
-  background: radial-gradient(circle at top, rgba(0, 212, 255, 0.08) 0%, rgba(3, 7, 18, 0) 70%);
+  background-color: #030712;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -9,6 +9,8 @@
 }
 
 .hero-container {
+  position: relative;
+  z-index: 2;
   width: 100%;
   max-width: 1200px;
   padding: 160px 24px 80px;
@@ -131,17 +133,22 @@
   .hero-title {
     font-size: 48px;
   }
+
   .hero-subtitle {
     font-size: 16px;
   }
+
   .hero-ctas {
     flex-direction: column;
     width: 100%;
     max-width: 320px;
   }
-  .cta-primary, .cta-secondary {
+
+  .cta-primary,
+  .cta-secondary {
     width: 100%;
   }
+
   .hero-badges {
     flex-wrap: wrap;
     gap: 12px;
