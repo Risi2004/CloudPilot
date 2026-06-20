@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/Dashboard/DashboardLayout';
 import './RepositoryAnalysis.css';
 
@@ -8,10 +9,13 @@ import githubIcon from '../../assets/github.svg';
 
 function RepositoryAnalysis() {
   const [repoUrl, setRepoUrl] = useState('');
+  const navigate = useNavigate();
 
   const handleAnalyze = (e) => {
     e.preventDefault();
-    console.log('Analyzing repository:', repoUrl);
+    if (repoUrl.trim()) {
+      navigate(`/repository-analysis?url=${encodeURIComponent(repoUrl.trim())}`);
+    }
   };
 
   return (

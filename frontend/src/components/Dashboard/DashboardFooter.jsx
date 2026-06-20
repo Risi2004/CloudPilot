@@ -2,7 +2,7 @@ import React from 'react';
 import './DashboardFooter.css';
 
 // SVG Assets
-import logoWithBackground from '../../assets/logo-with-background.svg';
+import logoWithoutBackground from '../../assets/logo-without-background.svg';
 
 function DashboardFooter() {
   const currentYear = new Date().getFullYear();
@@ -12,7 +12,7 @@ function DashboardFooter() {
         
         {/* Left Column: Branding Description & Socials */}
         <div className="db-footer-brand">
-          <img src={logoWithBackground} alt="CloudPilot Logo" className="db-footer-logo-img" />
+          <img src={logoWithoutBackground} alt="CloudPilot Logo" className="db-footer-logo-img" />
           <p className="db-footer-desc">
             The world's first autonomous engineering engine for the modern cloud stack.
           </p>
