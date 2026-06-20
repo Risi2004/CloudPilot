@@ -5,6 +5,7 @@ import './DashboardFooter.css';
 import logoWithBackground from '../../assets/logo-with-background.svg';
 
 function DashboardFooter() {
+  const currentYear = new Date().getFullYear();
   return (
     <footer className="db-footer">
       <div className="db-footer-container">
@@ -71,7 +72,7 @@ function DashboardFooter() {
       </div>
 
       <div className="db-footer-bottom">
-        <p className="footer-bottom-text">© 2024 CloudPilot AI. All systems operational.</p>
+        <p className="footer-bottom-text">© {currentYear} CloudPilot AI. All systems operational.</p>
       </div>
     </footer>
   );
