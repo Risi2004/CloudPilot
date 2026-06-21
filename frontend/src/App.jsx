@@ -19,6 +19,7 @@ import Revenue from './pages/Admin/Revenue/Revenue';
 import AIAgents from './pages/Admin/AIAgents/AIAgents';
 import KnowledgeBase from './pages/Admin/KnowledgeBase/KnowledgeBase';
 import Support from './pages/Admin/Support/Support';
+import Notification from './pages/Admin/Notification/Notification';
 import AuditLogs from './pages/Admin/AuditLogs/AuditLogs';
 import Settings from './pages/Admin/Settings/Settings';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
@@ -52,6 +53,7 @@ function App() {
         <Route path="/admin/ai-agents" element={<ProtectedRoute><AIAgents /></ProtectedRoute>} />
         <Route path="/admin/knowledge-base" element={<ProtectedRoute><KnowledgeBase /></ProtectedRoute>} />
         <Route path="/admin/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
+        <Route path="/admin/notifications" element={<ProtectedRoute><Notification /></ProtectedRoute>} />
         <Route path="/admin/audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
         <Route path="/admin/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       </Routes>

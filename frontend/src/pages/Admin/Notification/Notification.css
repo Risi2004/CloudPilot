@@ -1,0 +1,31 @@
+.notification-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: calc(100vh - 64px);
+}
+
+.notification-layout-split {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 20px;
+  flex: 1;
+  min-height: 0;
+  align-items: start;
+}
+
+.notification-feed-column,
+.notification-detail-column {
+  min-width: 0;
+  height: 100%;
+}
+
+@media (max-width: 1200px) {
+  .notification-layout-split {
+    grid-template-columns: 1fr;
+  }
+
+  .notification-page {
+    height: auto;
+  }
+}
