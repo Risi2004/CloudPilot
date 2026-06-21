@@ -50,16 +50,43 @@ function Signup() {
       })
       .then(res => {
         if (res.ok) {
-          navigate('/dashboard');
+          return res.json();
         } else {
-          localStorage.removeItem('token');
-          localStorage.removeItem('email');
-          localStorage.removeItem('fullName');
-          localStorage.removeItem('profileImageKey');
-          localStorage.removeItem('profileImage');
+          throw new Error('Token verification failed');
         }
       })
-      .catch(() => {});
+      .then(data => {
+        localStorage.setItem('email', data.user.email);
+        if (data.user.fullName) {
+          localStorage.setItem('fullName', data.user.fullName);
+        } else {
+          localStorage.removeItem('fullName');
+        }
+        if (data.user.profileImageKey) {
+          localStorage.setItem('profileImageKey', data.user.profileImageKey);
+        } else {
+          localStorage.removeItem('profileImageKey');
+        }
+        if (data.user.role) {
+          localStorage.setItem('role', data.user.role);
+        } else {
+          localStorage.removeItem('role');
+        }
+
+        if (data.user.role === 'admin') {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/dashboard');
+        }
+      })
+      .catch(() => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('email');
+        localStorage.removeItem('fullName');
+        localStorage.removeItem('profileImageKey');
+        localStorage.removeItem('profileImage');
+        localStorage.removeItem('role');
+      });
     }
   }, [navigate]);
 
@@ -178,6 +205,11 @@ function Signup() {
       if (data.user.profileImageKey) {
         localStorage.setItem('profileImageKey', data.user.profileImageKey);
       }
+      if (data.user.role) {
+        localStorage.setItem('role', data.user.role);
+      } else {
+        localStorage.removeItem('role');
+      }
       if (profileImage) {
         localStorage.setItem('profileImage', profileImage); // base64 fallback
       } else {
@@ -185,7 +217,11 @@ function Signup() {
       }
 
       setOtpModalOpen(false);
-      navigate('/dashboard');
+      if (data.user.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       setOtpError(err.message);
     } finally {

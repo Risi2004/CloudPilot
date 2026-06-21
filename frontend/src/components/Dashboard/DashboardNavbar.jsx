@@ -67,6 +67,7 @@ function DashboardNavbar() {
     localStorage.removeItem('fullName');
     localStorage.removeItem('profileImageKey');
     localStorage.removeItem('profileImage');
+    localStorage.removeItem('role');
     setIsProfileDropdownOpen(false);
     navigate('/login');
   };

@@ -159,6 +159,7 @@
   border-radius: 8px;
   transition: background 0.2s ease;
   cursor: pointer;
+  flex: 1;
 }
 
 .admin-user-profile:hover {
@@ -210,4 +211,30 @@
   font-size: 11px;
   color: #64748b;
   margin-top: 1px;
+}
+
+.admin-footer-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.admin-logout-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.admin-logout-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
 }

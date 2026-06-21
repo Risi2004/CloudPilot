@@ -21,27 +21,49 @@ function Login() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const email = localStorage.getItem('email');
     if (token) {
       fetch(`${API_URL}/api/auth/verify`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       .then(res => {
         if (res.ok) {
-          if (email === 'admin@gmail.com') {
-            navigate('/admin');
-          } else {
-            navigate('/dashboard');
-          }
+          return res.json();
         } else {
-          localStorage.removeItem('token');
-          localStorage.removeItem('email');
-          localStorage.removeItem('fullName');
-          localStorage.removeItem('profileImageKey');
-          localStorage.removeItem('profileImage');
+          throw new Error('Token verification failed');
         }
       })
-      .catch(() => {});
+      .then(data => {
+        localStorage.setItem('email', data.user.email);
+        if (data.user.fullName) {
+          localStorage.setItem('fullName', data.user.fullName);
+        } else {
+          localStorage.removeItem('fullName');
+        }
+        if (data.user.profileImageKey) {
+          localStorage.setItem('profileImageKey', data.user.profileImageKey);
+        } else {
+          localStorage.removeItem('profileImageKey');
+        }
+        if (data.user.role) {
+          localStorage.setItem('role', data.user.role);
+        } else {
+          localStorage.removeItem('role');
+        }
+
+        if (data.user.role === 'admin') {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/dashboard');
+        }
+      })
+      .catch(() => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('email');
+        localStorage.removeItem('fullName');
+        localStorage.removeItem('profileImageKey');
+        localStorage.removeItem('profileImage');
+        localStorage.removeItem('role');
+      });
     }
   }, [navigate]);
 
@@ -82,11 +104,16 @@ function Login() {
       } else {
         localStorage.removeItem('profileImageKey');
       }
+      if (data.user.role) {
+        localStorage.setItem('role', data.user.role);
+      } else {
+        localStorage.removeItem('role');
+      }
       // Clear any temporary base64 image on new login to avoid stale local images
       localStorage.removeItem('profileImage');
 
-      if (data.user.email === 'admin@gmail.com') {
-        navigate('/admin');
+      if (data.user.role === 'admin') {
+        navigate('/admin/dashboard');
       } else {
         navigate('/dashboard');
       }
