@@ -79,7 +79,7 @@ function UserInsights() {
           </div>
           <button 
             className="view-audit-log-btn"
-            onClick={() => navigate('/admin')}
+            onClick={() => navigate('/admin/dashboard')}
           >
             View Audit Log
           </button>

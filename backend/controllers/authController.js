@@ -219,7 +219,8 @@ const verifyOtp = async (req, res, next) => {
       email: pendingUser.email,
       fullName: pendingUser.fullName,
       password: pendingUser.password,
-      profileImageKey: pendingUser.profileImageKey
+      profileImageKey: pendingUser.profileImageKey,
+      role: pendingUser.email === 'admin@gmail.com' ? 'admin' : 'user'
     });
 
     await user.save();
@@ -229,7 +230,7 @@ const verifyOtp = async (req, res, next) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: user._id, email: user.email },
+      { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'jwt_secret_fallback',
       { expiresIn: '7d' }
     );
@@ -243,7 +244,8 @@ const verifyOtp = async (req, res, next) => {
       user: {
         email: user.email,
         fullName: user.fullName,
-        profileImageKey: user.profileImageKey
+        profileImageKey: user.profileImageKey,
+        role: user.role
       }
     });
   } catch (err) {
@@ -280,8 +282,14 @@ const login = async (req, res, next) => {
       return res.status(401).json({ message: 'Unauthorized: Invalid credentials.' });
     }
 
+    // Auto-promote admin email if not already admin
+    if (user.email === 'admin@gmail.com' && user.role !== 'admin') {
+      user.role = 'admin';
+      await user.save();
+    }
+
     const token = jwt.sign(
-      { id: user._id, email: user.email },
+      { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'jwt_secret_fallback',
       { expiresIn: '7d' }
     );
@@ -292,7 +300,8 @@ const login = async (req, res, next) => {
       user: {
         email: user.email,
         fullName: user.fullName,
-        profileImageKey: user.profileImageKey
+        profileImageKey: user.profileImageKey,
+        role: user.role
       }
     });
   } catch (err) {
@@ -352,7 +361,8 @@ const verifyToken = async (req, res, next) => {
       user: {
         email: user.email,
         fullName: user.fullName,
-        profileImageKey: user.profileImageKey
+        profileImageKey: user.profileImageKey,
+        role: user.role
       }
     });
   } catch (err) {

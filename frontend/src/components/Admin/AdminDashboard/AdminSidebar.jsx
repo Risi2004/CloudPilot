@@ -36,7 +36,7 @@ function AdminSidebar({ activeTab, setActiveTab }) {
       setActiveTab(itemId);
     }
     if (itemId === 'dashboard') {
-      navigate('/admin');
+      navigate('/admin/dashboard');
     } else if (itemId === 'users') {
       navigate('/admin/users');
     } else if (itemId === 'subscriptions') {
@@ -56,6 +56,16 @@ function AdminSidebar({ activeTab, setActiveTab }) {
     } else if (itemId === 'settings') {
       navigate('/admin/settings');
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('email');
+    localStorage.removeItem('fullName');
+    localStorage.removeItem('profileImageKey');
+    localStorage.removeItem('profileImage');
+    localStorage.removeItem('role');
+    navigate('/login');
   };
 
   return (
@@ -95,18 +105,27 @@ function AdminSidebar({ activeTab, setActiveTab }) {
 
       {/* Admin user info footer */}
       <div className="admin-sidebar-footer">
-        <div className="admin-user-profile">
-          <div className="admin-avatar-wrapper">
-            <div className="admin-avatar-dot" />
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="admin-default-avatar-svg">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
+        <div className="admin-footer-container">
+          <div className="admin-user-profile">
+            <div className="admin-avatar-wrapper">
+              <div className="admin-avatar-dot" />
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="admin-default-avatar-svg">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
+            <div className="admin-user-details">
+              <span className="admin-user-name">Admin User</span>
+              <span className="admin-user-role">Profile Settings</span>
+            </div>
+          </div>
+          <button className="admin-logout-btn" onClick={handleLogout} title="Logout">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
             </svg>
-          </div>
-          <div className="admin-user-details">
-            <span className="admin-user-name">Admin User</span>
-            <span className="admin-user-role">Profile Settings</span>
-          </div>
+          </button>
         </div>
       </div>
     </aside>
