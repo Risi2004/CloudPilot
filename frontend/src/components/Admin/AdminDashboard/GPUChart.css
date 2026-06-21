@@ -1,0 +1,153 @@
+.gpu-chart-card {
+  background: rgba(13, 18, 33, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 24px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.gpu-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.gpu-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gpu-chart-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.gpu-chart-subtitle {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.gpu-chart-tabs {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 2px;
+  display: flex;
+  gap: 2px;
+}
+
+.gpu-tab-btn {
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #64748b;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.gpu-tab-btn:hover {
+  color: #94a3b8;
+}
+
+.gpu-tab-btn.active {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
+.gpu-chart-body {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  min-height: 180px;
+}
+
+.gpu-svg {
+  overflow: visible;
+}
+
+.grid-line {
+  stroke: rgba(255, 255, 255, 0.03);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.axis-line {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1;
+}
+
+.gpu-bar {
+  fill: rgba(81, 91, 128, 0.3);
+  transition: height 0.4s cubic-bezier(0.16, 1, 0.3, 1), y 0.4s cubic-bezier(0.16, 1, 0.3, 1), fill 0.3s ease;
+  cursor: pointer;
+}
+
+.gpu-bar:hover {
+  fill: rgba(142, 149, 255, 0.5);
+}
+
+.gpu-bar.highlighted {
+  fill: #1a5649; /* Dark green/teal base */
+  fill: linear-gradient(180deg, #4edea3 0%, #10b981 100%);
+  fill: #15803d;
+  fill: rgba(16, 185, 129, 0.6);
+  stroke: rgba(78, 222, 163, 0.4);
+  stroke-width: 1;
+}
+
+.gpu-bar.highlighted:hover {
+  fill: rgba(78, 222, 163, 0.8);
+}
+
+.gpu-axis-label {
+  fill: #64748b;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* Tooltip styles */
+.gpu-tooltip {
+  position: absolute;
+  background: #090d16;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 6px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.2s ease, left 0.15s ease, top 0.15s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 10;
+}
+
+.gpu-tooltip.visible {
+  opacity: 1;
+}
+
+.tooltip-value {
+  color: #f8fafc;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tooltip-label {
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: uppercase;
+}

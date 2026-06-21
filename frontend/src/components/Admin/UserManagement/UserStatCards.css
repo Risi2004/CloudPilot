@@ -1,0 +1,130 @@
+.user-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.user-stat-card {
+  background: rgba(13, 18, 33, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 24px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.user-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+
+.user-stat-icon-wrapper {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-stat-icon-wrapper.blue-purple-bg {
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+}
+
+.user-stat-icon-wrapper.green-bg {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.user-stat-icon-wrapper.blue-bg {
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.user-stat-icon {
+  width: 22px;
+  height: 22px;
+  filter: brightness(0) invert(1);
+  opacity: 0.85;
+}
+
+.user-stat-icon-img {
+  width: 26px;
+  height: 20px;
+  opacity: 0.95;
+  display: block;
+}
+
+.trend-growth-icon {
+  width: 8px;
+  height: 10px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.user-stat-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.user-stat-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.06em;
+}
+
+.user-stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #f8fafc;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+}
+
+.user-stat-trend {
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.user-stat-trend.trend-positive {
+  color: #10b981;
+}
+
+.user-stat-trend .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #10b981;
+  box-shadow: 0 0 6px #10b981;
+}
+
+.user-stat-trend .arrow {
+  font-size: 12px;
+}
+
+.user-stat-trend .flash {
+  font-size: 12px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .user-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,132 @@
+.knowledge-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+  width: 100%;
+}
+
+.kb-super-label {
+  font-size: 9px;
+  font-weight: 800;
+  color: #8b5cf6;
+  letter-spacing: 0.12em;
+}
+
+.knowledge-page-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: -0.02em;
+  margin-top: 4px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Action triggers */
+.kb-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.kb-action-btn.secondary {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+}
+
+.kb-action-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.kb-action-btn.primary {
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  color: #a5b4fc;
+}
+
+.kb-action-btn.primary:hover:not(:disabled) {
+  background: #6366f1;
+  color: #ffffff;
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+  border-color: #6366f1;
+}
+
+.kb-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rebuilding-spinner-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kb-spinner {
+  width: 14px;
+  height: 14px;
+  animation: spin 1s linear infinite;
+}
+
+/* Split layout columns */
+.knowledge-layout-split {
+  display: grid;
+  grid-template-columns: 1fr 2.3fr;
+  gap: 20px;
+  width: 100%;
+  align-items: start;
+}
+
+.knowledge-left-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.knowledge-right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.right-col-docs-row {
+  width: 100%;
+}
+
+.right-col-insight-row {
+  width: 100%;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1000px) {
+  .knowledge-layout-split {
+    grid-template-columns: 1fr;
+  }
+  
+  .knowledge-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .header-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
