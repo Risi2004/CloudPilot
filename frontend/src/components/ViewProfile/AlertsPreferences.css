@@ -1,0 +1,58 @@
+.alerts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.alert-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.alert-checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.alert-checkmark {
+  width: 18px;
+  height: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  background: rgba(3, 7, 18, 0.6);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.alert-checkbox:checked + .alert-checkmark {
+  background: rgba(0, 212, 255, 0.15);
+  border-color: #00d4ff;
+}
+
+.alert-checkbox:checked + .alert-checkmark::after {
+  content: '';
+  width: 5px;
+  height: 9px;
+  border: solid #00d4ff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translateY(-1px);
+}
+
+.alert-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+}
+
+.alert-option:hover .alert-label {
+  color: #e2e8f0;
+}

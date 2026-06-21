@@ -1,0 +1,93 @@
+.operator-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.operator-form-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.operator-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.operator-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #64748b;
+}
+
+.operator-input {
+  background: rgba(3, 7, 18, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  height: 42px;
+  padding: 0 14px;
+  color: #f1f5f9;
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.operator-input:focus {
+  border-color: rgba(0, 212, 255, 0.4);
+}
+
+.operator-input.readonly {
+  color: #64748b;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.operator-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+  cursor: pointer;
+}
+
+.operator-select option {
+  background: #0a1628;
+  color: #f1f5f9;
+}
+
+.operator-save-btn {
+  align-self: flex-start;
+  background: rgba(0, 212, 255, 0.12);
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  border-radius: 8px;
+  height: 42px;
+  padding: 0 28px;
+  color: #00d4ff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.operator-save-btn:hover:not(:disabled) {
+  background: #00d4ff;
+  color: #030712;
+}
+
+.operator-save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+  .operator-form-row {
+    grid-template-columns: 1fr;
+  }
+}

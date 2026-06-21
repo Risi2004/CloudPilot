@@ -1,0 +1,47 @@
+.terminal-operations-card {
+  border-color: rgba(239, 68, 68, 0.15);
+}
+
+.terminal-warning {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.terminal-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.terminal-btn {
+  background: transparent;
+  border-radius: 8px;
+  height: 40px;
+  padding: 0 24px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.terminal-btn.purge {
+  border: 1px solid rgba(251, 146, 60, 0.4);
+  color: #fb923c;
+}
+
+.terminal-btn.purge:hover {
+  background: rgba(251, 146, 60, 0.1);
+}
+
+.terminal-btn.kill {
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+.terminal-btn.kill:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
