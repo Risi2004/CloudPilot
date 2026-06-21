@@ -49,6 +49,8 @@ function AdminSidebar({ activeTab, setActiveTab }) {
       navigate('/admin/knowledge-base');
     } else if (itemId === 'support') {
       navigate('/admin/support');
+    } else if (itemId === 'notifications') {
+      navigate('/admin/notifications');
     } else if (itemId === 'audit-logs') {
       navigate('/admin/audit-logs');
     } else if (itemId === 'settings') {
