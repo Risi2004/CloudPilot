@@ -212,3 +212,107 @@
     display: flex;
   }
 }
+
+.profile-btn img {
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Profile Dropdown Styles */
+.db-profile-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 240px;
+  background: rgba(5, 20, 36, 0.95);
+  border: 1px solid rgba(0, 212, 255, 0.20);
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(0, 212, 255, 0.05);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 16px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  animation: dropdownFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.db-dropdown-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 8px 8px 8px;
+}
+
+.db-dropdown-name {
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+.db-dropdown-email {
+  color: #94a3b8;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+.db-dropdown-divider {
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.08);
+  margin: 8px 0;
+}
+
+.db-dropdown-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.db-dropdown-item {
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #cbd5e1;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+}
+
+.db-dropdown-item:hover {
+  background-color: rgba(0, 212, 255, 0.1);
+  color: #00d4ff;
+}
+
+.db-dropdown-item.logout {
+  color: #f87171;
+}
+
+.db-dropdown-item.logout:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+}

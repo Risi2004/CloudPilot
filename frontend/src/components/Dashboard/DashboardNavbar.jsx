@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './DashboardNavbar.css';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // SVG Assets
 import logo from '../../assets/logo-without-background.svg';
@@ -12,6 +14,54 @@ function DashboardNavbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
+  const [avatar, setAvatar] = useState(profileIcon);
+  const [userName, setUserName] = useState('');
+  const [userEmail, setUserEmail] = useState('');
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    const savedKey = localStorage.getItem('profileImageKey');
+    const savedImage = localStorage.getItem('profileImage');
+    const name = localStorage.getItem('fullName') || 'Commander';
+    const mail = localStorage.getItem('email') || 'commander@fleet.io';
+    
+    setUserName(name);
+    setUserEmail(mail);
+
+    if (savedKey) {
+      const filename = savedKey.split('/').pop();
+      setAvatar(`${API_URL}/api/auth/profile-image/${filename}`);
+    } else if (savedImage) {
+      setAvatar(savedImage);
+    } else {
+      setAvatar(profileIcon);
+    }
+  }, []);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.db-profile-menu-container')) {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+    if (isProfileDropdownOpen) {
+      document.addEventListener('click', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [isProfileDropdownOpen]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('email');
+    localStorage.removeItem('fullName');
+    localStorage.removeItem('profileImageKey');
+    localStorage.removeItem('profileImage');
+    setIsProfileDropdownOpen(false);
+    navigate('/login');
+  };
 
   useEffect(() => {
     if (isOverlayOpen) {
@@ -86,9 +136,31 @@ function DashboardNavbar() {
           <button className="db-action-btn notification-btn" onClick={() => console.log('View notifications')}>
             <img src={notificationIcon} alt="Notifications" className="db-action-icon" />
           </button>
-          <button className="db-action-btn profile-btn" onClick={() => navigate('/dashboard')}>
-            <img src={profileIcon} alt="Profile" className="db-action-icon" />
-          </button>
+          
+          <div className="db-profile-menu-container" style={{ position: 'relative' }}>
+            <button className="db-action-btn profile-btn" onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}>
+              <img src={avatar} alt="Profile" className="db-action-icon" />
+            </button>
+            
+            {isProfileDropdownOpen && (
+              <div className="db-profile-dropdown">
+                <div className="db-dropdown-header">
+                  <div className="db-dropdown-name">{userName}</div>
+                  <div className="db-dropdown-email">{userEmail}</div>
+                </div>
+                <div className="db-dropdown-divider"></div>
+                <div className="db-dropdown-actions">
+                  <button className="db-dropdown-item" onClick={() => { setIsProfileDropdownOpen(false); navigate('/dashboard'); }}>
+                    View Profile
+                  </button>
+                  <button className="db-dropdown-item logout" onClick={handleLogout}>
+                    Logout
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <button className="db-menu-btn" onClick={() => setIsOverlayOpen(true)}>
             <img src={menuIcon} alt="Menu" className="db-menu-icon-img" />
           </button>
