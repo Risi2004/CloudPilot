@@ -19,7 +19,7 @@ function DashboardNavbar() {
   const [userEmail, setUserEmail] = useState('');
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
-  useEffect(() => {
+  const loadProfile = () => {
     const savedKey = localStorage.getItem('profileImageKey');
     const savedImage = localStorage.getItem('profileImage');
     const name = localStorage.getItem('fullName') || 'Commander';
@@ -36,6 +36,14 @@ function DashboardNavbar() {
     } else {
       setAvatar(profileIcon);
     }
+  };
+
+  useEffect(() => {
+    loadProfile();
+    window.addEventListener('profileUpdate', loadProfile);
+    return () => {
+      window.removeEventListener('profileUpdate', loadProfile);
+    };
   }, []);
 
   // Close dropdown on click outside
@@ -150,7 +158,7 @@ function DashboardNavbar() {
                 </div>
                 <div className="db-dropdown-divider"></div>
                 <div className="db-dropdown-actions">
-                  <button className="db-dropdown-item" onClick={() => { setIsProfileDropdownOpen(false); navigate('/dashboard'); }}>
+                  <button className="db-dropdown-item" onClick={() => { setIsProfileDropdownOpen(false); navigate('/view-profile'); }}>
                     View Profile
                   </button>
                   <button className="db-dropdown-item logout" onClick={handleLogout}>

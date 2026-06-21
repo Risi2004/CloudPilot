@@ -1,5 +1,6 @@
 const express = require('express');
-const { signup, verifyOtp, resendOtp, login, getProfileImage, verifyToken } = require('../controllers/authController');
+const { signup, verifyOtp, resendOtp, login, getProfileImage, verifyToken, updateProfile } = require('../controllers/authController');
+const { protect } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -9,5 +10,6 @@ router.post('/resend-otp', resendOtp);
 router.post('/login', login);
 router.get('/profile-image/:filename', getProfileImage);
 router.get('/verify', verifyToken);
+router.put('/update-profile', protect, updateProfile);
 
 module.exports = router;

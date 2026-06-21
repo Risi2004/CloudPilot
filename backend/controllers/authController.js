@@ -360,11 +360,90 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
+/**
+ * Update user profile details (Full Name, Password, and Profile Image).
+ */
+const updateProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { fullName, currentPassword, newPassword, profileImage } = req.body;
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    // Optional: If changing password, verify current password first
+    if (newPassword) {
+      if (!currentPassword) {
+        return res.status(400).json({ message: 'Current password is required to change password.' });
+      }
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!isMatch) {
+        return res.status(401).json({ message: 'Invalid current password.' });
+      }
+      if (!passwordRegex.test(newPassword)) {
+        return res.status(400).json({ message: 'New Encryption Key must be at least 8 characters long and contain both letters and numbers.' });
+      }
+      user.password = await bcrypt.hash(newPassword, 10);
+    }
+
+    // Update full name if provided
+    if (fullName) {
+      if (typeof fullName !== 'string' || fullName.trim().length < 2) {
+        return res.status(400).json({ message: 'Full Name must be at least 2 characters long.' });
+      }
+      user.fullName = fullName.trim();
+    }
+
+    // Update profile image if provided
+    if (profileImage) {
+      // Validate image type & size
+      const mimeMatch = profileImage.match(/^data:(image\/(jpeg|jpg|png));base64,/);
+      if (!mimeMatch) {
+        return res.status(400).json({ message: 'Invalid profile image format. Only JPG, JPEG, and PNG are accepted.' });
+      }
+      const base64Data = profileImage.replace(/^data:image\/\w+;base64,/, "");
+      const buffer = Buffer.from(base64Data, 'base64');
+      if (buffer.length > 5 * 1024 * 1024) {
+        return res.status(400).json({ message: 'Profile image size exceeds the 5MB limit.' });
+      }
+
+      // Delete old image if it exists in R2
+      if (user.profileImageKey) {
+        try {
+          await deleteImage(user.profileImageKey);
+        } catch (e) {
+          console.error('Error deleting old profile image:', e);
+        }
+      }
+
+      // Upload new image
+      const newKey = await uploadBase64Image(profileImage, user.email);
+      user.profileImageKey = newKey;
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      message: 'Profile updated successfully.',
+      user: {
+        email: user.email,
+        fullName: user.fullName,
+        profileImageKey: user.profileImageKey
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   signup,
   resendOtp,
   verifyOtp,
   login,
   getProfileImage,
-  verifyToken
+  verifyToken,
+  updateProfile
 };
