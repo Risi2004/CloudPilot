@@ -11,6 +11,7 @@ import WorkspaceEditor from './pages/WorkspaceEditor/WorkspaceEditor';
 import Recommendations from './pages/Recommendations/Recommendations';
 import DeploymentPlan from './pages/DeploymentPlan/DeploymentPlan';
 import AiAssistant from './pages/AiAssistant/AiAssistant';
+import ViewProfile from './pages/ViewProfile/ViewProfile';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import './App.css';
 
@@ -34,6 +35,7 @@ function App() {
         <Route path="/recommendations" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
         <Route path="/deployment-plan" element={<ProtectedRoute><DeploymentPlan /></ProtectedRoute>} />
         <Route path="/ai-assistant" element={<ProtectedRoute><AiAssistant /></ProtectedRoute>} />
+        <Route path="/view-profile" element={<ProtectedRoute><ViewProfile /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );
