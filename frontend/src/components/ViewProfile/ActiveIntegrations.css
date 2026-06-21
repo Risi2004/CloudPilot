@@ -1,0 +1,113 @@
+.integrations-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.integration-tile {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: border-color 0.2s ease;
+}
+
+.integration-tile:hover {
+  border-color: rgba(0, 212, 255, 0.2);
+}
+
+.integration-tile-top {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.integration-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.integration-status-dot {
+  position: absolute;
+  top: -2px;
+  right: -6px;
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 6px #10b981;
+  border: 2px solid #0a1628;
+}
+
+.integration-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.integration-manage-link {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+.integration-manage-link:hover {
+  color: #00d4ff;
+}
+
+.integration-connect-tile {
+  background: transparent;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 100px;
+}
+
+.integration-connect-tile:hover {
+  border-color: rgba(0, 212, 255, 0.35);
+  background: rgba(0, 212, 255, 0.03);
+}
+
+.connect-plus {
+  font-size: 22px;
+  color: #64748b;
+  line-height: 1;
+}
+
+.connect-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #64748b;
+}
+
+.integration-connect-tile:hover .connect-plus,
+.integration-connect-tile:hover .connect-label {
+  color: #00d4ff;
+}
+
+@media (max-width: 900px) {
+  .integrations-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

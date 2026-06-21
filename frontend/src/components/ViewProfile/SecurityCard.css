@@ -1,0 +1,122 @@
+.security-mfa-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.security-mfa-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #f59e0b;
+}
+
+.security-mfa-desc {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.security-mfa-btn {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 6px;
+  height: 36px;
+  padding: 0 16px;
+  color: #f59e0b;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.security-mfa-btn:hover {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.security-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 16px 0;
+}
+
+.security-toggle-password {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+.security-toggle-password:hover {
+  color: #00d4ff;
+}
+
+.security-password-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.security-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.security-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #64748b;
+}
+
+.security-input {
+  background: rgba(3, 7, 18, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  height: 38px;
+  padding: 0 12px;
+  color: #f1f5f9;
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.security-input:focus {
+  border-color: rgba(0, 212, 255, 0.35);
+}
+
+.security-save-btn {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid rgba(165, 180, 252, 0.35);
+  border-radius: 6px;
+  height: 36px;
+  padding: 0 16px;
+  color: #a5b4fc;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.security-save-btn:hover:not(:disabled) {
+  background: rgba(165, 180, 252, 0.1);
+}
+
+.security-save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
