@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
 
@@ -11,15 +11,81 @@ import AuthInput from '../../components/Auth/AuthInput';
 import emailIcon from '../../assets/email.svg';
 import passwordIcon from '../../assets/password.svg';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetch(`${API_URL}/api/auth/verify`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => {
+        if (res.ok) {
+          navigate('/dashboard');
+        } else {
+          localStorage.removeItem('token');
+          localStorage.removeItem('email');
+          localStorage.removeItem('fullName');
+          localStorage.removeItem('profileImageKey');
+          localStorage.removeItem('profileImage');
+        }
+      })
+      .catch(() => {});
+    }
+  }, [navigate]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Initiating login with:', { email, password });
-    navigate('/dashboard');
+    if (isSubmitting) return;
+
+    // Regex check on email
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+      alert('Please enter a valid email address.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const res = await fetch(`${API_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Login failed.');
+      }
+
+      // Store token and user details
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('email', data.user.email);
+      if (data.user.fullName) {
+        localStorage.setItem('fullName', data.user.fullName);
+      } else {
+        localStorage.removeItem('fullName');
+      }
+      if (data.user.profileImageKey) {
+        localStorage.setItem('profileImageKey', data.user.profileImageKey);
+      } else {
+        localStorage.removeItem('profileImageKey');
+      }
+      // Clear any temporary base64 image on new login to avoid stale local images
+      localStorage.removeItem('profileImage');
+
+      navigate('/dashboard');
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const emergencyResetLink = (
@@ -58,16 +124,32 @@ function Login() {
             rightLabelAction={emergencyResetLink}
           />
 
-          <button type="submit" className="auth-submit-btn">
-            INITIATE LOGIN <span className="submit-btn-arrow">→</span>
+          <button type="submit" className="auth-submit-btn" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <span className="button-spinner"></span>
+                INITIATING SESSION...
+              </>
+            ) : (
+              <>
+                INITIATE LOGIN <span className="submit-btn-arrow">→</span>
+              </>
+            )}
           </button>
         </form>
 
         <div className="auth-card-footer">
-          <span className="footer-regular-text">New operator?</span>{' '}
-          <button className="footer-link-btn" onClick={() => navigate('/signup')}>
-            Register Fleet Access
-          </button>
+          <div className="footer-actions">
+            <span className="footer-regular-text">New operator?</span>{' '}
+            <button className="footer-link-btn" onClick={() => navigate('/signup')}>
+              Register Fleet Access
+            </button>
+          </div>
+          <div className="back-home-container">
+            <button className="back-home-btn" onClick={() => navigate('/')}>
+              ← Back to Home
+            </button>
+          </div>
         </div>
       </div>
     </AuthLayout>

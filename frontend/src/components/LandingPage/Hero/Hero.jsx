@@ -1,4 +1,5 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Hero.css';
 import HexGridBackground from './HexGridBackground';
 import awsLogo from '../../../assets/aws.svg';
@@ -8,6 +9,13 @@ import renderLogo from '../../../assets/render.svg';
 import railwayLogo from '../../../assets/railway.svg';
 
 function Hero() {
+  const navigate = useNavigate();
+  const [hasToken, setHasToken] = useState(false);
+
+  useEffect(() => {
+    setHasToken(!!localStorage.getItem('token'));
+  }, []);
+
   return (
     <section className="hero">
       <HexGridBackground />
@@ -24,7 +32,9 @@ function Hero() {
         </p>
 
         <div className="hero-ctas">
-          <button className="cta-primary">Initialize Engine</button>
+          <button className="cta-primary" onClick={() => navigate(hasToken ? '/dashboard' : '/signup')}>
+            {hasToken ? 'Go to Dashboard' : 'Initialize Engine'}
+          </button>
           <button className="cta-secondary">Read Documentation</button>
         </div>
 

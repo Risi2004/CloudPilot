@@ -1,3 +1,276 @@
 @import "../Login/Login.css";
 
-/* Additional signup-specific styles if any can go here */
+/* Additional signup-specific styles */
+.profile-image-upload-section {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 8px;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.profile-image-upload-section:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(0, 212, 255, 0.2);
+}
+
+.profile-image-preview-container {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.profile-image-upload-section:hover .profile-image-preview-container {
+  border-color: #00d4ff;
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.15);
+}
+
+.profile-image-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s ease;
+}
+
+.profile-image-preview.default-placeholder {
+  width: 50%;
+  height: 50%;
+  opacity: 0.4;
+  filter: invert(1);
+}
+
+.profile-upload-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(3, 7, 18, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00d4ff;
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.profile-image-preview-container:hover .profile-upload-overlay {
+  opacity: 1;
+}
+
+.profile-image-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-upload-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #00d4ff;
+  letter-spacing: 0.05em;
+}
+
+.profile-upload-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.profile-upload-btn {
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.profile-upload-btn:hover {
+  background: rgba(0, 212, 255, 0.1);
+  border-color: #00d4ff;
+  color: #00d4ff;
+}
+
+.profile-remove-btn {
+  font-size: 12px;
+  font-weight: 600;
+  color: #ef4444;
+  background: none;
+  border: none;
+  padding: 6px 0;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.profile-remove-btn:hover {
+  color: #f87171;
+  text-decoration: underline;
+}
+
+/* OTP Verification Modal Styles */
+.otp-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(3, 7, 18, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.otp-modal-card {
+  background: rgba(5, 20, 36, 0.95);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 16px;
+  padding: 40px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 0 30px rgba(0, 212, 255, 0.15);
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+
+.otp-modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #00d4ff;
+  margin: 0 0 8px 0;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+}
+
+.otp-modal-subtitle {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0 0 24px 0;
+}
+
+.otp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.otp-input-element {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  height: 48px;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.3em;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.otp-input-element:focus {
+  border-color: #00d4ff;
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.15);
+}
+
+.otp-error-message {
+  font-size: 12px;
+  color: #ef4444;
+  margin: 0;
+}
+
+.otp-status-message {
+  font-size: 12px;
+  color: #10b981;
+  margin: 0;
+}
+
+.otp-submit-btn {
+  background: #00d4ff;
+  border: none;
+  border-radius: 8px;
+  height: 44px;
+  color: #030712;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2);
+}
+
+.otp-submit-btn:hover:not(:disabled) {
+  background: #3ee2ff;
+  box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4);
+}
+
+.otp-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.otp-actions-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.otp-resend-btn {
+  background: none;
+  border: none;
+  color: #00d4ff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  padding: 0;
+}
+
+.otp-resend-btn:hover:not(:disabled) {
+  color: #3ee2ff;
+  text-decoration: underline;
+}
+
+.otp-resend-btn:disabled {
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.otp-cancel-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  padding: 0;
+}
+
+.otp-cancel-btn:hover {
+  color: #ffffff;
+}

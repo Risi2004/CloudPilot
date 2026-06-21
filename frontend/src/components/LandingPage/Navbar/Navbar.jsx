@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Navbar.css';
 import logo from '../../../assets/logo-without-background.svg';
@@ -8,6 +8,11 @@ function Navbar() {
   const navigate = useNavigate();
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
+  const [hasToken, setHasToken] = useState(false);
+
+  useEffect(() => {
+    setHasToken(!!localStorage.getItem('token'));
+  }, []);
 
   useEffect(() => {
     const sections = ['core-intelligence', 'how-it-works', 'pricing', 'faq', 'contact'];
@@ -87,7 +92,9 @@ function Navbar() {
           </div>
           
           <div className="navbar-actions">
-            <button className="signin-btn" onClick={() => navigate('/login')}>Sign In</button>
+            <button className="signin-btn" onClick={() => navigate(hasToken ? '/dashboard' : '/login')}>
+              {hasToken ? 'Dashboard' : 'Sign In'}
+            </button>
             <button className="menu-btn" onClick={() => setIsOverlayOpen(true)}>
               <img src={menuIcon} alt="Menu" className="menu-icon-img" />
             </button>
@@ -114,7 +121,9 @@ function Navbar() {
           <button onClick={() => handleLinkClick('pricing')} className={`overlay-link ${activeSection === 'pricing' ? 'active' : ''}`}>Pricings</button>
           <button onClick={() => handleLinkClick('faq')} className={`overlay-link ${activeSection === 'faq' ? 'active' : ''}`}>FAQ</button>
           <button onClick={() => handleLinkClick('contact')} className={`overlay-link ${activeSection === 'contact' ? 'active' : ''}`}>Contact</button>
-          <button onClick={() => { setIsOverlayOpen(false); navigate('/login'); }} className="overlay-signin-btn">Sign In</button>
+          <button onClick={() => { setIsOverlayOpen(false); navigate(hasToken ? '/dashboard' : '/login'); }} className="overlay-signin-btn">
+            {hasToken ? 'Dashboard' : 'Sign In'}
+          </button>
         </div>
       </div>
     </>
