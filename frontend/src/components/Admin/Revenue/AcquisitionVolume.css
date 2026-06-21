@@ -1,0 +1,93 @@
+.acquisition-volume-card {
+  background: rgba(13, 18, 33, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 24px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.acquisition-header {
+  margin-bottom: 24px;
+}
+
+.acquisition-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f8fafc;
+  margin-bottom: 4px;
+}
+
+.acquisition-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 400;
+}
+
+.acquisition-chart-container {
+  position: relative;
+  width: 100%;
+}
+
+.bar-chart-svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.bar-grid-line {
+  stroke: rgba(255, 255, 255, 0.02);
+  stroke-width: 1px;
+}
+
+.bar-grid-line.base {
+  stroke: rgba(255, 255, 255, 0.05);
+}
+
+.volume-bar {
+  fill: rgba(165, 180, 252, 0.14);
+  transition: fill 0.2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.2s ease, transform 0.2s ease;
+  transform-origin: bottom;
+}
+
+.volume-bar.hovered {
+  fill: #8b5cf6;
+  filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.6));
+}
+
+.bar-hotspot {
+  cursor: pointer;
+}
+
+/* Tooltip overlay */
+.bar-tooltip {
+  position: absolute;
+  background: rgba(8, 12, 24, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 6px 10px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5), 0 0 10px rgba(139, 92, 246, 0.1);
+  pointer-events: none;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+}
+
+.tooltip-date {
+  font-size: 9px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.tooltip-value {
+  font-size: 11px;
+  color: #a78bfa;
+}

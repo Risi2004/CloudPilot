@@ -12,6 +12,15 @@ import Recommendations from './pages/Recommendations/Recommendations';
 import DeploymentPlan from './pages/DeploymentPlan/DeploymentPlan';
 import AiAssistant from './pages/AiAssistant/AiAssistant';
 import ViewProfile from './pages/ViewProfile/ViewProfile';
+import AdminDashboard from './pages/Admin/AdminDashboard/AdminDashboard';
+import UserManagement from './pages/Admin/UserManagement/UserManagement';
+import SubscriptionManagement from './pages/Admin/SubscriptionManagement/SubscriptionManagement';
+import Revenue from './pages/Admin/Revenue/Revenue';
+import AIAgents from './pages/Admin/AIAgents/AIAgents';
+import KnowledgeBase from './pages/Admin/KnowledgeBase/KnowledgeBase';
+import Support from './pages/Admin/Support/Support';
+import AuditLogs from './pages/Admin/AuditLogs/AuditLogs';
+import Settings from './pages/Admin/Settings/Settings';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import './App.css';
 
@@ -36,6 +45,15 @@ function App() {
         <Route path="/deployment-plan" element={<ProtectedRoute><DeploymentPlan /></ProtectedRoute>} />
         <Route path="/ai-assistant" element={<ProtectedRoute><AiAssistant /></ProtectedRoute>} />
         <Route path="/view-profile" element={<ProtectedRoute><ViewProfile /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+        <Route path="/admin/subscriptions" element={<ProtectedRoute><SubscriptionManagement /></ProtectedRoute>} />
+        <Route path="/admin/revenue" element={<ProtectedRoute><Revenue /></ProtectedRoute>} />
+        <Route path="/admin/ai-agents" element={<ProtectedRoute><AIAgents /></ProtectedRoute>} />
+        <Route path="/admin/knowledge-base" element={<ProtectedRoute><KnowledgeBase /></ProtectedRoute>} />
+        <Route path="/admin/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
+        <Route path="/admin/audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
+        <Route path="/admin/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );

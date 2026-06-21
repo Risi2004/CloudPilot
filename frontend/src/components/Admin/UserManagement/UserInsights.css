@@ -1,0 +1,190 @@
+.user-insights-row {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 20px;
+  width: 100%;
+}
+
+.user-insight-card {
+  background: rgba(13, 18, 33, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 24px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.user-insight-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* AI Insights specific styling */
+.ai-insights-card {
+  background: rgba(99, 102, 241, 0.03);
+  border: 1px solid rgba(99, 102, 241, 0.12);
+  gap: 12px;
+}
+
+.ai-insights-card.completed {
+  background: rgba(16, 185, 129, 0.03);
+  border-color: rgba(16, 185, 129, 0.15);
+}
+
+.insight-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.insight-sparkles-icon {
+  width: 15px;
+  height: 15px;
+  opacity: 0.9;
+  filter: invert(41%) sepia(85%) saturate(1474%) hue-rotate(220deg) brightness(101%) contrast(105%);
+}
+
+.ai-insights-card.completed .insight-sparkles-icon {
+  filter: invert(74%) sepia(85%) saturate(3474%) hue-rotate(160deg) brightness(101%) contrast(105%);
+}
+
+.insight-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #c0c1ff;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ai-insights-card.completed .insight-card-title {
+  color: #4edea3;
+}
+
+.insight-card-text {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #c0c1ff;
+}
+
+.insight-spinner {
+  width: 14px;
+  height: 14px;
+  animation: spin-loader 1s linear infinite;
+}
+
+@keyframes spin-loader {
+  to { transform: rotate(360deg); }
+}
+
+.insight-action-btn {
+  background: transparent;
+  border: none;
+  color: #c0c1ff;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  padding: 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  transition: all 0.2s ease;
+}
+
+.insight-action-btn:hover:not(:disabled) {
+  color: #f8fafc;
+}
+
+.insight-action-btn:hover:not(:disabled) .arrow-icon {
+  transform: translateX(3px);
+}
+
+.arrow-icon {
+  font-size: 12px;
+  transition: transform 0.2s ease;
+}
+
+.campaign-success-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #10b981;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+/* Security Event specific styling */
+.security-event-card {
+  justify-content: center;
+}
+
+.security-event-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.security-event-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.security-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ef4444;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.security-event-text {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.blocked-account-text {
+  color: #f1f5f9;
+}
+
+.view-audit-log-btn {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 8px 16px;
+  color: #f1f5f9;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.view-audit-log-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .user-insights-row {
+    grid-template-columns: 1fr;
+  }
+}

@@ -21,13 +21,18 @@ function Login() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
+    const email = localStorage.getItem('email');
     if (token) {
       fetch(`${API_URL}/api/auth/verify`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       .then(res => {
         if (res.ok) {
-          navigate('/dashboard');
+          if (email === 'admin@gmail.com') {
+            navigate('/admin');
+          } else {
+            navigate('/dashboard');
+          }
         } else {
           localStorage.removeItem('token');
           localStorage.removeItem('email');
@@ -80,7 +85,11 @@ function Login() {
       // Clear any temporary base64 image on new login to avoid stale local images
       localStorage.removeItem('profileImage');
 
-      navigate('/dashboard');
+      if (data.user.email === 'admin@gmail.com') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       alert(err.message);
     } finally {
