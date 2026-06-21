@@ -4,6 +4,7 @@ const User = require('../models/User');
 const PendingUser = require('../models/PendingUser');
 const { uploadBase64Image, getPrivateImageStream, deleteImage } = require('../config/s3');
 const { sendOtpEmail, sendOnboardEmail } = require('../utils/mailer');
+const { verifyIdToken } = require('../config/firebase');
 
 // Regular Expressions for field validation
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -448,11 +449,67 @@ const updateProfile = async (req, res, next) => {
   }
 };
 
+/**
+ * Handle session login/registration using Firebase ID Token.
+ */
+const firebaseLogin = async (req, res, next) => {
+  try {
+    const { idToken } = req.body;
+    if (!idToken) {
+      return res.status(400).json({ message: 'Firebase ID token is required.' });
+    }
+
+    // Verify token using our firebase-admin config helper
+    const decodedToken = await verifyIdToken(idToken);
+    const email = decodedToken.email ? decodedToken.email.toLowerCase().trim() : null;
+    const name = decodedToken.name || decodedToken.email || 'CloudPilot Fleet Officer';
+
+    if (!email) {
+      return res.status(400).json({ message: 'Email address not found in Firebase token.' });
+    }
+
+    // Find or create user in MongoDB
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // First-time login / Registration for this OAuth user
+      user = new User({
+        email,
+        fullName: name.trim(),
+        role: email === 'admin@gmail.com' ? 'admin' : 'user',
+        password: undefined // No password since they use OAuth
+      });
+      await user.save();
+    }
+
+    // Generate JWT token for subsequent API requests (consistent with credentials login)
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || 'jwt_secret_fallback',
+      { expiresIn: '7d' }
+    );
+
+    res.status(200).json({
+      message: 'Firebase login successful.',
+      token,
+      user: {
+        email: user.email,
+        fullName: user.fullName,
+        profileImageKey: user.profileImageKey,
+        role: user.role
+      }
+    });
+  } catch (err) {
+    res.status(401).json({ message: 'Authentication failed: ' + err.message });
+  }
+};
+
 module.exports = {
   signup,
   resendOtp,
   verifyOtp,
   login,
+  firebaseLogin,
   getProfileImage,
   verifyToken,
   updateProfile
