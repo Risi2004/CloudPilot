@@ -719,3 +719,176 @@
 .markdown-doc-view .md-empty-space {
   height: 12px;
 }
+
+/* File metadata tooltips */
+.file-name-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.file-tooltip-trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  line-height: 1;
+}
+
+.file-tooltip-trigger:hover {
+  color: #a5b4fc;
+}
+
+.file-tooltip-trigger .info-icon {
+  flex-shrink: 0;
+}
+
+.file-tooltip-content {
+  position: absolute;
+  bottom: 135%;
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 10px 12px;
+  width: 240px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.file-tooltip-trigger:hover .file-tooltip-content {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.file-tooltip-content::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: #0f172a transparent transparent transparent;
+}
+
+.file-tooltip-content::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 7px;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.08) transparent transparent transparent;
+  z-index: -1;
+}
+
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  gap: 8px;
+  width: 100%;
+}
+
+.tooltip-label {
+  color: #64748b;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.tooltip-value {
+  color: #cbd5e1;
+  font-family: monospace;
+  word-break: break-all;
+  text-align: right;
+}
+
+.tooltip-value.select-all {
+  user-select: all;
+  -webkit-user-select: all;
+  -moz-user-select: all;
+  -ms-user-select: all;
+}
+
+.tooltip-value.capitalize {
+  text-transform: capitalize;
+}
+
+/* Upload progress styling */
+.upload-progress-card {
+  max-width: 360px !important;
+  padding: 24px !important;
+  background: #0f172a !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.upload-progress-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.upload-progress-header .kb-modal-title {
+  margin: 0;
+  font-size: 16px;
+}
+
+.upload-progress-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.progress-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.progress-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.progress-file-name {
+  font-size: 12px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 100px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #818cf8);
+  border-radius: 100px;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
