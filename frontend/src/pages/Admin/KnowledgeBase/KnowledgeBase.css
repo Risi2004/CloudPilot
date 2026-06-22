@@ -85,40 +85,23 @@
   animation: spin 1s linear infinite;
 }
 
-/* Split layout columns */
-.knowledge-layout-split {
-  display: grid;
-  grid-template-columns: 1fr 2.3fr;
-  gap: 20px;
+/* Full-width layout rows */
+.knowledge-stats-row {
   width: 100%;
-  align-items: start;
+  margin-bottom: 24px;
 }
 
-.knowledge-left-column {
-  display: flex;
-  flex-direction: column;
-}
-
-.knowledge-right-column {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.right-col-docs-row {
+.knowledge-explorer-row {
   width: 100%;
+  margin-bottom: 24px;
 }
 
-.right-col-insight-row {
+.knowledge-insight-row {
   width: 100%;
 }
 
 /* Responsive adjustments */
 @media (max-width: 1000px) {
-  .knowledge-layout-split {
-    grid-template-columns: 1fr;
-  }
-  
   .knowledge-header-row {
     flex-direction: column;
     align-items: flex-start;

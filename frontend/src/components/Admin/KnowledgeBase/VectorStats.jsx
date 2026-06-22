@@ -1,26 +1,24 @@
 import React from 'react';
 import './VectorStats.css';
 
-function VectorStats({ vectorsCount }) {
-  const displayVectors = vectorsCount ? vectorsCount.toLocaleString() : '1,248,302';
-
+function VectorStats({ storageCapacity }) {
   const STATS_DATA = [
     {
       id: 'total-vectors',
       title: 'Total Vectors',
-      value: displayVectors,
+      value: '-',
       colorClass: 'text-white'
     },
     {
       id: 'storage',
       title: 'Storage Capacity',
-      value: '42.8 GB',
+      value: storageCapacity || '-',
       colorClass: 'text-green'
     },
     {
       id: 'latency',
       title: 'Index Latency',
-      value: '14ms',
+      value: '-',
       colorClass: 'text-cyan'
     }
   ];
