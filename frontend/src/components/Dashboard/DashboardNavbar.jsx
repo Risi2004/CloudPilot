@@ -120,24 +120,7 @@ function DashboardNavbar() {
           >
             Workspace Editor
           </button>
-          <button
-            onClick={() => handleLinkClick('/recommendations')}
-            className={`db-nav-link ${isActive('/recommendations')}`}
-          >
-            Recommendations
-          </button>
-          <button
-            onClick={() => handleLinkClick('/deployment-plan')}
-            className={`db-nav-link ${isActive('/deployment-plan')}`}
-          >
-            Deployment Plan
-          </button>
-          <button
-            onClick={() => handleLinkClick('/ai-assistant')}
-            className={`db-nav-link ${isActive('/ai-assistant')}`}
-          >
-            AI Assistant
-          </button>
+
           <button
             onClick={() => handleLinkClick('/support')}
             className={`db-nav-link ${isActive('/support')}`}
@@ -213,24 +196,7 @@ function DashboardNavbar() {
           >
             Workspace Editor
           </button>
-          <button
-            onClick={() => handleLinkClick('/recommendations')}
-            className={`db-overlay-link ${isActive('/recommendations')}`}
-          >
-            Recommendations
-          </button>
-          <button
-            onClick={() => handleLinkClick('/deployment-plan')}
-            className={`db-overlay-link ${isActive('/deployment-plan')}`}
-          >
-            Deployment Plan
-          </button>
-          <button
-            onClick={() => handleLinkClick('/ai-assistant')}
-            className={`db-overlay-link ${isActive('/ai-assistant')}`}
-          >
-            AI Assistant
-          </button>
+
           <button
             onClick={() => handleLinkClick('/support')}
             className={`db-overlay-link ${isActive('/support')}`}

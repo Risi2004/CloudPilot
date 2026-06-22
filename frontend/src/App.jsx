@@ -9,9 +9,7 @@ import RepositoryAnalysisDetails from './pages/RepositoryAnalysis/RepositoryAnal
 import ArchitectureRecommendation from './pages/ArchitectureRecommendation/ArchitectureRecommendation';
 import CostEstimation from './pages/CostEstimation/CostEstimation';
 import WorkspaceEditor from './pages/WorkspaceEditor/WorkspaceEditor';
-import Recommendations from './pages/Recommendations/Recommendations';
-import DeploymentPlan from './pages/DeploymentPlan/DeploymentPlan';
-import AiAssistant from './pages/AiAssistant/AiAssistant';
+
 import ViewProfile from './pages/ViewProfile/ViewProfile';
 import SupportUser from './pages/Support/SupportUser';
 import AdminDashboard from './pages/Admin/AdminDashboard/AdminDashboard';
@@ -44,9 +42,7 @@ function App() {
         <Route path="/architecture-recommendation" element={<ProtectedRoute><ArchitectureRecommendation /></ProtectedRoute>} />
         <Route path="/cost-estimation" element={<ProtectedRoute><CostEstimation /></ProtectedRoute>} />
         <Route path="/workspace-editor" element={<ProtectedRoute><WorkspaceEditor /></ProtectedRoute>} />
-        <Route path="/recommendations" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
-        <Route path="/deployment-plan" element={<ProtectedRoute><DeploymentPlan /></ProtectedRoute>} />
-        <Route path="/ai-assistant" element={<ProtectedRoute><AiAssistant /></ProtectedRoute>} />
+
         <Route path="/view-profile" element={<ProtectedRoute><ViewProfile /></ProtectedRoute>} />
         <Route path="/support" element={<ProtectedRoute><SupportUser /></ProtectedRoute>} />
         <Route path="/admin/dashboard" element={<ProtectedRoute requireAdmin={true}><AdminDashboard /></ProtectedRoute>} />
