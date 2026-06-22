@@ -57,6 +57,9 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
   const [fileContent, setFileContent] = useState(null);
   const [loadingContent, setLoadingContent] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null); // { current, total, name }
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounter = useRef(0);
+  const abortControllerRef = useRef(null);
 
   // Hidden File input ref
   const fileInputRef = useRef(null);
@@ -228,14 +231,13 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
     }
   };
 
-  // Upload file event handler
-  const handleFileChange = async (e) => {
-    if (!e.target.files || e.target.files.length === 0 || !currentFolder) return;
+  // Shared Upload Routine
+  const processFilesUpload = async (fileList) => {
+    if (!fileList || fileList.length === 0 || !currentFolder) return;
 
-    const rawFiles = Array.from(e.target.files);
+    const rawFiles = Array.from(fileList);
     if (rawFiles.length > 10) {
       setErrorMessage('You can only upload up to 10 files at a time.');
-      e.target.value = '';
       return;
     }
 
@@ -247,25 +249,39 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
       const fileExt = '.' + file.name.split('.').pop().toLowerCase();
       if (!acceptedExtensions.includes(fileExt)) {
         setErrorMessage(`Unrecognized or unsupported file format: ${file.name}. Only PDF, MD, TXT, JSON, YAML, and TF files are supported.`);
-        e.target.value = '';
         return;
       }
       if (file.size > maxSizeBytes) {
         setErrorMessage(`File exceeds size limit (25MB): ${file.name} (${(file.size / (1024 * 1024)).toFixed(1)} MB).`);
-        e.target.value = '';
         return;
       }
     }
 
     setIsSubmitting(true);
     setErrorMessage('');
+
+    // Create AbortController for cancellation
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
     
     let uploadedCount = 0;
 
     const uploadSingleFile = (file) => {
       return new Promise((resolve, reject) => {
+        if (signal.aborted) {
+          return reject(new DOMException('Aborted', 'AbortError'));
+        }
+
         const reader = new FileReader();
+
+        const onAbort = () => {
+          reader.abort();
+          reject(new DOMException('Aborted', 'AbortError'));
+        };
+        signal.addEventListener('abort', onAbort);
+
         reader.onload = async () => {
+          signal.removeEventListener('abort', onAbort);
           try {
             const base64Data = reader.result;
             const fileSizeStr = file.size > 1024 * 1024 
@@ -297,7 +313,8 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
                 fileData: base64Data,
                 size: fileSizeStr,
                 fileType
-              })
+              }),
+              signal
             });
 
             const uploadData = await uploadRes.json();
@@ -309,7 +326,12 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
             reject(err);
           }
         };
-        reader.onerror = () => reject(new Error(`Error reading ${file.name}`));
+
+        reader.onerror = () => {
+          signal.removeEventListener('abort', onAbort);
+          reject(new Error(`Error reading ${file.name}`));
+        };
+
         reader.readAsDataURL(file);
       });
     };
@@ -317,6 +339,9 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
     try {
       let idx = 0;
       for (const file of rawFiles) {
+        if (signal.aborted) {
+          throw new DOMException('Aborted', 'AbortError');
+        }
         setUploadStatus({ current: idx + 1, total: rawFiles.length, name: file.name });
         await uploadSingleFile(file);
         uploadedCount++;
@@ -324,13 +349,69 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
       }
       setSuccessMessage(`Successfully uploaded and indexed ${uploadedCount} file(s)!`);
     } catch (err) {
-      setErrorMessage(err.message || 'Error uploading files.');
+      if (err.name === 'AbortError') {
+        setErrorMessage('Upload process canceled.');
+      } else {
+        setErrorMessage(err.message || 'Error uploading files.');
+      }
     } finally {
       setIsSubmitting(false);
       setUploadStatus(null);
-      e.target.value = ''; // clear input
+      abortControllerRef.current = null;
       fetchContents();
       if (onContentsChanged) onContentsChanged();
+    }
+  };
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      processFilesUpload(e.target.files);
+    }
+    e.target.value = ''; // clear input
+  };
+
+  const handleCancelUpload = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+  };
+
+  // Drag and drop event handlers
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current++;
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current === 0) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    dragCounter.current = 0;
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      if (!currentFolder) {
+        setErrorMessage('Please navigate into a directory folder before uploading files.');
+        return;
+      }
+      processFilesUpload(e.dataTransfer.files);
     }
   };
 
@@ -379,7 +460,27 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
   );
 
   return (
-    <div className="connectors-panel-card full-width-explorer">
+    <div 
+      className="connectors-panel-card full-width-explorer"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* Drag and Drop Zone Overlay */}
+      {isDragging && (
+        <div className="explorer-drag-overlay">
+          <div className="drag-overlay-message">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="drag-icon-pulse">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <span className="drag-overlay-title">Drop Files Here</span>
+            <span className="drag-overlay-sub">Upload files directly to {currentFolder ? `"${currentFolder.name}"` : 'active folder'}</span>
+          </div>
+        </div>
+      )}
       {/* Hidden file input */}
       <input 
         type="file" 
@@ -749,6 +850,14 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
                   style={{ width: `${(uploadStatus.current / uploadStatus.total) * 100}%` }}
                 />
               </div>
+              <button 
+                type="button" 
+                className="kb-modal-btn cancel abort-upload-btn"
+                style={{ width: '100%', marginTop: '12px' }}
+                onClick={handleCancelUpload}
+              >
+                Cancel Upload
+              </button>
             </div>
           </div>
         </div>,
