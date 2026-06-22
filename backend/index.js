@@ -17,6 +17,7 @@ app.use(express.json({ limit: '10mb' })); // Support larger base64 avatar upload
 const authRoutes = require('./routes/authRoutes');
 app.use('/api/auth', authRoutes);
 app.use('/api/tickets', require('./routes/ticketRoutes'));
+app.use('/api/knowledge', require('./routes/knowledgeRoutes'));
 
 // Base Route
 app.get('/', (req, res) => {

@@ -1,4 +1,4 @@
-const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, CopyObjectCommand } = require('@aws-sdk/client-s3');
 
 const s3Client = new S3Client({
   region: 'auto',
@@ -89,9 +89,195 @@ const deleteImage = async (key) => {
   await s3Client.send(command);
 };
 
+/**
+ * Creates an empty folder directory object in Cloudflare R2
+ * @param {string} folderName - Name of the data source
+ * @returns {Promise<string>} - The folder key path
+ */
+const createFolder = async (folderKey) => {
+  const bucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME;
+  if (!bucketName) {
+    throw new Error('CLOUDFLARE_R2_BUCKET_NAME is not configured.');
+  }
+
+  const command = new PutObjectCommand({
+    Bucket: bucketName,
+    Key: folderKey,
+    Body: '',
+    ContentType: 'application/x-directory'
+  });
+
+  await s3Client.send(command);
+  return folderKey;
+};
+
+
+/**
+ * Uploads a base64 encoded document to a folder path in Cloudflare R2
+ * @param {string} base64String - DataURL base64 document or raw base64 string
+ * @param {string} folderKey - Destination folder key path
+ * @param {string} fileName - Document filename
+ * @param {string} mimeType - Document mime type
+ * @returns {Promise<string>} - The uploaded object key path
+ */
+const uploadKnowledgeFile = async (base64String, folderKey, fileName, mimeType) => {
+  const bucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME;
+  if (!bucketName) {
+    throw new Error('CLOUDFLARE_R2_BUCKET_NAME is not configured.');
+  }
+
+  let buffer;
+  let finalMimeType = mimeType || 'application/octet-stream';
+
+  if (base64String.startsWith('data:')) {
+    const mimeTypeMatch = base64String.match(/^data:([^;]+);base64,/);
+    if (mimeTypeMatch) {
+      finalMimeType = mimeTypeMatch[1];
+    }
+    const base64Data = base64String.replace(/^data:[^;]+;base64,/, "");
+    buffer = Buffer.from(base64Data, 'base64');
+  } else {
+    buffer = Buffer.from(base64String, 'base64');
+  }
+
+  let cleanFolderKey = folderKey;
+  if (!cleanFolderKey.endsWith('/')) {
+    cleanFolderKey += '/';
+  }
+
+  const key = `${cleanFolderKey}${fileName}`;
+
+  const command = new PutObjectCommand({
+    Bucket: bucketName,
+    Key: key,
+    Body: buffer,
+    ContentType: finalMimeType
+  });
+
+  await s3Client.send(command);
+  return key;
+};
+
+/**
+ * Lists all folders (common prefixes) inside the knowledge-base/ folder in Cloudflare R2
+ * @returns {Promise<string[]>} - List of folder names
+ */
+const listR2Folders = async () => {
+  const bucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME;
+  if (!bucketName) {
+    throw new Error('CLOUDFLARE_R2_BUCKET_NAME is not configured.');
+  }
+
+  const command = new ListObjectsV2Command({
+    Bucket: bucketName,
+    Prefix: 'knowledge-base/',
+    Delimiter: '/'
+  });
+
+  const response = await s3Client.send(command);
+  const folders = [];
+
+  if (response.CommonPrefixes) {
+    for (const cp of response.CommonPrefixes) {
+      const parts = cp.Prefix.split('/');
+      const folderName = parts[parts.length - 2];
+      if (folderName) {
+        folders.push(folderName);
+      }
+    }
+  }
+
+  return folders;
+};
+
+/**
+ * Deletes all objects under a folder key prefix in Cloudflare R2
+ * @param {string} folderKey - Folder key path (ends with slash)
+ */
+const deleteR2Folder = async (folderKey) => {
+  const bucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME;
+  if (!bucketName) {
+    throw new Error('CLOUDFLARE_R2_BUCKET_NAME is not configured.');
+  }
+
+  const listCommand = new ListObjectsV2Command({
+    Bucket: bucketName,
+    Prefix: folderKey
+  });
+
+  const listResponse = await s3Client.send(listCommand);
+
+  if (listResponse.Contents && listResponse.Contents.length > 0) {
+    for (const obj of listResponse.Contents) {
+      const deleteCommand = new DeleteObjectCommand({
+        Bucket: bucketName,
+        Key: obj.Key
+      });
+      await s3Client.send(deleteCommand);
+    }
+  }
+};
+
+/**
+ * Renames (moves) all objects from old folder key prefix to a new folder key prefix in Cloudflare R2
+ * @param {string} oldFolderKey - Old folder key path (ends with slash)
+ * @param {string} newFolderKey - New folder key path (ends with slash)
+ */
+const renameR2Folder = async (oldFolderKey, newFolderKey) => {
+  const bucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME;
+  if (!bucketName) {
+    throw new Error('CLOUDFLARE_R2_BUCKET_NAME is not configured.');
+  }
+
+  const listCommand = new ListObjectsV2Command({
+    Bucket: bucketName,
+    Prefix: oldFolderKey
+  });
+
+  const listResponse = await s3Client.send(listCommand);
+
+  if (listResponse.Contents && listResponse.Contents.length > 0) {
+    for (const obj of listResponse.Contents) {
+      const oldKey = obj.Key;
+      const relativePath = oldKey.substring(oldFolderKey.length);
+      const newKey = `${newFolderKey}${relativePath}`;
+
+      // Copy object
+      const copyCommand = new CopyObjectCommand({
+        Bucket: bucketName,
+        CopySource: `${bucketName}/${oldKey}`,
+        Key: newKey
+      });
+      await s3Client.send(copyCommand);
+
+      // Delete old object
+      const deleteCommand = new DeleteObjectCommand({
+        Bucket: bucketName,
+        Key: oldKey
+      });
+      await s3Client.send(deleteCommand);
+    }
+  }
+
+  // Ensure new folder marker exists
+  const folderMarkerCommand = new PutObjectCommand({
+    Bucket: bucketName,
+    Key: newFolderKey,
+    Body: '',
+    ContentType: 'application/x-directory'
+  });
+  await s3Client.send(folderMarkerCommand);
+};
+
 module.exports = {
   s3Client,
   uploadBase64Image,
   getPrivateImageStream,
-  deleteImage
+  deleteImage,
+  createFolder,
+  uploadKnowledgeFile,
+  listR2Folders,
+  deleteR2Folder,
+  renameR2Folder
 };
+
