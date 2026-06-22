@@ -173,7 +173,7 @@ function TicketsList({ activeTicketId, onSelectTicket, ticketsListOverride }) {
         <div className="mini-metrics-box">
           <div className="mini-metric">
             <span className="mini-lbl">AVG. RESPONSE</span>
-            <span className="mini-val">14m</span>
+            <span className="mini-val">24 Hours</span>
           </div>
           <div className="mini-divider" />
           <div className="mini-metric">
@@ -214,7 +214,9 @@ function TicketsList({ activeTicketId, onSelectTicket, ticketsListOverride }) {
                   </td>
                   <td>
                     <div className="ticket-user-bubble-cell">
-                      <span className="user-initials-bubble">{t.initials}</span>
+                      <span className="user-initials-bubble">
+                        {t.initials || (t.userName ? t.userName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : '??')}
+                      </span>
                       <span className="user-name-text">{t.userName}</span>
                     </div>
                   </td>

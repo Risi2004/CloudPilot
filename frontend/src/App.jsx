@@ -13,6 +13,7 @@ import Recommendations from './pages/Recommendations/Recommendations';
 import DeploymentPlan from './pages/DeploymentPlan/DeploymentPlan';
 import AiAssistant from './pages/AiAssistant/AiAssistant';
 import ViewProfile from './pages/ViewProfile/ViewProfile';
+import SupportUser from './pages/Support/SupportUser';
 import AdminDashboard from './pages/Admin/AdminDashboard/AdminDashboard';
 import UserManagement from './pages/Admin/UserManagement/UserManagement';
 import SubscriptionManagement from './pages/Admin/SubscriptionManagement/SubscriptionManagement';
@@ -47,6 +48,7 @@ function App() {
         <Route path="/deployment-plan" element={<ProtectedRoute><DeploymentPlan /></ProtectedRoute>} />
         <Route path="/ai-assistant" element={<ProtectedRoute><AiAssistant /></ProtectedRoute>} />
         <Route path="/view-profile" element={<ProtectedRoute><ViewProfile /></ProtectedRoute>} />
+        <Route path="/support" element={<ProtectedRoute><SupportUser /></ProtectedRoute>} />
         <Route path="/admin/dashboard" element={<ProtectedRoute requireAdmin={true}><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/dashbaord" element={<ProtectedRoute requireAdmin={true}><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/users" element={<ProtectedRoute requireAdmin={true}><UserManagement /></ProtectedRoute>} />
