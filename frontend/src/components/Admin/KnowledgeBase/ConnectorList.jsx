@@ -56,6 +56,7 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
   const [viewingFile, setViewingFile] = useState(null);
   const [fileContent, setFileContent] = useState(null);
   const [loadingContent, setLoadingContent] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState(null); // { current, total, name }
 
   // Hidden File input ref
   const fileInputRef = useRef(null);
@@ -234,7 +235,26 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
     const rawFiles = Array.from(e.target.files);
     if (rawFiles.length > 10) {
       setErrorMessage('You can only upload up to 10 files at a time.');
+      e.target.value = '';
       return;
+    }
+
+    // Pre-Upload Validation
+    const acceptedExtensions = ['.pdf', '.md', '.txt', '.json', '.yaml', '.yml', '.tf'];
+    const maxSizeBytes = 25 * 1024 * 1024; // 25 MB
+
+    for (const file of rawFiles) {
+      const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+      if (!acceptedExtensions.includes(fileExt)) {
+        setErrorMessage(`Unrecognized or unsupported file format: ${file.name}. Only PDF, MD, TXT, JSON, YAML, and TF files are supported.`);
+        e.target.value = '';
+        return;
+      }
+      if (file.size > maxSizeBytes) {
+        setErrorMessage(`File exceeds size limit (25MB): ${file.name} (${(file.size / (1024 * 1024)).toFixed(1)} MB).`);
+        e.target.value = '';
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -295,15 +315,19 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
     };
 
     try {
+      let idx = 0;
       for (const file of rawFiles) {
+        setUploadStatus({ current: idx + 1, total: rawFiles.length, name: file.name });
         await uploadSingleFile(file);
         uploadedCount++;
+        idx++;
       }
       setSuccessMessage(`Successfully uploaded and indexed ${uploadedCount} file(s)!`);
     } catch (err) {
       setErrorMessage(err.message || 'Error uploading files.');
     } finally {
       setIsSubmitting(false);
+      setUploadStatus(null);
       e.target.value = ''; // clear input
       fetchContents();
       if (onContentsChanged) onContentsChanged();
@@ -510,7 +534,30 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
                     {FILE_ICONS[file.fileType] || FILE_ICONS.pdf}
                   </div>
                   <div className="connector-text-group">
-                    <span className="connector-name file-name">{file.name}</span>
+                    <div className="file-name-container">
+                      <span className="connector-name file-name">{file.name}</span>
+                      <div className="file-tooltip-trigger" onClick={(e) => e.stopPropagation()}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="info-icon">
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <line x1="12" y1="16" x2="12" y2="12"></line>
+                          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                        <div className="file-tooltip-content">
+                          <div className="tooltip-row">
+                            <span className="tooltip-label">ID:</span>
+                            <span className="tooltip-value select-all">{file._id}</span>
+                          </div>
+                          <div className="tooltip-row">
+                            <span className="tooltip-label">Uploaded:</span>
+                            <span className="tooltip-value">{new Date(file.uploadedAt || file.createdAt || Date.now()).toLocaleString()}</span>
+                          </div>
+                          <div className="tooltip-row">
+                            <span className="tooltip-label">Type:</span>
+                            <span className="tooltip-value capitalize">{file.fileType}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                     <span className="connector-sub file-size">{file.size}</span>
                   </div>
                 </div>
@@ -676,6 +723,33 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
               <circle cx="12" cy="12" r="10" strokeDasharray="40 20" strokeLinecap="round" />
             </svg>
             <span style={{ color: '#94a3b8', fontSize: '13px' }}>Streaming object from Cloudflare R2...</span>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Global loading overlay for batch uploads */}
+      {uploadStatus && createPortal(
+        <div className="kb-modal-overlay" style={{ zIndex: 9999 }}>
+          <div className="kb-modal-card upload-progress-card">
+            <div className="upload-progress-header">
+              <svg className="kb-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                <circle cx="12" cy="12" r="10" strokeDasharray="40 20" strokeLinecap="round" />
+              </svg>
+              <h3 className="kb-modal-title">Batch Indexing Progress</h3>
+            </div>
+            <div className="upload-progress-body">
+              <div className="progress-details">
+                <span className="progress-count">Uploading file {uploadStatus.current} of {uploadStatus.total}</span>
+                <span className="progress-file-name">{uploadStatus.name}</span>
+              </div>
+              <div className="progress-bar-container">
+                <div 
+                  className="progress-bar-fill" 
+                  style={{ width: `${(uploadStatus.current / uploadStatus.total) * 100}%` }}
+                />
+              </div>
+            </div>
           </div>
         </div>,
         document.body
