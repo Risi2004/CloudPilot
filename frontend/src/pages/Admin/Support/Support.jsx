@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Support.css';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // Layout and widgets
 import AdminSidebar from '../../../components/Admin/AdminDashboard/AdminSidebar';
@@ -99,67 +101,169 @@ const PRIORITY_ORDER = {
 };
 
 function Support() {
-  const [tickets, setTickets] = useState(INITIAL_TICKETS);
-  const [activeTicketId, setActiveTicketId] = useState('#CP-8922');
+  const [tickets, setTickets] = useState([]);
+  const [activeTicketId, setActiveTicketId] = useState(null);
   const [sortBy, setSortBy] = useState('newest');
+  const [loading, setLoading] = useState(true);
 
-  const handleResolveTicket = (ticketId) => {
-    setTickets((prev) =>
-      prev.map((t) => (t.id === ticketId ? { ...t, status: 'resolved' } : t))
-    );
-    alert(`Ticket ${ticketId} resolved successfully.`);
-  };
-
-  const handleApplyFix = (ticketId) => {
-    setTickets((prev) =>
-      prev.map((t) => (t.id === ticketId ? { ...t, status: 'resolved' } : t))
-    );
-    alert(`AI Copilot recommendation applied. Ticket ${ticketId} resolved.`);
-  };
-
-  const handleActionLog = (msg) => {
-    if (msg.includes('assigned to Admin User')) {
-      setTickets((prev) =>
-        prev.map((t) => (t.id === activeTicketId ? { ...t, admin: 'Admin User' } : t))
-      );
+  const fetchTickets = async (selectFirst = false) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/tickets`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTickets(data);
+        if (data.length > 0) {
+          if (selectFirst || !activeTicketId || !data.some(t => t.id === activeTicketId)) {
+            setActiveTicketId(data[0].id);
+          }
+        } else {
+          setActiveTicketId(null);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching admin tickets:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleCreateTicket = () => {
+  useEffect(() => {
+    fetchTickets();
+  }, []);
+
+  // Poll for tickets/messages update every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchTickets();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [activeTicketId]);
+
+  const activeTicket = tickets.find((t) => t.id === activeTicketId);
+
+  const handleResolveTicket = async (ticketId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/tickets/${encodeURIComponent(ticketId)}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: 'resolved' })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to resolve ticket.');
+      await fetchTickets();
+      alert(`Ticket ${ticketId} resolved successfully.`);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleCloseTicket = async (ticketId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/tickets/${encodeURIComponent(ticketId)}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: 'closed' })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to close ticket.');
+      await fetchTickets();
+      alert(`Ticket ${ticketId} closed successfully.`);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleSendMessage = async (text) => {
+    if (!activeTicketId) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/tickets/${encodeURIComponent(activeTicketId)}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ text })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to send message.');
+      await fetchTickets();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleApplyFix = async (ticketId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/tickets/${encodeURIComponent(ticketId)}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: 'resolved' })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to apply fix.');
+      await fetchTickets();
+      alert(`AI Copilot recommendation applied. Ticket ${ticketId} resolved.`);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleActionLog = (msg) => {
+    console.log('Action log:', msg);
+  };
+
+  const handleCreateTicket = async () => {
     const subject = prompt('Enter ticket subject:');
     if (!subject) return;
     const desc = prompt('Enter ticket description:');
     if (!desc) return;
     const priorityVal = prompt('Enter ticket priority (Urgent, High, Med, Low):', 'Med');
     if (!priorityVal) return;
-    const userName = prompt('Enter user name:', 'Admin Operator');
-    if (!userName) return;
-
-    const initials = userName
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .substring(0, 2);
-    const newId = `#CP-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const formattedPriority =
       priorityVal.charAt(0).toUpperCase() + priorityVal.slice(1).toLowerCase();
 
-    const newTicket = {
-      id: newId,
-      subject,
-      desc,
-      initials,
-      userName,
-      priority: formattedPriority,
-      admin: 'Unassigned',
-      status: 'open'
-    };
-
-    setTickets((prev) => [newTicket, ...prev]);
-    setActiveTicketId(newId);
-    alert(`Ticket ${newId} created successfully.`);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/tickets`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          subject,
+          desc,
+          priority: formattedPriority
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to create ticket.');
+      
+      await fetchTickets();
+      if (data.ticket) {
+        setActiveTicketId(data.ticket.id);
+      }
+      alert(`Ticket created successfully.`);
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   // Sort logic
@@ -171,8 +275,8 @@ function Support() {
     } else if (sortBy === 'id') {
       return a.id.localeCompare(b.id);
     } else {
-      // 'newest' (order as initialized/appended)
-      return 0; // Maintain natural state ordering (newest is prepended in handleCreateTicket)
+      // 'newest'
+      return new Date(b.createdAt) - new Date(a.createdAt);
     }
   });
 
@@ -231,11 +335,15 @@ function Support() {
           <div className="support-layout-split">
             {/* Left Column: Tickets log Table list */}
             <div className="support-list-column">
-              <TicketsList
-                activeTicketId={activeTicketId}
-                onSelectTicket={setActiveTicketId}
-                ticketsListOverride={sortedTickets}
-              />
+              {loading ? (
+                <div style={{ color: '#94a3b8', padding: '20px', textAlign: 'center' }}>Loading tickets...</div>
+              ) : (
+                <TicketsList
+                  activeTicketId={activeTicketId}
+                  onSelectTicket={setActiveTicketId}
+                  ticketsListOverride={sortedTickets}
+                />
+              )}
             </div>
 
             {/* Right Column: AI Suggestion and Chat dialogues */}
@@ -245,8 +353,10 @@ function Support() {
                 onApplyFix={handleApplyFix}
               />
               <TicketChat
-                activeTicketId={activeTicketId}
+                activeTicket={activeTicket}
+                onSendMessage={handleSendMessage}
                 onResolveTicket={handleResolveTicket}
+                onCloseTicket={handleCloseTicket}
                 onActionLog={handleActionLog}
               />
             </div>

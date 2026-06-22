@@ -138,6 +138,12 @@ function DashboardNavbar() {
           >
             AI Assistant
           </button>
+          <button
+            onClick={() => handleLinkClick('/support')}
+            className={`db-nav-link ${isActive('/support')}`}
+          >
+            Support
+          </button>
         </div>
 
         {/* Right Side Icons */}
@@ -224,6 +230,12 @@ function DashboardNavbar() {
             className={`db-overlay-link ${isActive('/ai-assistant')}`}
           >
             AI Assistant
+          </button>
+          <button
+            onClick={() => handleLinkClick('/support')}
+            className={`db-overlay-link ${isActive('/support')}`}
+          >
+            Support
           </button>
         </div>
       </div>
