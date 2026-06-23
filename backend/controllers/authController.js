@@ -221,7 +221,8 @@ const verifyOtp = async (req, res, next) => {
       fullName: pendingUser.fullName,
       password: pendingUser.password,
       profileImageKey: pendingUser.profileImageKey,
-      role: pendingUser.email === 'admin@gmail.com' ? 'admin' : 'user'
+      role: pendingUser.email === 'admin@gmail.com' ? 'admin' : 'user',
+      plan: 'Free'
     });
 
     await user.save();
@@ -246,7 +247,8 @@ const verifyOtp = async (req, res, next) => {
         email: user.email,
         fullName: user.fullName,
         profileImageKey: user.profileImageKey,
-        role: user.role
+        role: user.role,
+        plan: user.plan
       }
     });
   } catch (err) {
@@ -306,7 +308,8 @@ const login = async (req, res, next) => {
         email: user.email,
         fullName: user.fullName,
         profileImageKey: user.profileImageKey,
-        role: user.role
+        role: user.role,
+        plan: user.plan
       }
     });
   } catch (err) {
@@ -371,7 +374,8 @@ const verifyToken = async (req, res, next) => {
         email: user.email,
         fullName: user.fullName,
         profileImageKey: user.profileImageKey,
-        role: user.role
+        role: user.role,
+        plan: user.plan
       }
     });
   } catch (err) {
@@ -449,7 +453,8 @@ const updateProfile = async (req, res, next) => {
       user: {
         email: user.email,
         fullName: user.fullName,
-        profileImageKey: user.profileImageKey
+        profileImageKey: user.profileImageKey,
+        plan: user.plan
       }
     });
   } catch (err) {
@@ -489,7 +494,8 @@ const firebaseLogin = async (req, res, next) => {
         email,
         fullName: name.trim(),
         role: email === 'admin@gmail.com' ? 'admin' : 'user',
-        password: undefined // No password since they use OAuth
+        password: undefined, // No password since they use OAuth
+        plan: 'Free'
       });
       await user.save();
     }
@@ -508,7 +514,8 @@ const firebaseLogin = async (req, res, next) => {
         email: user.email,
         fullName: user.fullName,
         profileImageKey: user.profileImageKey,
-        role: user.role
+        role: user.role,
+        plan: user.plan
       }
     });
   } catch (err) {

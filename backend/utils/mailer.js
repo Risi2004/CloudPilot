@@ -275,10 +275,95 @@ const sendDeletionEmail = async (email, fullName) => {
   }
 };
 
+const sendPaymentReceiptEmail = async (email, fullName, planName, amount, currency, orderId) => {
+  const transporter = getTransporter();
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  
+  const mailOptions = {
+    from: process.env.SMTP_FROM || '"CloudPilot" <no-reply@cloudpilot.io>',
+    to: email,
+    subject: `Receipt for your CloudPilot ${planName} Upgrade (Order: ${orderId})`,
+    text: `Hello ${fullName},\n\nThank you for upgrading your subscription plan to ${planName}. We have received your payment of ${amount} ${currency} (Order: ${orderId}). Your subscription features are now active.`,
+    html: `
+      <div style="background-color: #030712; color: #ffffff; padding: 40px; font-family: sans-serif; border-radius: 12px; max-width: 600px; margin: 0 auto; border: 1px solid #1e293b;">
+        <h2 style="color: #00d4ff; font-size: 24px; font-weight: bold; border-bottom: 1px solid #1e293b; padding-bottom: 10px; margin-bottom: 20px;">CLOUDPILOT BILLING SYSTEM</h2>
+        
+        <p style="color: #f1f5f9; font-size: 16px; font-weight: 600; margin-top: 20px;">Hello ${fullName},</p>
+        <p style="color: #94a3b8; font-size: 15px; line-height: 1.6;">
+          Your payment has been successfully processed, and your account has been upgraded to the <strong>${planName} Plan</strong>.
+        </p>
+
+        <!-- Digital Receipt Box -->
+        <div style="background: rgba(0, 212, 255, 0.03); border: 1px solid rgba(0, 212, 255, 0.15); border-radius: 8px; padding: 25px; margin: 25px 0;">
+          <h3 style="color: #00d4ff; margin: 0 0 15px 0; font-size: 16px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(0, 212, 255, 0.1); padding-bottom: 10px;">Digital Payment Receipt</h3>
+          
+          <table style="width: 100%; border-collapse: collapse; color: #94a3b8; font-size: 14px;">
+            <tr>
+              <td style="padding: 6px 0; font-weight: 600; color: #f1f5f9; width: 40%;">Order ID:</td>
+              <td style="padding: 6px 0; color: #e2e8f0; font-family: monospace;">${orderId}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-weight: 600; color: #f1f5f9;">Date:</td>
+              <td style="padding: 6px 0; color: #e2e8f0;">${currentDate}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-weight: 600; color: #f1f5f9;">Upgrade Tier:</td>
+              <td style="padding: 6px 0; color: #e2e8f0; font-weight: bold;">${planName} Plan</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-weight: 600; color: #f1f5f9;">Billing Period:</td>
+              <td style="padding: 6px 0; color: #e2e8f0;">Monthly Recurring</td>
+            </tr>
+            <tr>
+              <td style="padding: 15px 0 6px 0; font-weight: bold; color: #00d4ff; font-size: 16px; border-top: 1px solid rgba(0, 212, 255, 0.1);">Total Amount:</td>
+              <td style="padding: 15px 0 6px 0; color: #00d4ff; font-size: 16px; font-weight: bold; border-top: 1px solid rgba(0, 212, 255, 0.1);">${amount} ${currency}</td>
+            </tr>
+          </table>
+        </div>
+
+        <p style="color: #94a3b8; font-size: 15px; line-height: 1.6;">
+          Your billing dashboard has been updated to reflect this transaction. You can manage integrations, configure analyses, and invoke your AI agent fleet right away.
+        </p>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="http://localhost:5173/dashboard" style="background-color: #00d4ff; color: #030712; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2); display: inline-block;">
+            LAUNCH MISSION CONTROL
+          </a>
+        </div>
+        
+        <p style="color: #64748b; font-size: 12px; line-height: 1.5; border-top: 1px solid #1e293b; padding-top: 15px; margin-top: 30px;">
+          This is an automated payment receipt. Please retain this email for your records. For questions regarding your billing transaction, contact support.
+        </p>
+      </div>
+    `
+  };
+
+  if (!transporter) {
+    console.log(`[MOCK EMAIL] To: ${email} | Subject: ${mailOptions.subject} | Payment confirmation and receipt email logged`);
+    return;
+  }
+
+  try {
+    await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.error('SMTP receipt email dispatch failed. Error:', error.message);
+    console.warn('-------- SMTP FAIL FALLBACK --------');
+    console.warn(`[MOCK EMAIL] To: ${email} | Subject: ${mailOptions.subject} | Payment confirmation and receipt email logged`);
+    console.warn('------------------------------------');
+  }
+};
+
 module.exports = {
   sendOtpEmail,
   sendOnboardEmail,
   sendSuspensionEmail,
   sendReactivationEmail,
-  sendDeletionEmail
+  sendDeletionEmail,
+  sendPaymentReceiptEmail
 };

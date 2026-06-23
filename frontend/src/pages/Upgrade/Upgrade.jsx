@@ -21,7 +21,18 @@ function Upgrade() {
     </svg>
   );
 
-  // Fetch plans from DB
+  // Load PayHere script and fetch plans from DB
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://www.payhere.lk/lib/payhere.js';
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
   useEffect(() => {
     const fetchPlans = async () => {
       setLoading(true);
@@ -75,8 +86,90 @@ function Upgrade() {
     }
   };
 
-  const handleSelectPlan = (planName) => {
-    alert(`Plan Selected: ${planName}\nBilling system integrations will launch next.`);
+  const handleSelectPlan = async (plan) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please log in to upgrade your plan.');
+        return;
+      }
+
+      if (plan.price === 0) {
+        // Free plan - no checkout required
+        const res = await fetch(`${API_URL}/api/payments/subscribe-free`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ planId: plan._id })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert(`Successfully subscribed to ${plan.name} plan!`);
+          window.location.href = '/dashboard';
+        } else {
+          alert(data.message || 'Failed to subscribe to Free plan.');
+        }
+      } else {
+        // Paid plan - call PayHere initiation endpoint
+        const res = await fetch(`${API_URL}/api/payments/initiate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            planId: plan._id,
+            promoCode: appliedPromo ? appliedPromo.code : undefined
+          })
+        });
+        const payConfig = await res.json();
+        if (!res.ok) {
+          throw new Error(payConfig.message || 'Failed to initiate payment.');
+        }
+
+        // Configure callback events for PayHere
+        window.payhere.onCompleted = async function onCompleted(orderId) {
+          try {
+            // Call local confirm endpoint to save the user's plan to DB instantly (local dev webhook fallback)
+            const confirmRes = await fetch(`${API_URL}/api/payments/confirm`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ orderId, planId: plan._id })
+            });
+            
+            if (confirmRes.ok) {
+              const data = await confirmRes.json();
+              if (data.plan) {
+                localStorage.setItem('plan', data.plan);
+              }
+            }
+          } catch (err) {
+            console.error('Error confirmation local payment save:', err);
+          }
+          alert(`Payment Successful! Your subscription is being activated.`);
+          window.location.href = '/dashboard?payment=success';
+        };
+
+        window.payhere.onDismissed = function onDismissed() {
+          console.log('Payment checkout popup closed by user.');
+        };
+
+        window.payhere.onError = function onError(error) {
+          alert(`Billing error encountered: ${error}`);
+        };
+
+        // Start PayHere popup payment
+        window.payhere.startPayment(payConfig);
+      }
+    } catch (err) {
+      console.error('Payment initiation error:', err);
+      alert(err.message || 'Billing systems are currently offline. Please try again.');
+    }
   };
 
   return (
@@ -193,7 +286,7 @@ function Upgrade() {
                   </ul>
 
                   <button 
-                    onClick={() => handleSelectPlan(plan.name)} 
+                    onClick={() => handleSelectPlan(plan)} 
                     className={`plan-select-btn ${plan.isHighlighted ? 'primary' : 'outline'}`}
                   >
                     Select Plan

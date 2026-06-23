@@ -21,6 +21,7 @@ app.use('/api/knowledge', require('./routes/knowledgeRoutes'));
 app.use('/api/subscriptions', require('./routes/subscriptionRoutes'));
 app.use('/api/promotions', require('./routes/promotionRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/payments', require('./routes/paymentRoutes'));
 
 
 // Base Route

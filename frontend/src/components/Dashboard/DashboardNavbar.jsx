@@ -17,25 +17,61 @@ function DashboardNavbar() {
   const [avatar, setAvatar] = useState(profileIcon);
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
+  const [userPlan, setUserPlan] = useState('Free');
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
   const loadProfile = () => {
-    const savedKey = localStorage.getItem('profileImageKey');
-    const savedImage = localStorage.getItem('profileImage');
-    const name = localStorage.getItem('fullName') || 'Commander';
-    const mail = localStorage.getItem('email') || 'commander@fleet.io';
-    
-    setUserName(name);
-    setUserEmail(mail);
+    const token = localStorage.getItem('token');
+    if (!token) return;
 
-    if (savedKey) {
-      const filename = savedKey.split('/').pop();
-      setAvatar(`${API_URL}/api/auth/profile-image/${filename}`);
-    } else if (savedImage) {
-      setAvatar(savedImage);
-    } else {
-      setAvatar(profileIcon);
-    }
+    fetch(`${API_URL}/api/auth/verify`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Token verification failed');
+        return res.json();
+      })
+      .then((data) => {
+        const user = data.user;
+        setUserName(user.fullName || 'Commander');
+        setUserEmail(user.email || '');
+        setUserPlan(user.plan || 'Free');
+
+        // Sync local storage
+        localStorage.setItem('fullName', user.fullName || '');
+        localStorage.setItem('email', user.email || '');
+        localStorage.setItem('plan', user.plan || 'Free');
+        if (user.profileImageKey) {
+          localStorage.setItem('profileImageKey', user.profileImageKey);
+          const filename = user.profileImageKey.split('/').pop();
+          setAvatar(`${API_URL}/api/auth/profile-image/${filename}`);
+        } else {
+          localStorage.removeItem('profileImageKey');
+          setAvatar(profileIcon);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to sync profile inside navbar:', err);
+        // Fallback to local storage values if network/auth fails
+        const name = localStorage.getItem('fullName') || 'Commander';
+        const mail = localStorage.getItem('email') || 'commander@fleet.io';
+        const plan = localStorage.getItem('plan') || 'Free';
+        const savedKey = localStorage.getItem('profileImageKey');
+        const savedImage = localStorage.getItem('profileImage');
+
+        setUserName(name);
+        setUserEmail(mail);
+        setUserPlan(plan);
+
+        if (savedKey) {
+          const filename = savedKey.split('/').pop();
+          setAvatar(`${API_URL}/api/auth/profile-image/${filename}`);
+        } else if (savedImage) {
+          setAvatar(savedImage);
+        } else {
+          setAvatar(profileIcon);
+        }
+      });
   };
 
   useEffect(() => {
@@ -143,7 +179,12 @@ function DashboardNavbar() {
             {isProfileDropdownOpen && (
               <div className="db-profile-dropdown">
                 <div className="db-dropdown-header">
-                  <div className="db-dropdown-name">{userName}</div>
+                  <div className="db-dropdown-name-container">
+                    <span className="db-dropdown-name">{userName}</span>
+                    <span className={`user-plan-badge ${userPlan.toLowerCase()}`}>
+                      {userPlan}
+                    </span>
+                  </div>
                   <div className="db-dropdown-email">{userEmail}</div>
                 </div>
                 <div className="db-dropdown-divider"></div>
