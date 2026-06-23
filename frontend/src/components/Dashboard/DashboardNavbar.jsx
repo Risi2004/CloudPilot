@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './DashboardNavbar.css';
 
@@ -19,6 +20,13 @@ function DashboardNavbar() {
   const [userEmail, setUserEmail] = useState('');
   const [userPlan, setUserPlan] = useState('Free');
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+
+  // Notifications State
+  const [notifications, setNotifications] = useState([]);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [expandedNotification, setExpandedNotification] = useState(null);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const loadProfile = () => {
     const token = localStorage.getItem('token');
@@ -74,15 +82,39 @@ function DashboardNavbar() {
       });
   };
 
+  const loadNotifications = () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    fetch(`${API_URL}/api/notifications/my`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Notifications fetch failed');
+        return res.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setNotifications(data);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load user notifications:', err);
+      });
+  };
+
   useEffect(() => {
     loadProfile();
+    loadNotifications();
     window.addEventListener('profileUpdate', loadProfile);
+    window.addEventListener('notificationUpdate', loadNotifications);
     return () => {
       window.removeEventListener('profileUpdate', loadProfile);
+      window.removeEventListener('notificationUpdate', loadNotifications);
     };
   }, []);
 
-  // Close dropdown on click outside
+  // Close profile dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (!e.target.closest('.db-profile-menu-container')) {
@@ -97,6 +129,60 @@ function DashboardNavbar() {
     };
   }, [isProfileDropdownOpen]);
 
+  // Close notifications dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.db-notification-menu-container')) {
+        setIsNotificationsOpen(false);
+      }
+    };
+    if (isNotificationsOpen) {
+      document.addEventListener('click', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [isNotificationsOpen]);
+
+  const handleMarkAllRead = () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    const unread = notifications.filter(n => !n.read);
+    if (unread.length === 0) return;
+
+    Promise.all(unread.map(n => 
+      fetch(`${API_URL}/api/notifications/${n._id}/read`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+    ))
+      .then(() => {
+        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      })
+      .catch((err) => console.error('Failed to mark notifications read:', err));
+  };
+
+  const handleExpandNotification = (notif) => {
+    setExpandedNotification(notif);
+    setIsNotificationsOpen(false); // Close dropdown menu
+
+    if (!notif.read) {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      fetch(`${API_URL}/api/notifications/${notif._id}/read`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(() => {
+          setNotifications((prev) =>
+            prev.map((n) => (n._id === notif._id ? { ...n, read: true } : n))
+          );
+        })
+        .catch((err) => console.error('Failed to mark read on server:', err));
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('email');
@@ -109,7 +195,7 @@ function DashboardNavbar() {
   };
 
   useEffect(() => {
-    if (isOverlayOpen) {
+    if (isOverlayOpen || expandedNotification) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
@@ -117,7 +203,7 @@ function DashboardNavbar() {
     return () => {
       document.body.style.overflow = '';
     };
-  }, [isOverlayOpen]);
+  }, [isOverlayOpen, expandedNotification]);
 
   const handleLinkClick = (path) => {
     setIsOverlayOpen(false);
@@ -167,10 +253,55 @@ function DashboardNavbar() {
 
         {/* Right Side Icons */}
         <div className="db-navbar-actions">
-          <button className="db-action-btn notification-btn" onClick={() => console.log('View notifications')}>
-            <img src={notificationIcon} alt="Notifications" className="db-action-icon" />
-          </button>
+          {/* Notification Bell Menu */}
+          <div className="db-notification-menu-container" style={{ position: 'relative' }}>
+            <button className="db-action-btn notification-btn" onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}>
+              <img src={notificationIcon} alt="Notifications" className="db-action-icon" />
+              {unreadCount > 0 && <span className="notification-dot"></span>}
+            </button>
+            
+            {isNotificationsOpen && (
+              <div className="db-notifications-dropdown">
+                <div className="db-dropdown-header">
+                  <span className="db-dropdown-name">Notifications</span>
+                  {unreadCount > 0 && (
+                    <button className="db-mark-all-read-btn" onClick={handleMarkAllRead}>
+                      Mark all as read
+                    </button>
+                  )}
+                </div>
+                <div className="db-dropdown-divider"></div>
+                <div className="db-notifications-list">
+                  {notifications.length === 0 ? (
+                    <div className="db-notification-empty">No notifications matching plan.</div>
+                  ) : (
+                    notifications.map((notif) => (
+                      <div
+                        key={notif._id}
+                        className={`db-notification-item ${!notif.read ? 'unread' : ''}`}
+                        onClick={() => handleExpandNotification(notif)}
+                      >
+                        <div className="db-notification-item-top">
+                          <span className={`db-notification-item-tag tag-${
+                            notif.severity === 'Critical' ? 'failure' : notif.severity === 'Warning' ? 'security' : 'registration'
+                          }`}>
+                            {notif.category.toUpperCase()}
+                          </span>
+                          <span className="db-notification-item-time">
+                            {new Date(notif.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+                        <div className="db-notification-item-title">{notif.title}</div>
+                        <div className="db-notification-item-message">{notif.message}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
           
+          {/* Profile Menu */}
           <div className="db-profile-menu-container" style={{ position: 'relative' }}>
             <button className="db-action-btn profile-btn" onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}>
               <img src={avatar} alt="Profile" className="db-action-icon" />
@@ -249,6 +380,45 @@ function DashboardNavbar() {
           </button>
         </div>
       </div>
+
+      {/* Notification Detail Overlay Modal */}
+      {expandedNotification && createPortal(
+        <div className="notification-modal-overlay" onClick={() => setExpandedNotification(null)}>
+          <div className="notification-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="notification-modal-header">
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                <span className={`db-notification-item-tag tag-${
+                  expandedNotification.severity === 'Critical' ? 'failure' : expandedNotification.severity === 'Warning' ? 'security' : 'registration'
+                }`}>
+                  {expandedNotification.category.toUpperCase()}
+                </span>
+                <span className={`user-plan-badge ${expandedNotification.severity.toLowerCase()}`}>
+                  {expandedNotification.severity}
+                </span>
+              </div>
+              <h3 className="notification-modal-title">{expandedNotification.title}</h3>
+              <p className="notification-modal-time">
+                Dispatched on {new Date(expandedNotification.createdAt).toLocaleString()}
+              </p>
+              <button className="notification-modal-close-btn" onClick={() => setExpandedNotification(null)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            <div className="notification-modal-body">
+              {expandedNotification.message}
+            </div>
+            <div className="notification-modal-footer">
+              <button className="notification-modal-btn" onClick={() => setExpandedNotification(null)}>
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </nav>
   );
 }

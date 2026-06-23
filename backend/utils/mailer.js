@@ -474,6 +474,73 @@ const sendTicketClosedEmail = async (email, fullName, ticketId, subject) => {
   }
 };
 
+const sendNotificationEmail = async (email, fullName, title, message, actionType = 'created') => {
+  const transporter = getTransporter();
+  let subject = `CloudPilot Fleet Alert - ${title}`;
+  let actionTitle = 'SYSTEM ANNOUNCEMENT';
+  let actionColor = '#00d4ff';
+  let actionText = 'A new fleet notification has been dispatched to your dashboard.';
+
+  if (actionType === 'updated') {
+    subject = `CloudPilot Fleet Alert [UPDATED] - ${title}`;
+    actionTitle = 'SYSTEM ANNOUNCEMENT [UPDATED]';
+    actionColor = '#eab308';
+    actionText = 'An active fleet notification has been updated by the administrator.';
+  } else if (actionType === 'deleted') {
+    subject = `CloudPilot Fleet Alert [RECALLED] - ${title}`;
+    actionTitle = 'SYSTEM ANNOUNCEMENT [RECALLED]';
+    actionColor = '#ef4444';
+    actionText = 'A previously issued fleet notification has been recalled/deleted by the administrator.';
+  }
+
+  const mailOptions = {
+    from: process.env.SMTP_FROM || '"CloudPilot" <no-reply@cloudpilot.io>',
+    to: email,
+    subject: subject,
+    text: `Hello ${fullName},\n\n${actionText}\n\nTitle: ${title}\nMessage: ${message}\n\nVisit your dashboard at http://localhost:5173/dashboard to view detail.`,
+    html: `
+      <div style="background-color: #030712; color: #ffffff; padding: 40px; font-family: sans-serif; border-radius: 12px; max-width: 600px; margin: 0 auto; border: 1px solid #1e293b;">
+        <h2 style="color: ${actionColor}; font-size: 24px; font-weight: bold; border-bottom: 1px solid #1e293b; padding-bottom: 10px;">${actionTitle}</h2>
+        <p style="color: #f1f5f9; font-size: 18px; font-weight: 600; margin-top: 20px;">Hello ${fullName},</p>
+        <p style="color: #94a3b8; font-size: 15px; line-height: 1.6;">
+          ${actionText}
+        </p>
+        
+        <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid #1e293b; border-radius: 8px; padding: 20px; margin: 25px 0;">
+          <h3 style="color: #f1f5f9; margin: 0 0 10px 0; font-size: 16px;">${title}</h3>
+          <p style="color: #94a3b8; font-size: 14px; line-height: 1.7; margin: 0; white-space: pre-wrap;">
+            ${message}
+          </p>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="http://localhost:5173/dashboard" style="background-color: #00d4ff; color: #030712; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2); display: inline-block;">
+            VIEW DASHBOARD
+          </a>
+        </div>
+        
+        <p style="color: #64748b; font-size: 12px; line-height: 1.5; border-top: 1px solid #1e293b; padding-top: 15px; margin-top: 30px;">
+          This is an automated fleet notification dispatch. Do not reply to this email.
+        </p>
+      </div>
+    `
+  };
+
+  if (!transporter) {
+    console.log(`[MOCK EMAIL] To: ${email} | Subject: ${mailOptions.subject} | Action: ${actionType}`);
+    return;
+  }
+
+  try {
+    await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.error(`SMTP notification email dispatch failed. Error:`, error.message);
+    console.warn('-------- SMTP FAIL FALLBACK --------');
+    console.warn(`[MOCK EMAIL] To: ${email} | Subject: ${mailOptions.subject} | Action: ${actionType}`);
+    console.warn('------------------------------------');
+  }
+};
+
 module.exports = {
   sendOtpEmail,
   sendOnboardEmail,
@@ -482,5 +549,7 @@ module.exports = {
   sendDeletionEmail,
   sendPaymentReceiptEmail,
   sendTicketOpenedEmail,
-  sendTicketClosedEmail
+  sendTicketClosedEmail,
+  sendNotificationEmail
 };
+
