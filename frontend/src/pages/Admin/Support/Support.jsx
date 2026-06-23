@@ -246,7 +246,7 @@ function Support() {
           </div>
 
           {/* Stats Metrics Cards */}
-          <SupportMetrics />
+          <SupportMetrics tickets={tickets} />
 
           {/* Core Support Console Split Grid */}
           <div className="support-layout-split">
