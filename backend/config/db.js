@@ -26,6 +26,22 @@ const connectDB = async () => {
     } catch (seedErr) {
       console.error('Error seeding subscription plans during startup:', seedErr);
     }
+
+    // Purge mock tickets
+    try {
+      const Ticket = require('../models/Ticket');
+      const deleteResult = await Ticket.deleteMany({
+        $or: [
+          { userName: 'John Doe' },
+          { subject: 'API Automated Verification Check' }
+        ]
+      });
+      if (deleteResult.deletedCount > 0) {
+        console.log(`Successfully purged ${deleteResult.deletedCount} mock tickets from DB.`);
+      }
+    } catch (dbCleanErr) {
+      console.error('Error cleaning mock tickets from database:', dbCleanErr);
+    }
   } catch (err) {
     console.error('MongoDB connection error:', err);
     // Don't kill the process in development if db connection fails, just log it.

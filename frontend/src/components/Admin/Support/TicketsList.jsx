@@ -1,96 +1,12 @@
 import React, { useState } from 'react';
 import './TicketsList.css';
 
-const MOCK_TICKETS = [
-  {
-    id: '#CP-8921',
-    subject: 'API Endpoint 403 Errors',
-    desc: 'Production cluster unstable...',
-    initials: 'JD',
-    userName: 'John Doe',
-    priority: 'Urgent',
-    admin: 'Sarah K.',
-    status: 'open'
-  },
-  {
-    id: '#CP-8922',
-    subject: 'Billing Discrepancy June',
-    desc: 'Invoice showing extra instance usage...',
-    initials: 'AL',
-    userName: 'Alice Liao',
-    priority: 'High',
-    admin: 'Unassigned',
-    status: 'open'
-  },
-  {
-    id: '#CP-8919',
-    subject: 'New Agent Token Request',
-    desc: 'Requesting access to beta LLM nodes...',
-    initials: 'MK',
-    userName: 'Mike K.',
-    priority: 'Med',
-    admin: 'Sarah K.',
-    status: 'in-progress'
-  },
-  {
-    id: '#CP-8918',
-    subject: 'UI Lag in Safari 17',
-    desc: 'Dashboard charts flicker on resize...',
-    initials: 'RT',
-    userName: 'Ray T.',
-    priority: 'Low',
-    admin: 'David M.',
-    status: 'resolved'
-  },
-  // Additional mock tickets for filter & pagination
-  {
-    id: '#CP-8915',
-    subject: 'OTP Dispatch Delivery Delay',
-    desc: 'Users waiting over 5 mins for auth SMS code...',
-    initials: 'SK',
-    userName: 'Sanjay K.',
-    priority: 'Urgent',
-    admin: 'David M.',
-    status: 'open'
-  },
-  {
-    id: '#CP-8912',
-    subject: 'VPC Route Peering Failure',
-    desc: 'Autopilot failing to establish gateway link...',
-    initials: 'ET',
-    userName: 'Elena T.',
-    priority: 'High',
-    admin: 'Unassigned',
-    status: 'in-progress'
-  },
-  {
-    id: '#CP-8910',
-    subject: 'GPU Compute Scaling Limits',
-    desc: 'Requested upgrade to A100 dedicated block...',
-    initials: 'MX',
-    userName: 'Marcus X.',
-    priority: 'Med',
-    admin: 'Sarah K.',
-    status: 'resolved'
-  },
-  {
-    id: '#CP-8908',
-    subject: 'Account Password Reset Lock',
-    desc: 'Lockout after 3 failed login attempts...',
-    initials: 'JN',
-    userName: 'Julia N.',
-    priority: 'Low',
-    admin: 'David M.',
-    status: 'closed'
-  }
-];
-
 function TicketsList({ activeTicketId, onSelectTicket, ticketsListOverride }) {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
 
   // Sync tickets with overrides from parent state (e.g. status changes resolved via copilot)
-  const tickets = ticketsListOverride || MOCK_TICKETS;
+  const tickets = ticketsListOverride || [];
 
   // Filter count
   const openCount = tickets.filter(t => t.status === 'open').length;
@@ -173,7 +89,7 @@ function TicketsList({ activeTicketId, onSelectTicket, ticketsListOverride }) {
         <div className="mini-metrics-box">
           <div className="mini-metric">
             <span className="mini-lbl">AVG. RESPONSE</span>
-            <span className="mini-val">24 Hours</span>
+            <span className="mini-val">48 Hours</span>
           </div>
           <div className="mini-divider" />
           <div className="mini-metric">

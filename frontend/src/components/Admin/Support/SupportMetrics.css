@@ -1,29 +1,25 @@
 .support-metrics-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   background: rgba(13, 18, 33, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 12px;
-  padding: 16px 24px;
+  padding: 20px 24px;
   backdrop-filter: blur(12px);
   width: 100%;
   margin-bottom: 24px;
+  gap: 24px;
 }
 
 .support-metric-card {
-  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.support-metric-card:first-child {
+.support-metrics-row .support-metric-card:not(:last-child) {
   border-right: 1px solid rgba(255, 255, 255, 0.05);
   padding-right: 24px;
-}
-
-.support-metric-card:last-child {
-  padding-left: 24px;
-  align-items: flex-end;
 }
 
 .metric-title-label {
@@ -31,6 +27,7 @@
   font-weight: 700;
   color: #64748b;
   letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .metric-value-text {
@@ -39,6 +36,16 @@
   color: #f8fafc;
   line-height: 1.1;
   letter-spacing: -0.01em;
+}
+
+.metric-value-text.text-blue {
+  color: #3b82f6;
+  text-shadow: 0 0 8px rgba(59, 130, 246, 0.15);
+}
+
+.metric-value-text.text-amber {
+  color: #f59e0b;
+  text-shadow: 0 0 8px rgba(245, 158, 11, 0.15);
 }
 
 .metric-value-text.text-green {

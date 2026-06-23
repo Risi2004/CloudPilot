@@ -3,7 +3,7 @@ import './TicketChat.css';
 
 function TicketChat({ activeTicket, onSendMessage, onResolveTicket, onCloseTicket }) {
   const [replyText, setReplyText] = useState('');
-  const chatEndRef = useRef(null);
+  const chatDisplayRef = useRef(null);
 
   const activeMessages = activeTicket ? activeTicket.messages : [];
   const assignee = activeTicket ? activeTicket.admin : 'Unassigned';
@@ -11,8 +11,8 @@ function TicketChat({ activeTicket, onSendMessage, onResolveTicket, onCloseTicke
 
   // Scroll to bottom on new message
   useEffect(() => {
-    if (chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (chatDisplayRef.current) {
+      chatDisplayRef.current.scrollTop = chatDisplayRef.current.scrollHeight;
     }
   }, [activeMessages]);
 
@@ -89,7 +89,7 @@ function TicketChat({ activeTicket, onSendMessage, onResolveTicket, onCloseTicke
       </div>
 
       {/* Messages Scroll Area */}
-      <div className="chat-message-display">
+      <div className="chat-message-display" ref={chatDisplayRef}>
         {/* Render ticket initial description as first bubble */}
         <div className="chat-message-bubble-row user">
           <div className="message-bubble">
@@ -110,7 +110,6 @@ function TicketChat({ activeTicket, onSendMessage, onResolveTicket, onCloseTicke
             </span>
           </div>
         ))}
-        <div ref={chatEndRef} />
       </div>
 
       {/* Input panel */}
