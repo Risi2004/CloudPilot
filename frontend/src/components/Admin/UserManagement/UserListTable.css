@@ -140,6 +140,14 @@
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+.user-avatar-image {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 .user-name-text {
   font-weight: 600;
   color: #f1f5f9;
@@ -245,7 +253,7 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  width: 140px;
+  width: 150px;
   padding: 4px;
   z-index: 50;
   display: flex;
@@ -270,6 +278,15 @@
 .action-dropdown-menu button:hover {
   background: rgba(255, 255, 255, 0.04);
   color: #f1f5f9;
+}
+
+.action-dropdown-menu button.delete-user-btn {
+  color: #f87171;
+}
+
+.action-dropdown-menu button.delete-user-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
 }
 
 /* Footer Pagination */
@@ -389,3 +406,177 @@
   border-color: rgba(255, 255, 255, 0.12);
   color: #f1f5f9;
 }
+
+/* Loading, Empty and Error State Styles */
+.users-table-loading,
+.users-table-error,
+.users-table-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+  color: #64748b;
+  font-size: 14px;
+  gap: 16px;
+  padding: 40px;
+  text-align: center;
+}
+
+.users-table-error span {
+  color: #f87171;
+  font-weight: 500;
+}
+
+.users-table-empty span {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.users-spinner {
+  width: 32px;
+  height: 32px;
+  animation: users-rotate 1s linear infinite;
+  color: #6366f1;
+}
+
+@keyframes users-rotate {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Table Configuration Modal Styles */
+.promo-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(3, 7, 18, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.promo-modal-card.config-modal {
+  width: 100%;
+  max-width: 440px;
+  background: #090d16;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.config-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  padding-bottom: 16px;
+}
+
+.config-section:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.config-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.config-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.config-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.config-label-text {
+  font-size: 13px;
+  color: #e2e8f0;
+}
+
+/* Custom Checkbox elements */
+.config-checkbox-row input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  cursor: pointer;
+}
+
+.promo-custom-box {
+  width: 16px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  display: inline-block;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.config-checkbox-row input:checked ~ .promo-custom-box {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.config-checkbox-row input:checked ~ .promo-custom-box::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Dense mode overrides */
+.user-table.dense td {
+  padding: 8px 24px;
+}
+
+.user-table.dense .user-avatar-bubble,
+.user-table.dense .user-avatar-image {
+  width: 26px;
+  height: 26px;
+  font-size: 9px;
+}
+
+.user-table.dense .user-cell {
+  gap: 8px;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+

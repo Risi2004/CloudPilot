@@ -7,7 +7,12 @@ import newUsersIcon from '../../../assets/new-users.svg';
 import activeUsersIcon from '../../../assets/active-users.svg';
 import growthIcon from '../../../assets/growth.svg';
 
-function UserStatCards() {
+function UserStatCards({ totalUsers = 0, newUsers24h = 0, activeUsers = 0, loading = false }) {
+  const formatVal = (val) => {
+    if (loading) return '...';
+    return val.toLocaleString();
+  };
+
   return (
     <div className="user-stats-grid">
       
@@ -18,9 +23,9 @@ function UserStatCards() {
         </div>
         <div className="user-stat-details">
           <span className="user-stat-title">TOTAL USERS</span>
-          <span className="user-stat-value">12,842</span>
+          <span className="user-stat-value">{formatVal(totalUsers)}</span>
           <span className="user-stat-trend trend-positive">
-            <span className="arrow">↗</span> +12% from last month
+            <span className="arrow">↗</span> Registered Users
           </span>
         </div>
       </div>
@@ -32,9 +37,9 @@ function UserStatCards() {
         </div>
         <div className="user-stat-details">
           <span className="user-stat-title">NEW USERS (24H)</span>
-          <span className="user-stat-value">148</span>
+          <span className="user-stat-value">{formatVal(newUsers24h)}</span>
           <span className="user-stat-trend trend-positive">
-            <img src={growthIcon} alt="Growth" className="trend-growth-icon" /> High growth period
+            <img src={growthIcon} alt="Growth" className="trend-growth-icon" /> Active Registrants
           </span>
         </div>
       </div>
@@ -46,9 +51,9 @@ function UserStatCards() {
         </div>
         <div className="user-stat-details">
           <span className="user-stat-title">ACTIVE USERS</span>
-          <span className="user-stat-value">8,291</span>
+          <span className="user-stat-value">{formatVal(activeUsers)}</span>
           <span className="user-stat-trend trend-positive">
-            <span className="dot" /> 64% retention rate
+            <span className="dot" /> Status Active
           </span>
         </div>
       </div>

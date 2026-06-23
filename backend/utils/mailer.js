@@ -123,7 +123,162 @@ const sendOnboardEmail = async (email) => {
   }
 };
 
+const sendSuspensionEmail = async (email, fullName) => {
+  const transporter = getTransporter();
+  const mailOptions = {
+    from: process.env.SMTP_FROM || '"CloudPilot" <no-reply@cloudpilot.io>',
+    to: email,
+    subject: 'CloudPilot Fleet Alert - Account Suspended',
+    text: `Hello ${fullName},\n\nWe are writing to inform you that your CloudPilot account has been suspended by an administrator. Please reach out to support if you believe this is in error.`,
+    html: `
+      <div style="background-color: #030712; color: #ffffff; padding: 40px; font-family: sans-serif; border-radius: 12px; max-width: 600px; margin: 0 auto; border: 1px solid #1e293b;">
+        <h2 style="color: #ef4444; font-size: 24px; font-weight: bold; border-bottom: 1px solid #1e293b; padding-bottom: 10px;">ACCOUNT SUSPENDED</h2>
+        <p style="color: #f1f5f9; font-size: 18px; font-weight: 600; margin-top: 20px;">Hello ${fullName},</p>
+        <p style="color: #94a3b8; font-size: 15px; line-height: 1.6;">
+          This message is to notify you that your autonomous fleet integration access for CloudPilot has been <strong>suspended</strong> by a system administrator.
+        </p>
+        
+        <div style="background: rgba(239, 68, 68, 0.04); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 8px; padding: 20px; margin: 25px 0;">
+          <h4 style="color: #f87171; margin: 0 0 10px 0; font-size: 15px;">What this means:</h4>
+          <ul style="color: #94a3b8; font-size: 14px; line-height: 1.7; padding-left: 20px; margin: 0;">
+            <li>Your access to the CloudPilot Mission Control dashboard is temporarily restricted.</li>
+            <li>Active monitoring schedules and automated optimizations have been paused.</li>
+            <li>No data is lost; your resources and analysis configurations remain intact.</li>
+          </ul>
+        </div>
+
+        <p style="color: #94a3b8; font-size: 15px; line-height: 1.6;">
+          If you believe this suspension is in error or would like to request reactivation, please contact our support team.
+        </p>
+        
+        <p style="color: #64748b; font-size: 12px; line-height: 1.5; border-top: 1px solid #1e293b; padding-top: 15px; margin-top: 30px;">
+          This is an automated system dispatch. Do not reply to this email.
+        </p>
+      </div>
+    `
+  };
+
+  if (!transporter) {
+    console.log(`[MOCK EMAIL] To: ${email} | Subject: ${mailOptions.subject} | Suspension email logged`);
+    return;
+  }
+
+  try {
+    await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.error('SMTP suspension email dispatch failed. Error:', error.message);
+    console.warn('-------- SMTP FAIL FALLBACK --------');
+    console.warn(`[MOCK EMAIL] To: ${email} | Subject: ${mailOptions.subject} | Suspension email logged`);
+    console.warn('------------------------------------');
+  }
+};
+
+const sendReactivationEmail = async (email, fullName) => {
+  const transporter = getTransporter();
+  const mailOptions = {
+    from: process.env.SMTP_FROM || '"CloudPilot" <no-reply@cloudpilot.io>',
+    to: email,
+    subject: 'CloudPilot Fleet Alert - Account Reactivated',
+    text: `Hello ${fullName},\n\nWe are pleased to inform you that your CloudPilot account has been reactivated. You can now log back in at http://localhost:5173.`,
+    html: `
+      <div style="background-color: #030712; color: #ffffff; padding: 40px; font-family: sans-serif; border-radius: 12px; max-width: 600px; margin: 0 auto; border: 1px solid #1e293b;">
+        <h2 style="color: #10b981; font-size: 24px; font-weight: bold; border-bottom: 1px solid #1e293b; padding-bottom: 10px;">CLOUDPILOT MISSION CONTROL</h2>
+        <p style="color: #f1f5f9; font-size: 18px; font-weight: 600; margin-top: 20px;">Welcome Back, ${fullName}!</p>
+        <p style="color: #94a3b8; font-size: 15px; line-height: 1.6;">
+          Your CloudPilot autonomous fleet operator account has been successfully <strong>reactivated</strong> by a system administrator.
+        </p>
+        
+        <div style="background: rgba(16, 185, 129, 0.04); border: 1px solid rgba(16, 185, 129, 0.15); border-radius: 8px; padding: 20px; margin: 25px 0;">
+          <h4 style="color: #34d399; margin: 0 0 10px 0; font-size: 15px;">Your access is fully restored:</h4>
+          <ul style="color: #94a3b8; font-size: 14px; line-height: 1.7; padding-left: 20px; margin: 0;">
+            <li>You can now log in to the dashboard at http://localhost:5173.</li>
+            <li>All active cloud resource integrations are once again accessible.</li>
+            <li>Mission logs, tickets, and configurations are ready for use.</li>
+          </ul>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="http://localhost:5173/login" style="background-color: #00d4ff; color: #030712; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2); display: inline-block;">
+            LOG IN TO ACCOUNT
+          </a>
+        </div>
+        
+        <p style="color: #64748b; font-size: 12px; line-height: 1.5; border-top: 1px solid #1e293b; padding-top: 15px; margin-top: 30px;">
+          This is an automated system dispatch. Do not reply to this email.
+        </p>
+      </div>
+    `
+  };
+
+  if (!transporter) {
+    console.log(`[MOCK EMAIL] To: ${email} | Subject: ${mailOptions.subject} | Reactivation email logged`);
+    return;
+  }
+
+  try {
+    await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.error('SMTP reactivation email dispatch failed. Error:', error.message);
+    console.warn('-------- SMTP FAIL FALLBACK --------');
+    console.warn(`[MOCK EMAIL] To: ${email} | Subject: ${mailOptions.subject} | Reactivation email logged`);
+    console.warn('------------------------------------');
+  }
+};
+
+const sendDeletionEmail = async (email, fullName) => {
+  const transporter = getTransporter();
+  const mailOptions = {
+    from: process.env.SMTP_FROM || '"CloudPilot" <no-reply@cloudpilot.io>',
+    to: email,
+    subject: 'CloudPilot Fleet Alert - Account Deleted',
+    text: `Hello ${fullName},\n\nWe are writing to inform you that your CloudPilot account has been permanently deleted by an administrator. All your associated data has been purged from our systems.`,
+    html: `
+      <div style="background-color: #030712; color: #ffffff; padding: 40px; font-family: sans-serif; border-radius: 12px; max-width: 600px; margin: 0 auto; border: 1px solid #1e293b;">
+        <h2 style="color: #ef4444; font-size: 24px; font-weight: bold; border-bottom: 1px solid #1e293b; padding-bottom: 10px;">ACCOUNT DELETED</h2>
+        <p style="color: #f1f5f9; font-size: 18px; font-weight: 600; margin-top: 20px;">Hello ${fullName},</p>
+        <p style="color: #94a3b8; font-size: 15px; line-height: 1.6;">
+          This message is to notify you that your autonomous fleet operator account for CloudPilot has been <strong>deleted permanently</strong> by a system administrator.
+        </p>
+        
+        <div style="background: rgba(239, 68, 68, 0.04); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 8px; padding: 20px; margin: 25px 0;">
+          <h4 style="color: #f87171; margin: 0 0 10px 0; font-size: 15px;">What this means:</h4>
+          <ul style="color: #94a3b8; font-size: 14px; line-height: 1.7; padding-left: 20px; margin: 0;">
+            <li>Your access credentials have been deactivated and removed.</li>
+            <li>All associated tickets, profile metadata, and files have been purged.</li>
+            <li>Your subscription plan features are no longer active.</li>
+          </ul>
+        </div>
+
+        <p style="color: #94a3b8; font-size: 15px; line-height: 1.6;">
+          Thank you for deploying with CloudPilot. If you believe this action was taken in error, please get in touch with our security administrator.
+        </p>
+        
+        <p style="color: #64748b; font-size: 12px; line-height: 1.5; border-top: 1px solid #1e293b; padding-top: 15px; margin-top: 30px;">
+          This is an automated system dispatch. Do not reply to this email.
+        </p>
+      </div>
+    `
+  };
+
+  if (!transporter) {
+    console.log(`[MOCK EMAIL] To: ${email} | Subject: ${mailOptions.subject} | Deletion email logged`);
+    return;
+  }
+
+  try {
+    await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.error('SMTP deletion email dispatch failed. Error:', error.message);
+    console.warn('-------- SMTP FAIL FALLBACK --------');
+    console.warn(`[MOCK EMAIL] To: ${email} | Subject: ${mailOptions.subject} | Deletion email logged`);
+    console.warn('------------------------------------');
+  }
+};
+
 module.exports = {
   sendOtpEmail,
-  sendOnboardEmail
+  sendOnboardEmail,
+  sendSuspensionEmail,
+  sendReactivationEmail,
+  sendDeletionEmail
 };

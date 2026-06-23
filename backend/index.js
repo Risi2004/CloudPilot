@@ -20,6 +20,8 @@ app.use('/api/tickets', require('./routes/ticketRoutes'));
 app.use('/api/knowledge', require('./routes/knowledgeRoutes'));
 app.use('/api/subscriptions', require('./routes/subscriptionRoutes'));
 app.use('/api/promotions', require('./routes/promotionRoutes'));
+app.use('/api/users', require('./routes/userRoutes'));
+
 
 // Base Route
 app.get('/', (req, res) => {

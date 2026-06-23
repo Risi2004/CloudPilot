@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './UserManagement.css';
 
 // Layout and widgets
@@ -7,7 +7,102 @@ import UserStatCards from '../../../components/Admin/UserManagement/UserStatCard
 import UserListTable from '../../../components/Admin/UserManagement/UserListTable';
 import UserInsights from '../../../components/Admin/UserManagement/UserInsights';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 function UserManagement() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/users`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUsers(data);
+        setError(null);
+      } else {
+        setError(data.message || 'Failed to fetch user directory.');
+      }
+    } catch (err) {
+      console.error('Error fetching users:', err);
+      setError('Connection error. Could not connect to API.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const handleToggleStatus = async (id, currentStatus) => {
+    try {
+      const token = localStorage.getItem('token');
+      const newStatus = currentStatus === 'Active' ? 'Suspended' : 'Active';
+      const res = await fetch(`${API_URL}/api/users/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+      
+      if (res.ok) {
+        // Update user status locally
+        setUsers(prevUsers => prevUsers.map(u => {
+          if (u._id === id) {
+            return { 
+              ...u, 
+              status: newStatus, 
+              lastActivity: new Date().toISOString() 
+            };
+          }
+          return u;
+        }));
+      } else {
+        const data = await res.json();
+        alert(data.message || 'Failed to update user status.');
+      }
+    } catch (err) {
+      console.error('Failed to update user status:', err);
+      alert('Connection error. Could not update user status.');
+    }
+  };
+
+  const handleDeleteUser = async (id, name) => {
+    if (!window.confirm(`Are you sure you want to permanently delete the account of "${name}"? All associated tickets, profile picture, and access keys will be permanently deleted.`)) {
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/users/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (res.ok) {
+        // Remove user locally from state
+        setUsers(prevUsers => prevUsers.filter(u => u._id !== id));
+      } else {
+        const data = await res.json();
+        alert(data.message || 'Failed to delete user.');
+      }
+    } catch (err) {
+      console.error('Failed to delete user:', err);
+      alert('Connection error. Could not delete user.');
+    }
+  };
+
   return (
     <div className="admin-dashboard-container">
       {/* Left Sidebar */}
@@ -58,10 +153,21 @@ function UserManagement() {
           </div>
 
           {/* Stats Section */}
-          <UserStatCards />
+          <UserStatCards 
+            totalUsers={users.length}
+            activeUsers={users.filter(u => u.status === 'Active').length}
+            newUsers24h={users.filter(u => new Date(u.createdAt) > new Date(Date.now() - 24 * 60 * 60 * 1000)).length}
+            loading={loading}
+          />
 
           {/* Table list Section */}
-          <UserListTable />
+          <UserListTable 
+            users={users} 
+            loading={loading} 
+            error={error}
+            onToggleStatus={handleToggleStatus} 
+            onDeleteUser={handleDeleteUser}
+          />
 
           {/* AI Insights & Security events Section */}
           <UserInsights />
