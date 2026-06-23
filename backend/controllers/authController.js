@@ -278,6 +278,10 @@ const login = async (req, res, next) => {
       return res.status(401).json({ message: 'Unauthorized: Invalid credentials.' });
     }
 
+    if (user.status === 'Suspended') {
+      return res.status(403).json({ message: 'Your account has been suspended by an administrator. For further information, please contact support.' });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Unauthorized: Invalid credentials.' });
@@ -355,6 +359,10 @@ const verifyToken = async (req, res, next) => {
     const user = await User.findById(decoded.id).select('-password');
     if (!user) {
       return res.status(401).json({ message: 'Authorization error: User no longer exists.' });
+    }
+
+    if (user.status === 'Suspended') {
+      return res.status(403).json({ message: 'Your account has been suspended by an administrator. For further information, please contact support.' });
     }
 
     res.status(200).json({
@@ -471,6 +479,10 @@ const firebaseLogin = async (req, res, next) => {
     // Find or create user in MongoDB
     let user = await User.findOne({ email });
 
+    if (user && user.status === 'Suspended') {
+      return res.status(403).json({ message: 'Your account has been suspended by an administrator. For further information, please contact support.' });
+    }
+
     if (!user) {
       // First-time login / Registration for this OAuth user
       user = new User({
@@ -504,6 +516,23 @@ const firebaseLogin = async (req, res, next) => {
   }
 };
 
+/**
+ * Update user's last activity timestamp (called via periodic heartbeat pings when active)
+ */
+const updateUserActivity = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+    user.lastActivity = new Date();
+    await user.save();
+    res.status(200).json({ message: 'Activity timestamp updated.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   signup,
   resendOtp,
@@ -512,5 +541,6 @@ module.exports = {
   firebaseLogin,
   getProfileImage,
   verifyToken,
-  updateProfile
+  updateProfile,
+  updateUserActivity
 };

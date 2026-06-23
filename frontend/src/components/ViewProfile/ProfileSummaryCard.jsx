@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import editIcon from '../../assets/edit.svg';
 import './ProfileCard.css';
 import './ProfileSummaryCard.css';
@@ -11,6 +12,7 @@ function ProfileSummaryCard({
   onAvatarChange,
 }) {
   const fileInputRef = useRef(null);
+  const navigate = useNavigate();
 
   const triggerUpload = () => {
     fileInputRef.current?.click();
@@ -87,8 +89,8 @@ function ProfileSummaryCard({
         </div>
       </div>
 
-      <button type="button" className="profile-upgrade-btn">
-        UPGRADE TO PRO
+      <button type="button" className="profile-upgrade-btn" onClick={() => navigate('/upgrade')}>
+        Upgrade Plan
       </button>
     </section>
   );

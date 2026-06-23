@@ -26,6 +26,20 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'admin'],
     default: 'user'
   },
+  plan: {
+    type: String,
+    enum: ['Free', 'Pro', 'Enterprise'],
+    default: 'Free'
+  },
+  status: {
+    type: String,
+    enum: ['Active', 'Suspended'],
+    default: 'Active'
+  },
+  lastActivity: {
+    type: Date,
+    default: Date.now
+  },
   createdAt: {
     type: Date,
     default: Date.now

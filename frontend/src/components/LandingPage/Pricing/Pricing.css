@@ -190,3 +190,106 @@
     padding: 36px 28px;
   }
 }
+
+/* Promo code entry bar styles */
+.promo-entry-bar {
+  margin-bottom: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.promo-input-wrapper {
+  display: flex;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 4px;
+  width: 100%;
+  max-width: 380px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.promo-input-wrapper:focus-within {
+  border-color: rgba(0, 212, 255, 0.5);
+  box-shadow: 0 0 14px rgba(0, 212, 255, 0.15);
+}
+
+.promo-code-field {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  flex: 1;
+}
+
+.promo-code-field::placeholder {
+  color: #4b5563;
+}
+
+.promo-apply-btn {
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  color: #00d4ff;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.promo-apply-btn:hover {
+  background: #00d4ff;
+  color: #030712;
+}
+
+.promo-status-msg {
+  font-size: 13px;
+  font-weight: 500;
+  animation: fadeInDown 0.3s ease;
+}
+
+.promo-status-msg.error {
+  color: #f87171;
+}
+
+.promo-status-msg.success {
+  color: #34d399;
+}
+
+/* Discounted & Crossed Price Styles */
+.plan-price-crossed {
+  font-size: 20px;
+  font-weight: 500;
+  color: #4b5563;
+  text-decoration: line-through;
+  margin-left: 12px;
+  align-self: center;
+}
+
+.plan-price.discounted {
+  color: #00d4ff;
+}
+
+.promo-applied-badge {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: #34d399;
+  font-size: 8.5px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  display: inline-block;
+  vertical-align: middle;
+}

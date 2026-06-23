@@ -43,6 +43,7 @@ const uploadBase64Image = async (base64String, email) => {
     Bucket: bucketName,
     Key: key,
     Body: buffer,
+    ContentLength: buffer.length,
     ContentType: mimeType
   });
 
@@ -103,7 +104,8 @@ const createFolder = async (folderKey) => {
   const command = new PutObjectCommand({
     Bucket: bucketName,
     Key: folderKey,
-    Body: '',
+    Body: Buffer.alloc(0),
+    ContentLength: 0,
     ContentType: 'application/x-directory'
   });
 
@@ -151,6 +153,7 @@ const uploadKnowledgeFile = async (base64String, folderKey, fileName, mimeType) 
     Bucket: bucketName,
     Key: key,
     Body: buffer,
+    ContentLength: buffer.length,
     ContentType: finalMimeType
   });
 
@@ -263,7 +266,8 @@ const renameR2Folder = async (oldFolderKey, newFolderKey) => {
   const folderMarkerCommand = new PutObjectCommand({
     Bucket: bucketName,
     Key: newFolderKey,
-    Body: '',
+    Body: Buffer.alloc(0),
+    ContentLength: 0,
     ContentType: 'application/x-directory'
   });
   await s3Client.send(folderMarkerCommand);

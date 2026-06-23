@@ -16,7 +16,20 @@ const protect = async (req, res, next) => {
       return res.status(401).json({ message: 'Authorization error: User no longer exists.' });
     }
 
+    if (user.status === 'Suspended') {
+      return res.status(403).json({ message: 'Your account has been suspended by an administrator. For further information, please contact support.' });
+    }
+
     req.user = user;
+
+    // Rate-limit lastActivity updates to at most once per 60 seconds to avoid DB bottlenecks
+    const now = new Date();
+    if (!user.lastActivity || (now - new Date(user.lastActivity)) > 60 * 1000) {
+      User.findByIdAndUpdate(user._id, { lastActivity: now }).catch(err => {
+        console.error('Failed to update last activity in protect middleware:', err);
+      });
+    }
+
     next();
   } catch (err) {
     return res.status(401).json({ message: 'Authorization error: Session expired or invalid.' });
