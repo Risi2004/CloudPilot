@@ -359,11 +359,128 @@ const sendPaymentReceiptEmail = async (email, fullName, planName, amount, curren
   }
 };
 
+/**
+ * Sends an email when a user raises a support ticket, informing them to wait for 2 working days.
+ */
+const sendTicketOpenedEmail = async (email, fullName, ticketId, subject) => {
+  const transporter = getTransporter();
+  const mailOptions = {
+    from: process.env.SMTP_FROM || '"CloudPilot Support" <support@cloudpilot.io>',
+    to: email,
+    subject: `[CloudPilot Support] Ticket Opened: ${ticketId}`,
+    text: `Hello ${fullName},\n\nWe have successfully received your support ticket "${subject}" (ID: ${ticketId}). Our support engineers have been notified. Please allow up to 2 working days for our team to inspect the telemetry logs and reply.\n\nThank you,\nCloudPilot Support Fleet`,
+    html: `
+      <div style="background-color: #030712; color: #ffffff; padding: 40px; font-family: sans-serif; border-radius: 12px; max-width: 600px; margin: 0 auto; border: 1px solid #1e293b;">
+        <h2 style="color: #00d4ff; font-size: 24px; font-weight: bold; border-bottom: 1px solid #1e293b; padding-bottom: 10px;">CLOUDPILOT SUPPORT</h2>
+        <p style="color: #f1f5f9; font-size: 18px; font-weight: 600; margin-top: 20px;">Support Ticket Opened</p>
+        <p style="color: #94a3b8; font-size: 15px; line-height: 1.6;">
+          Hello ${fullName},
+        </p>
+        <p style="color: #94a3b8; font-size: 15px; line-height: 1.6;">
+          We have successfully received your support ticket regarding <strong>${subject}</strong>. Your ticket identifier is <strong>${ticketId}</strong>.
+        </p>
+        
+        <div style="background: rgba(0, 212, 255, 0.04); border: 1px solid rgba(0, 212, 255, 0.15); border-radius: 8px; padding: 20px; margin: 25px 0;">
+          <h4 style="color: #00d4ff; margin: 0 0 10px 0; font-size: 15px;">Next steps:</h4>
+          <p style="color: #e2e8f0; font-size: 14px; line-height: 1.6; margin: 0;">
+            Our support engineers are actively reviewing your case telemetry. <strong>Please allow up to 2 working days</strong> for a full analysis and response from our engineering fleet.
+          </p>
+        </div>
+
+        <p style="color: #94a3b8; font-size: 15px; line-height: 1.6;">
+          You can track progress and reply to this ticket directly inside the CloudPilot Console.
+        </p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="http://localhost:5173/support" style="background-color: #00d4ff; color: #030712; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2); display: inline-block;">
+            VIEW TICKET TIMELINE
+          </a>
+        </div>
+        
+        <p style="color: #64748b; font-size: 12px; line-height: 1.5; border-top: 1px solid #1e293b; padding-top: 15px; margin-top: 30px;">
+          This is an automated support dispatch. Please do not reply directly to this email.
+        </p>
+      </div>
+    `
+  };
+
+  if (!transporter) {
+    console.log(`[MOCK EMAIL] To: ${email} | Subject: ${mailOptions.subject} | Welcome support ticket email logged`);
+    return;
+  }
+
+  try {
+    await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.error('SMTP ticket opened email dispatch failed. Error:', error.message);
+    console.warn('-------- SMTP FAIL FALLBACK --------');
+    console.warn(`[MOCK EMAIL] To: ${email} | Subject: ${mailOptions.subject} | Welcome support ticket email logged`);
+    console.warn('------------------------------------');
+  }
+};
+
+/**
+ * Sends an email to the user when a ticket is closed.
+ */
+const sendTicketClosedEmail = async (email, fullName, ticketId, subject) => {
+  const transporter = getTransporter();
+  const mailOptions = {
+    from: process.env.SMTP_FROM || '"CloudPilot Support" <support@cloudpilot.io>',
+    to: email,
+    subject: `[CloudPilot Support] Ticket Closed: ${ticketId}`,
+    text: `Hello ${fullName},\n\nYour support ticket "${subject}" (ID: ${ticketId}) has been successfully marked as resolved and closed. If you have any further questions or if the issue persists, please raise a new ticket in the CloudPilot Console.\n\nThank you,\nCloudPilot Support Fleet`,
+    html: `
+      <div style="background-color: #030712; color: #ffffff; padding: 40px; font-family: sans-serif; border-radius: 12px; max-width: 600px; margin: 0 auto; border: 1px solid #1e293b;">
+        <h2 style="color: #10b981; font-size: 24px; font-weight: bold; border-bottom: 1px solid #1e293b; padding-bottom: 10px;">CLOUDPILOT SUPPORT</h2>
+        <p style="color: #f1f5f9; font-size: 18px; font-weight: 600; margin-top: 20px;">Support Ticket Closed</p>
+        <p style="color: #94a3b8; font-size: 15px; line-height: 1.6;">
+          Hello ${fullName},
+        </p>
+        <p style="color: #94a3b8; font-size: 15px; line-height: 1.6;">
+          Your support ticket regarding <strong>${subject}</strong> (ID: <strong>${ticketId}</strong>) has been marked as <strong>resolved & closed</strong>.
+        </p>
+        
+        <div style="background: rgba(16, 185, 129, 0.04); border: 1px solid rgba(16, 185, 129, 0.15); border-radius: 8px; padding: 20px; margin: 25px 0;">
+          <p style="color: #e2e8f0; font-size: 14px; line-height: 1.6; margin: 0;">
+            This ticket is now archived. If you encounter any other anomalies or need additional telemetry analysis, you can raise a new ticket at any time in the Support console.
+          </p>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="http://localhost:5173/support" style="background-color: #00d4ff; color: #030712; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2); display: inline-block;">
+            LAUNCH SUPPORT CONSOLE
+          </a>
+        </div>
+        
+        <p style="color: #64748b; font-size: 12px; line-height: 1.5; border-top: 1px solid #1e293b; padding-top: 15px; margin-top: 30px;">
+          This is an automated support dispatch. Please do not reply directly to this email.
+        </p>
+      </div>
+    `
+  };
+
+  if (!transporter) {
+    console.log(`[MOCK EMAIL] To: ${email} | Subject: ${mailOptions.subject} | Ticket closed email logged`);
+    return;
+  }
+
+  try {
+    await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.error('SMTP ticket closed email dispatch failed. Error:', error.message);
+    console.warn('-------- SMTP FAIL FALLBACK --------');
+    console.warn(`[MOCK EMAIL] To: ${email} | Subject: ${mailOptions.subject} | Ticket closed email logged`);
+    console.warn('------------------------------------');
+  }
+};
+
 module.exports = {
   sendOtpEmail,
   sendOnboardEmail,
   sendSuspensionEmail,
   sendReactivationEmail,
   sendDeletionEmail,
-  sendPaymentReceiptEmail
+  sendPaymentReceiptEmail,
+  sendTicketOpenedEmail,
+  sendTicketClosedEmail
 };

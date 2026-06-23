@@ -16,12 +16,12 @@
   gap: 4px;
 }
 
-.support-metric-card:first-child {
+.support-metrics-row .support-metric-card:first-child {
   border-right: 1px solid rgba(255, 255, 255, 0.05);
   padding-right: 24px;
 }
 
-.support-metric-card:last-child {
+.support-metrics-row .support-metric-card:last-child {
   padding-left: 24px;
   align-items: flex-end;
 }

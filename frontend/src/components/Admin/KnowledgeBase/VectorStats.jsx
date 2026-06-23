@@ -1,7 +1,7 @@
 import React from 'react';
 import './VectorStats.css';
 
-function VectorStats({ storageCapacity }) {
+function VectorStats({ storageCapacity, mdFileCount }) {
   const STATS_DATA = [
     {
       id: 'total-vectors',
@@ -20,6 +20,12 @@ function VectorStats({ storageCapacity }) {
       title: 'Index Latency',
       value: '-',
       colorClass: 'text-cyan'
+    },
+    {
+      id: 'file-count',
+      title: 'File Count',
+      value: mdFileCount !== undefined && mdFileCount !== null ? mdFileCount : '-',
+      colorClass: 'text-purple'
     }
   ];
 

@@ -19,7 +19,7 @@ function SupportUser() {
   const [newPriority, setNewPriority] = useState('Med');
   const [submittingTicket, setSubmittingTicket] = useState(false);
 
-  const chatEndRef = useRef(null);
+  const chatDisplayRef = useRef(null);
 
   // Fetch all tickets on mount
   const fetchTickets = async (selectFirst = false) => {
@@ -57,10 +57,10 @@ function SupportUser() {
     return () => clearInterval(interval);
   }, [activeTicketId]);
 
-  // Scroll chat to bottom
+  // Scroll chat container to bottom
   useEffect(() => {
-    if (chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (chatDisplayRef.current) {
+      chatDisplayRef.current.scrollTop = chatDisplayRef.current.scrollHeight;
     }
   }, [tickets, activeTicketId]);
 
@@ -141,7 +141,7 @@ function SupportUser() {
 
   const handleCloseTicket = async () => {
     if (!activeTicketId) return;
-    if (!window.confirm('Are you sure you want to resolve and close this ticket?')) return;
+    if (!window.confirm('Are you sure you want to close this ticket?')) return;
 
     try {
       const token = localStorage.getItem('token');
@@ -151,14 +151,14 @@ function SupportUser() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ status: 'resolved' })
+        body: JSON.stringify({ status: 'closed' })
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to update status.');
 
       await fetchTickets();
-      alert('Ticket marked as resolved.');
+      alert('Ticket marked as closed.');
     } catch (err) {
       alert(err.message);
     }
@@ -213,11 +213,7 @@ function SupportUser() {
           </div>
           <div className="support-metric-card">
             <span className="metric-lbl">AVG RESPONSE TIME</span>
-            <span className="metric-val">24 Hours</span>
-          </div>
-          <div className="support-metric-card">
-            <span className="metric-lbl">SLA COMPLIANCE</span>
-            <span className="metric-val green">98.2%</span>
+            <span className="metric-val">48 Hours</span>
           </div>
         </div>
 
@@ -300,13 +296,13 @@ function SupportUser() {
                   </div>
                   {activeTicket.status !== 'resolved' && activeTicket.status !== 'closed' && (
                     <button className="resolve-ticket-action-btn" onClick={handleCloseTicket}>
-                      Mark Resolved
+                      Close Ticket
                     </button>
                   )}
                 </div>
 
                 {/* Chat Body */}
-                <div className="chat-box-message-display">
+                <div className="chat-box-message-display" ref={chatDisplayRef}>
                   <div className="chat-message-bubble-row system">
                     <div className="message-bubble">
                       <span className="bubble-msg">{activeTicket.desc}</span>
@@ -326,7 +322,6 @@ function SupportUser() {
                       </span>
                     </div>
                   ))}
-                  <div ref={chatEndRef} />
                 </div>
 
                 {/* Chat Input */}

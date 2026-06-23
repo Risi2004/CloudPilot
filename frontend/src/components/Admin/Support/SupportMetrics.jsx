@@ -6,7 +6,7 @@ function SupportMetrics() {
     <div className="support-metrics-row">
       <div className="support-metric-card">
         <span className="metric-title-label">AVG. RESPONSE</span>
-        <span className="metric-value-text">24 Hours</span>
+        <span className="metric-value-text">48 Hours</span>
       </div>
       <div className="support-metric-card">
         <span className="metric-title-label">SLA HEALTH</span>

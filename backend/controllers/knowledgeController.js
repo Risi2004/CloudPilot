@@ -522,8 +522,10 @@ const getBucketSize = async (req, res, next) => {
     const { s3Client } = require('../config/s3');
     const bucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME;
 
+    const mdFileCount = await KnowledgeFile.countDocuments({ name: /\.md$/i });
+
     if (!bucketName) {
-      return res.status(200).json({ storageSize: '0 B' });
+      return res.status(200).json({ storageSize: '0 B', mdFileCount });
     }
 
     let totalSize = 0;
@@ -557,11 +559,12 @@ const getBucketSize = async (req, res, next) => {
       formattedSize = parseFloat((totalSize / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
-    res.status(200).json({ storageSize: formattedSize });
+    res.status(200).json({ storageSize: formattedSize, mdFileCount });
   } catch (err) {
     console.error('Error fetching R2 storage size:', err);
     // Fallback to summing database file sizes
     try {
+      const mdFileCount = await KnowledgeFile.countDocuments({ name: /\.md$/i });
       const files = await KnowledgeFile.find({});
       let totalSize = 0;
       for (const f of files) {
@@ -580,7 +583,7 @@ const getBucketSize = async (req, res, next) => {
         const i = Math.floor(Math.log(totalSize) / Math.log(k));
         formattedSize = parseFloat((totalSize / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
       }
-      return res.status(200).json({ storageSize: formattedSize });
+      return res.status(200).json({ storageSize: formattedSize, mdFileCount });
     } catch (dbErr) {
       next(err);
     }

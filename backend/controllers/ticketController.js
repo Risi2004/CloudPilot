@@ -1,4 +1,6 @@
 const Ticket = require('../models/Ticket');
+const User = require('../models/User');
+const { sendTicketOpenedEmail, sendTicketClosedEmail } = require('../utils/mailer');
 
 /**
  * Generate a unique #CP-XXXX ticket ID
@@ -47,6 +49,11 @@ const createTicket = async (req, res, next) => {
     });
 
     await newTicket.save();
+    try {
+      await sendTicketOpenedEmail(req.user.email, req.user.fullName, ticketId, newTicket.subject);
+    } catch (mailErr) {
+      console.error('Error sending ticket opened email:', mailErr);
+    }
     res.status(201).json({ message: 'Ticket raised successfully.', ticket: newTicket });
   } catch (err) {
     next(err);
@@ -58,7 +65,10 @@ const createTicket = async (req, res, next) => {
  */
 const getTickets = async (req, res, next) => {
   try {
-    let query = {};
+    let query = {
+      userName: { $ne: 'John Doe' },
+      subject: { $ne: 'API Automated Verification Check' }
+    };
     if (req.user.role !== 'admin') {
       query.user = req.user.id;
     }
@@ -144,6 +154,8 @@ const updateTicketStatus = async (req, res, next) => {
       }
     }
 
+    const oldStatus = ticket.status;
+
     if (status) {
       ticket.status = status;
     }
@@ -152,6 +164,18 @@ const updateTicketStatus = async (req, res, next) => {
     }
 
     await ticket.save();
+
+    if (status && (status === 'closed' || status === 'resolved') && oldStatus !== 'closed' && oldStatus !== 'resolved') {
+      try {
+        const user = await User.findById(ticket.user);
+        if (user) {
+          await sendTicketClosedEmail(user.email, user.fullName, ticket.id, ticket.subject);
+        }
+      } catch (mailErr) {
+        console.error('Error sending ticket closed email:', mailErr);
+      }
+    }
+
     res.status(200).json({ message: 'Ticket updated successfully.', ticket });
   } catch (err) {
     next(err);

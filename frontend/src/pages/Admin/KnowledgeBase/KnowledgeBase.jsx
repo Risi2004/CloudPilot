@@ -13,6 +13,7 @@ function KnowledgeBase() {
   const [rebuildTriggered, setRebuildTriggered] = useState(false);
   const [isRebuilding, setIsRebuilding] = useState(false);
   const [storageSize, setStorageSize] = useState('-');
+  const [mdFileCount, setMdFileCount] = useState('-');
 
   const fetchStorageSize = async () => {
     try {
@@ -23,6 +24,7 @@ function KnowledgeBase() {
       const data = await res.json();
       if (res.ok) {
         setStorageSize(data.storageSize);
+        setMdFileCount(data.mdFileCount);
       }
     } catch (e) {
       console.error('Error fetching storage size:', e);
@@ -90,7 +92,7 @@ function KnowledgeBase() {
 
           {/* Full-width Stats Card Row */}
           <div className="knowledge-stats-row">
-            <VectorStats storageCapacity={storageSize} />
+            <VectorStats storageCapacity={storageSize} mdFileCount={mdFileCount} />
           </div>
 
           {/* Full-width Explorer Card Row */}
