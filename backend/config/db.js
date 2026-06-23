@@ -18,6 +18,14 @@ const connectDB = async () => {
     } catch (seedErr) {
       console.error('Error seeding knowledge base during startup:', seedErr);
     }
+
+    // Seed initial subscription plans
+    try {
+      const { seedSubscriptionPlans } = require('../controllers/subscriptionController');
+      await seedSubscriptionPlans();
+    } catch (seedErr) {
+      console.error('Error seeding subscription plans during startup:', seedErr);
+    }
   } catch (err) {
     console.error('MongoDB connection error:', err);
     // Don't kill the process in development if db connection fails, just log it.

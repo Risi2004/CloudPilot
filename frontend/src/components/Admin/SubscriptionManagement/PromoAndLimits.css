@@ -93,10 +93,45 @@
   transition: all 0.2s ease;
 }
 
+.promo-select {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+
+.promo-input[type="number"]::-webkit-outer-spin-button,
+.promo-input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.promo-input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 .promo-input:focus, .promo-select:focus {
   border-color: rgba(99, 102, 241, 0.4);
   background: rgba(255, 255, 255, 0.05);
 }
+
+.promo-input[type="date"]::-webkit-calendar-picker-indicator,
+.promo-modal-input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(0.9);
+  cursor: pointer;
+  opacity: 0.65;
+  transition: opacity 0.2s ease;
+}
+
+.promo-input[type="date"]::-webkit-calendar-picker-indicator:hover,
+.promo-modal-input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
 
 .promo-select option {
   background-color: #0d1221;
@@ -298,4 +333,400 @@
   .promo-limits-row {
     grid-template-columns: 1fr;
   }
+}
+
+/* Promotions Table Registry Card Styles */
+.promotions-list-card {
+  background: rgba(13, 18, 33, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 24px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.promo-table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.promo-table-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.promotions-count-badge {
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  color: #818cf8;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.03em;
+}
+
+.promotions-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.promotions-table-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  color: #64748b;
+  font-size: 13px;
+  gap: 10px;
+}
+
+.promotions-empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #64748b;
+  font-size: 13.5px;
+  border: 1px dashed rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+/* Table Design */
+.promotions-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.promotions-table th, 
+.promotions-table td {
+  padding: 14px 16px;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.promotions-table th {
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  padding-bottom: 18px;
+}
+
+.promotions-table tbody tr {
+  transition: background 0.2s ease;
+}
+
+.promotions-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.promo-code-cell {
+  color: #f1f5f9;
+  font-weight: 700;
+  font-family: monospace;
+  font-size: 14px;
+}
+
+.promo-type-cell, 
+.promo-val-cell, 
+.promo-expiry-cell, 
+.promo-plan-cell {
+  color: #94a3b8;
+}
+
+/* Status Badges */
+.promo-status-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  display: inline-block;
+}
+
+.promo-status-badge.status-active {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.promo-status-badge.status-expired {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.promo-status-badge.status-inactive {
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+}
+
+/* Row Action Buttons */
+.promo-row-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.promo-action-btn {
+  background: transparent;
+  border: none;
+  color: #475569;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.promo-action-btn:hover.edit {
+  background: rgba(255, 255, 255, 0.03);
+  color: #94a3b8;
+}
+
+.promo-action-btn:hover.delete {
+  background: rgba(239, 68, 68, 0.08);
+  color: #f87171;
+}
+
+/* Edit Modal overlays specifically for Promotions */
+.promo-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(8, 10, 20, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+}
+
+.promo-modal-card {
+  background: #0b0f19;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 460px;
+  padding: 30px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+  animation: modalScaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.promo-modal-card.delete-card {
+  max-width: 420px;
+}
+
+.promo-modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #f8fafc;
+  margin-bottom: 20px;
+  letter-spacing: -0.01em;
+}
+
+.promo-modal-title.delete-title {
+  color: #f87171;
+}
+
+.promo-delete-desc {
+  font-size: 13.5px;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.promo-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.promo-form-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.promo-form-row .promo-form-group {
+  margin-bottom: 0;
+}
+
+.promo-form-group.half {
+  flex: 1;
+}
+
+.promo-input-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.promo-modal-input {
+  background: rgba(13, 18, 33, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #f1f5f9;
+  font-size: 13px;
+  outline: none;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.promo-modal-input:focus {
+  border-color: rgba(99, 102, 241, 0.5);
+  background: rgba(13, 18, 33, 0.85);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+select.promo-modal-input {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+
+/* Custom Checkbox Design for Promotion edit state */
+.checkbox-wrapper {
+  margin-top: 14px;
+  margin-bottom: 20px;
+}
+
+.promo-checkbox-container {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.promo-checkbox-container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.promo-custom-box {
+  height: 18px;
+  width: 18px;
+  background-color: rgba(13, 18, 33, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 5px;
+  margin-right: 10px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.promo-checkbox-container:hover input ~ .promo-custom-box {
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.promo-checkbox-container input:checked ~ .promo-custom-box {
+  background-color: #6366f1;
+  border-color: #6366f1;
+}
+
+.promo-custom-box:after {
+  content: "";
+  position: absolute;
+  display: none;
+  left: 6px;
+  top: 2px;
+  width: 4px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.promo-checkbox-container input:checked ~ .promo-custom-box:after {
+  display: block;
+}
+
+.promo-checkbox-label {
+  font-size: 12.5px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* Promo Modal Actions */
+.promo-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  padding-top: 18px;
+}
+
+.promo-modal-btn {
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.promo-modal-btn.cancel {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+}
+
+.promo-modal-btn.cancel:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: #f1f5f9;
+}
+
+.promo-modal-btn.submit {
+  background: #6366f1;
+  border: 1px solid #6366f1;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.2);
+}
+
+.promo-modal-btn.submit:hover:not(:disabled) {
+  background: #4f46e5;
+  border-color: #4f46e5;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
+}
+
+.promo-modal-btn.submit.danger {
+  background: #ef4444;
+  border-color: #ef4444;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.2);
+}
+
+.promo-modal-btn.submit.danger:hover:not(:disabled) {
+  background: #dc2626;
+  border-color: #dc2626;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35);
+}
+
+.promo-modal-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

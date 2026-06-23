@@ -12,6 +12,7 @@ import WorkspaceEditor from './pages/WorkspaceEditor/WorkspaceEditor';
 
 import ViewProfile from './pages/ViewProfile/ViewProfile';
 import SupportUser from './pages/Support/SupportUser';
+import Upgrade from './pages/Upgrade/Upgrade';
 import AdminDashboard from './pages/Admin/AdminDashboard/AdminDashboard';
 import UserManagement from './pages/Admin/UserManagement/UserManagement';
 import SubscriptionManagement from './pages/Admin/SubscriptionManagement/SubscriptionManagement';
@@ -45,6 +46,7 @@ function App() {
 
         <Route path="/view-profile" element={<ProtectedRoute><ViewProfile /></ProtectedRoute>} />
         <Route path="/support" element={<ProtectedRoute><SupportUser /></ProtectedRoute>} />
+        <Route path="/upgrade" element={<ProtectedRoute><Upgrade /></ProtectedRoute>} />
         <Route path="/admin/dashboard" element={<ProtectedRoute requireAdmin={true}><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/dashbaord" element={<ProtectedRoute requireAdmin={true}><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/users" element={<ProtectedRoute requireAdmin={true}><UserManagement /></ProtectedRoute>} />

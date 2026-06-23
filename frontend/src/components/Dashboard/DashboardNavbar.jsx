@@ -151,6 +151,9 @@ function DashboardNavbar() {
                   <button className="db-dropdown-item" onClick={() => { setIsProfileDropdownOpen(false); navigate('/view-profile'); }}>
                     View Profile
                   </button>
+                  <button className="db-dropdown-item" onClick={() => { setIsProfileDropdownOpen(false); navigate('/upgrade'); }}>
+                    Upgrade Plan
+                  </button>
                   <button className="db-dropdown-item logout" onClick={handleLogout}>
                     Logout
                   </button>
