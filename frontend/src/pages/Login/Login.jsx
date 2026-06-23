@@ -49,6 +49,11 @@ function Login() {
         } else {
           localStorage.removeItem('role');
         }
+        if (data.user.plan) {
+          localStorage.setItem('plan', data.user.plan);
+        } else {
+          localStorage.removeItem('plan');
+        }
 
         if (data.user.role === 'admin') {
           navigate('/admin/dashboard');
@@ -108,6 +113,11 @@ function Login() {
         localStorage.setItem('role', data.user.role);
       } else {
         localStorage.removeItem('role');
+      }
+      if (data.user.plan) {
+        localStorage.setItem('plan', data.user.plan);
+      } else {
+        localStorage.removeItem('plan');
       }
       // Clear any temporary base64 image on new login to avoid stale local images
       localStorage.removeItem('profileImage');

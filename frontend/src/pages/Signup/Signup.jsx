@@ -72,6 +72,11 @@ function Signup() {
         } else {
           localStorage.removeItem('role');
         }
+        if (data.user.plan) {
+          localStorage.setItem('plan', data.user.plan);
+        } else {
+          localStorage.removeItem('plan');
+        }
 
         if (data.user.role === 'admin') {
           navigate('/admin/dashboard');
@@ -209,6 +214,11 @@ function Signup() {
         localStorage.setItem('role', data.user.role);
       } else {
         localStorage.removeItem('role');
+      }
+      if (data.user.plan) {
+        localStorage.setItem('plan', data.user.plan);
+      } else {
+        localStorage.removeItem('plan');
       }
       if (profileImage) {
         localStorage.setItem('profileImage', profileImage); // base64 fallback

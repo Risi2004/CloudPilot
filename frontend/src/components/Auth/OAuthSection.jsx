@@ -59,6 +59,11 @@ function OAuthSection() {
       } else {
         localStorage.removeItem('role');
       }
+      if (data.user.plan) {
+        localStorage.setItem('plan', data.user.plan);
+      } else {
+        localStorage.removeItem('plan');
+      }
       localStorage.removeItem('profileImage');
 
       // Navigate to destination depending on user role
