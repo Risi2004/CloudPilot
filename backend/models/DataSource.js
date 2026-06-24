@@ -36,5 +36,9 @@ const dataSourceSchema = new mongoose.Schema({
   }
 });
 
+// Ensure uniqueness of folders under the same parent directory
+dataSourceSchema.index({ key: 1, parentId: 1 }, { unique: true });
+
 module.exports = mongoose.model('DataSource', dataSourceSchema);
+
 

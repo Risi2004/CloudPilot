@@ -159,14 +159,93 @@ const getFiles = async (req, res, next) => {
   }
 };
 
+// Helper to resolve or recursively create directories under a parent
+const resolveOrCreateDirectories = async (relativePath, startParentId) => {
+  if (!relativePath) return startParentId;
+
+  // Normalize path separators to forward slash
+  const normalizedPath = relativePath.replace(/\\/g, '/');
+  const pathParts = normalizedPath.split('/');
+  
+  // The last part is the filename, we only want folders
+  const folderNames = pathParts.slice(0, -1);
+  if (folderNames.length === 0) return startParentId;
+
+  let currentParentId = startParentId && startParentId !== 'null' ? startParentId : null;
+
+  for (const folderName of folderNames) {
+    const name = folderName.trim();
+    if (!name) continue;
+
+    const key = generateKey(name);
+    
+    // Check if directory already exists
+    let dataSource = await DataSource.findOne({ key, parentId: currentParentId });
+    
+    if (!dataSource) {
+      // Determine folder key
+      let folderKey = `knowledge-base/${name.replace(/\s+/g, '-')}/`;
+      if (currentParentId) {
+        const parent = await DataSource.findById(currentParentId);
+        if (parent) {
+          folderKey = `${parent.folderKey}${name.replace(/\s+/g, '-')}/`;
+        }
+      }
+
+      // Create folder in R2
+      try {
+        await createFolder(folderKey);
+      } catch (s3Error) {
+        console.error('Error creating folder in Cloudflare R2:', s3Error);
+        throw new Error('Failed to create folder in Cloudflare R2: ' + s3Error.message);
+      }
+
+      // Save folder in MongoDB
+      try {
+        dataSource = new DataSource({
+          name,
+          key,
+          folderKey,
+          parentId: currentParentId,
+          sub: 'R2 Folder',
+          status: 'Synced'
+        });
+        await dataSource.save();
+      } catch (dbErr) {
+        // Under high concurrency, another request might have saved this folder key/parentId.
+        // If so, a duplicate key error is thrown (E11000). We query for it again.
+        if (dbErr.code === 11000) {
+          dataSource = await DataSource.findOne({ key, parentId: currentParentId });
+        } else {
+          throw dbErr;
+        }
+      }
+    }
+    
+    if (dataSource) {
+      currentParentId = dataSource._id;
+    }
+  }
+
+  return currentParentId;
+};
+
 const uploadFile = async (req, res, next) => {
   try {
-    const { name, dataSourceId, fileData, size, fileType } = req.body;
+    const { name, dataSourceId, relativePath, fileData, size, fileType } = req.body;
     if (!name || !dataSourceId || !fileData || !size || !fileType) {
       return res.status(400).json({ message: 'Name, dataSourceId, fileData (base64), size, and fileType are required.' });
     }
 
-    const dataSource = await DataSource.findById(dataSourceId);
+    // 1. Resolve or create directories recursively
+    let resolvedDataSourceId = dataSourceId;
+    try {
+      resolvedDataSourceId = await resolveOrCreateDirectories(relativePath, dataSourceId);
+    } catch (pathErr) {
+      return res.status(500).json({ message: 'Failed to resolve folder path: ' + pathErr.message });
+    }
+
+    const dataSource = await DataSource.findById(resolvedDataSourceId);
     if (!dataSource) {
       return res.status(404).json({ message: 'Data Source not found.' });
     }
@@ -177,7 +256,7 @@ const uploadFile = async (req, res, next) => {
     else if (fileType === 'code') mimeType = 'text/plain';
     else if (fileType === 'doc') mimeType = 'text/markdown';
 
-    // 1. Upload File to Cloudflare R2
+    // 2. Upload File to Cloudflare R2
     let fileKey;
     try {
       fileKey = await uploadKnowledgeFile(fileData, dataSource.folderKey, name, mimeType);
@@ -186,7 +265,7 @@ const uploadFile = async (req, res, next) => {
       return res.status(500).json({ message: 'Failed to upload file to Cloudflare R2: ' + s3Error.message });
     }
 
-    // 2. Save File in MongoDB
+    // 3. Save File in MongoDB
     const knowledgeFile = new KnowledgeFile({
       name: name.trim(),
       dataSourceId: dataSource._id,
@@ -207,6 +286,7 @@ const uploadFile = async (req, res, next) => {
     next(err);
   }
 };
+
 
 // Seed initial data if the database is empty
 const seedKnowledgeBase = async () => {
