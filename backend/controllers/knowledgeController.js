@@ -152,6 +152,84 @@ const getFiles = async (req, res, next) => {
     if (dataSourceId && dataSourceId !== 'null') {
       query.dataSourceId = dataSourceId;
     }
+
+    // Synchronize files from Cloudflare R2 if a specific data source is requested
+    if (dataSourceId && dataSourceId !== 'null') {
+      const dataSource = await DataSource.findById(dataSourceId);
+      if (dataSource) {
+        try {
+          const { ListObjectsV2Command } = require('@aws-sdk/client-s3');
+          const { s3Client } = require('../config/s3');
+          const bucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME;
+
+          if (bucketName) {
+            const command = new ListObjectsV2Command({
+              Bucket: bucketName,
+              Prefix: dataSource.folderKey,
+              Delimiter: '/'
+            });
+            const response = await s3Client.send(command);
+
+            const formatSize = (bytes) => {
+              if (!bytes) return '0 B';
+              const k = 1024;
+              const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+              const i = Math.floor(Math.log(bytes) / Math.log(k));
+              return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            };
+
+            const getFileTypeFromExtension = (filename) => {
+              const ext = filename.split('.').pop().toLowerCase();
+              if (ext === 'pdf') return 'pdf';
+              if (['md', 'markdown', 'txt', 'docx', 'doc', 'csv'].includes(ext)) return 'doc';
+              if (['json', 'yaml', 'yml', 'tf', 'js', 'jsx', 'ts', 'tsx', 'py', 'go', 'html', 'css', 'sh', 'hcl', 'conf', 'config'].includes(ext)) return 'code';
+              return 'doc';
+            };
+
+            if (response.Contents) {
+              const r2Keys = [];
+              for (const item of response.Contents) {
+                // Skip the folder directory placeholder itself
+                if (item.Key === dataSource.folderKey || item.Key.endsWith('/')) {
+                  continue;
+                }
+
+                r2Keys.push(item.Key);
+                const filename = item.Key.substring(dataSource.folderKey.length);
+                if (!filename) continue;
+
+                // Check if file already exists in DB
+                let dbFile = await KnowledgeFile.findOne({ fileKey: item.Key });
+                if (!dbFile) {
+                  dbFile = new KnowledgeFile({
+                    name: filename,
+                    dataSourceId: dataSource._id,
+                    sourceName: dataSource.name,
+                    fileKey: item.Key,
+                    size: formatSize(item.Size),
+                    fileType: getFileTypeFromExtension(filename),
+                    status: 'Ready'
+                  });
+                  await dbFile.save();
+                }
+              }
+
+              // Clean up files in MongoDB that are no longer in R2
+              await KnowledgeFile.deleteMany({
+                dataSourceId: dataSource._id,
+                fileKey: { $nin: r2Keys }
+              });
+            } else {
+              // If there are no contents in R2 under this folder, empty the files list in DB
+              await KnowledgeFile.deleteMany({ dataSourceId: dataSource._id });
+            }
+          }
+        } catch (s3Err) {
+          console.error('Error syncing files from Cloudflare R2:', s3Err);
+        }
+      }
+    }
+
     const files = await KnowledgeFile.find(query).populate('dataSourceId').sort({ uploadedAt: -1 });
     res.status(200).json({ files });
   } catch (err) {
