@@ -77,7 +77,7 @@ const sendOnboardEmail = async (email) => {
     from: process.env.SMTP_FROM || '"CloudPilot" <no-reply@cloudpilot.io>',
     to: email,
     subject: 'Welcome to CloudPilot, Commander!',
-    text: `Welcome aboard! Your session is initialized. Explore the dashboard at http://localhost:5173/dashboard.`,
+    text: `Welcome aboard! Your session is initialized. Explore the dashboard at ${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard.`,
     html: `
       <div style="background-color: #030712; color: #ffffff; padding: 40px; font-family: sans-serif; border-radius: 12px; max-width: 600px; margin: 0 auto; border: 1px solid #1e293b;">
         <h2 style="color: #00d4ff; font-size: 24px; font-weight: bold; border-bottom: 1px solid #1e293b; padding-bottom: 10px;">CLOUDPILOT MISSION CONTROL</h2>
@@ -96,7 +96,7 @@ const sendOnboardEmail = async (email) => {
         </div>
 
         <div style="text-align: center; margin: 30px 0;">
-          <a href="http://localhost:5173/dashboard" style="background-color: #00d4ff; color: #030712; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2); display: inline-block;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" style="background-color: #00d4ff; color: #030712; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2); display: inline-block;">
             LAUNCH MISSION CONTROL
           </a>
         </div>
@@ -179,7 +179,7 @@ const sendReactivationEmail = async (email, fullName) => {
     from: process.env.SMTP_FROM || '"CloudPilot" <no-reply@cloudpilot.io>',
     to: email,
     subject: 'CloudPilot Fleet Alert - Account Reactivated',
-    text: `Hello ${fullName},\n\nWe are pleased to inform you that your CloudPilot account has been reactivated. You can now log back in at http://localhost:5173.`,
+    text: `Hello ${fullName},\n\nWe are pleased to inform you that your CloudPilot account has been reactivated. You can now log back in at ${process.env.FRONTEND_URL || 'http://localhost:5173'}.`,
     html: `
       <div style="background-color: #030712; color: #ffffff; padding: 40px; font-family: sans-serif; border-radius: 12px; max-width: 600px; margin: 0 auto; border: 1px solid #1e293b;">
         <h2 style="color: #10b981; font-size: 24px; font-weight: bold; border-bottom: 1px solid #1e293b; padding-bottom: 10px;">CLOUDPILOT MISSION CONTROL</h2>
@@ -191,14 +191,14 @@ const sendReactivationEmail = async (email, fullName) => {
         <div style="background: rgba(16, 185, 129, 0.04); border: 1px solid rgba(16, 185, 129, 0.15); border-radius: 8px; padding: 20px; margin: 25px 0;">
           <h4 style="color: #34d399; margin: 0 0 10px 0; font-size: 15px;">Your access is fully restored:</h4>
           <ul style="color: #94a3b8; font-size: 14px; line-height: 1.7; padding-left: 20px; margin: 0;">
-            <li>You can now log in to the dashboard at http://localhost:5173.</li>
+            <li>You can now log in to the dashboard at ${process.env.FRONTEND_URL || 'http://localhost:5173'}.</li>
             <li>All active cloud resource integrations are once again accessible.</li>
             <li>Mission logs, tickets, and configurations are ready for use.</li>
           </ul>
         </div>
 
         <div style="text-align: center; margin: 30px 0;">
-          <a href="http://localhost:5173/login" style="background-color: #00d4ff; color: #030712; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2); display: inline-block;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" style="background-color: #00d4ff; color: #030712; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2); display: inline-block;">
             LOG IN TO ACCOUNT
           </a>
         </div>
@@ -332,7 +332,7 @@ const sendPaymentReceiptEmail = async (email, fullName, planName, amount, curren
         </p>
 
         <div style="text-align: center; margin: 30px 0;">
-          <a href="http://localhost:5173/dashboard" style="background-color: #00d4ff; color: #030712; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2); display: inline-block;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" style="background-color: #00d4ff; color: #030712; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2); display: inline-block;">
             LAUNCH MISSION CONTROL
           </a>
         </div>
@@ -392,7 +392,7 @@ const sendTicketOpenedEmail = async (email, fullName, ticketId, subject) => {
         </p>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="http://localhost:5173/support" style="background-color: #00d4ff; color: #030712; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2); display: inline-block;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/support" style="background-color: #00d4ff; color: #030712; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2); display: inline-block;">
             VIEW TICKET TIMELINE
           </a>
         </div>
@@ -447,7 +447,7 @@ const sendTicketClosedEmail = async (email, fullName, ticketId, subject) => {
         </div>
 
         <div style="text-align: center; margin: 30px 0;">
-          <a href="http://localhost:5173/support" style="background-color: #00d4ff; color: #030712; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2); display: inline-block;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/support" style="background-color: #00d4ff; color: #030712; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2); display: inline-block;">
             LAUNCH SUPPORT CONSOLE
           </a>
         </div>
@@ -497,7 +497,7 @@ const sendNotificationEmail = async (email, fullName, title, message, actionType
     from: process.env.SMTP_FROM || '"CloudPilot" <no-reply@cloudpilot.io>',
     to: email,
     subject: subject,
-    text: `Hello ${fullName},\n\n${actionText}\n\nTitle: ${title}\nMessage: ${message}\n\nVisit your dashboard at http://localhost:5173/dashboard to view detail.`,
+    text: `Hello ${fullName},\n\n${actionText}\n\nTitle: ${title}\nMessage: ${message}\n\nVisit your dashboard at ${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard to view detail.`,
     html: `
       <div style="background-color: #030712; color: #ffffff; padding: 40px; font-family: sans-serif; border-radius: 12px; max-width: 600px; margin: 0 auto; border: 1px solid #1e293b;">
         <h2 style="color: ${actionColor}; font-size: 24px; font-weight: bold; border-bottom: 1px solid #1e293b; padding-bottom: 10px;">${actionTitle}</h2>
@@ -514,7 +514,7 @@ const sendNotificationEmail = async (email, fullName, title, message, actionType
         </div>
 
         <div style="text-align: center; margin: 30px 0;">
-          <a href="http://localhost:5173/dashboard" style="background-color: #00d4ff; color: #030712; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2); display: inline-block;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" style="background-color: #00d4ff; color: #030712; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2); display: inline-block;">
             VIEW DASHBOARD
           </a>
         </div>

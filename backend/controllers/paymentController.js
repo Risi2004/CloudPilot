@@ -67,8 +67,8 @@ const initiatePayment = async (req, res, next) => {
     res.status(200).json({
       sandbox: true, // Set to true for PayHere sandbox environment
       merchant_id: merchantId,
-      return_url: 'http://localhost:5173/dashboard?payment=success',
-      cancel_url: 'http://localhost:5173/upgrade?payment=cancelled',
+      return_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard?payment=success`,
+      cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/upgrade?payment=cancelled`,
       notify_url: `${process.env.BACKEND_API_URL || 'http://localhost:5000'}/api/payments/notify`,
       order_id: orderId,
       items: `${plan.name} Subscription`,
