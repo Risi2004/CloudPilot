@@ -4,19 +4,21 @@ import './AcquisitionVolume.css';
 function AcquisitionVolume({ acquisitionData }) {
   const [hoveredBar, setHoveredBar] = useState(null);
 
-  // Fallback mock data
-  const rawData = acquisitionData && acquisitionData.length > 0 ? acquisitionData : [
-    { name: 'Oct 15', Volume: 24 },
-    { name: 'Oct 16', Volume: 38 },
-    { name: 'Oct 17', Volume: 30 },
-    { name: 'Oct 18', Volume: 72 },
-    { name: 'Oct 19', Volume: 48 },
-    { name: 'Oct 20', Volume: 20 },
-    { name: 'Oct 21', Volume: 42 },
-    { name: 'Oct 22', Volume: 60 },
-    { name: 'Oct 23', Volume: 32 },
-    { name: 'Oct 24', Volume: 55 }
-  ];
+  const rawData = acquisitionData || [];
+
+  if (rawData.length === 0) {
+    return (
+      <div className="acquisition-volume-card">
+        <div className="acquisition-header">
+          <h3 className="acquisition-title">Acquisition Volume</h3>
+          <p className="acquisition-subtitle">Daily new subscriber sign-ups across all regions.</p>
+        </div>
+        <div className="chart-body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80px', color: '#64748b' }}>
+          <span>No sign-ups in this timeframe.</span>
+        </div>
+      </div>
+    );
+  }
 
   const DAILY_DATA = rawData.map((d, i) => ({
     day: `Day ${i + 1}`,

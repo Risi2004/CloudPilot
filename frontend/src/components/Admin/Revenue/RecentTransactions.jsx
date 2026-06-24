@@ -1,27 +1,12 @@
 import React, { useState } from 'react';
 import './RecentTransactions.css';
 
-const ALL_TRANSACTIONS = [
-  { id: 'tx-1', name: 'Acme Systems', email: 'billing@acme.co', initials: 'AS', status: 'COMPLETED', plan: 'Enterprise (Annual)', amount: '$24,400.00', date: 'Oct 24, 2023' },
-  { id: 'tx-2', name: 'Global Logistics', email: 'finance@gl-ship.com', initials: 'GL', status: 'COMPLETED', plan: 'Pro (Monthly)', amount: '$899.00', date: 'Oct 23, 2023' },
-  { id: 'tx-3', name: 'Vortex Tech', email: 'admin@vortex.io', initials: 'VT', status: 'PENDING', plan: 'Enterprise (Annual)', amount: '$12,000.00', date: 'Oct 23, 2023' },
-  { id: 'tx-4', name: 'Nexus Holding', email: 'billing@nexus.dev', initials: 'NH', status: 'FAILED', plan: 'Pro (Monthly)', amount: '$899.00', date: 'Oct 22, 2023' },
-  { id: 'tx-5', name: 'Alpha Biotech', email: 'billing@alpha.bio', initials: 'AB', status: 'COMPLETED', plan: 'Pro (Monthly)', amount: '$899.00', date: 'Oct 21, 2023' },
-  { id: 'tx-6', name: 'Quantum Crypt', email: 'ops@quantum.io', initials: 'QC', status: 'COMPLETED', plan: 'Enterprise (Annual)', amount: '$24,400.00', date: 'Oct 20, 2023' },
-  { id: 'tx-7', name: 'Stellar Tech', email: 'finance@stellar.dev', initials: 'ST', status: 'PENDING', plan: 'Pro (Monthly)', amount: '$899.00', date: 'Oct 19, 2023' },
-  { id: 'tx-8', name: 'Zeta Software', email: 'billing@zeta.com', initials: 'ZS', status: 'FAILED', plan: 'Starter (Monthly)', amount: '$99.00', date: 'Oct 18, 2023' },
-  { id: 'tx-9', name: 'Nova Express', email: 'billing@nova.io', initials: 'NE', status: 'COMPLETED', plan: 'Starter (Monthly)', amount: '$99.00', date: 'Oct 17, 2023' },
-  { id: 'tx-10', name: 'SkyGrid Inc', email: 'ops@skygrid.co', initials: 'SI', status: 'COMPLETED', plan: 'Enterprise (Annual)', amount: '$24,400.00', date: 'Oct 16, 2023' },
-  { id: 'tx-11', name: 'Volt Energy', email: 'billing@volt.energy', initials: 'VE', status: 'COMPLETED', plan: 'Pro (Monthly)', amount: '$899.00', date: 'Oct 15, 2023' },
-  { id: 'tx-12', name: 'Pixel Media', email: 'billing@pixel.net', initials: 'PM', status: 'COMPLETED', plan: 'Starter (Monthly)', amount: '$99.00', date: 'Oct 14, 2023' }
-];
-
 function RecentTransactions({ transactions }) {
   const [filterPlan, setFilterPlan] = useState('All');
   const [currentPage, setCurrentPage] = useState(0);
   const [actionMenuOpen, setActionMenuOpen] = useState(null);
 
-  const rawTx = transactions && transactions.length > 0 ? transactions : ALL_TRANSACTIONS;
+  const rawTx = transactions || [];
 
   const formattedTransactions = rawTx.map(tx => {
     const getInitials = (n) => {

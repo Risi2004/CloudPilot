@@ -1,87 +1,8 @@
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 
-// Helper to seed mock transactions if none exist
-const seedMockTransactions = async () => {
-  const count = await Transaction.countDocuments({});
-  if (count > 0) return;
-
-  console.log('Seeding mock transactions for revenue analytics...');
-
-  const users = await User.find({});
-  const mockNames = [
-    'Acme Systems', 'Global Logistics', 'Vortex Tech', 'Nexus Holding',
-    'Alpha Biotech', 'Quantum Crypt', 'Stellar Tech', 'Zeta Software',
-    'Nova Express', 'SkyGrid Inc', 'Volt Energy', 'Pixel Media',
-    'Apex Corp', 'Cyberdyne', 'Initech', 'Hooli', 'Veer Industries',
-    'Soylent Corp', 'Umbrella Corp', 'Stark Industries', 'Wayne Ent.'
-  ];
-  
-  const mockEmails = [
-    'billing@acme.co', 'finance@gl-ship.com', 'admin@vortex.io', 'billing@nexus.dev',
-    'billing@alpha.bio', 'ops@quantum.io', 'finance@stellar.dev', 'billing@zeta.com',
-    'billing@nova.io', 'ops@skygrid.co', 'billing@volt.energy', 'billing@pixel.net',
-    'finance@apex.co', 'admin@cyberdyne.io', 'billing@initech.com', 'ops@hooli.xyz',
-    'billing@veer.co', 'info@soylent.com', 'admin@umbrella.co', 'finance@stark.com', 'billing@wayne.com'
-  ];
-
-  const plans = [
-    { name: 'Pro (Monthly)', price: 49 },
-    { name: 'Enterprise (Monthly)', price: 299 },
-    { name: 'Free (Monthly)', price: 0 }
-  ];
-
-  const statuses = ['COMPLETED', 'COMPLETED', 'COMPLETED', 'PENDING', 'FAILED'];
-
-  const now = new Date();
-  const transactionsToInsert = [];
-
-  // Seed transactions spread over the last 90 days
-  for (let i = 0; i < 60; i++) {
-    const daysAgo = Math.floor(Math.random() * 90);
-    const date = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
-    
-    // Mix actual users and generic mock customers
-    let name, email, userId;
-    if (users.length > 0 && Math.random() > 0.6) {
-      const u = users[Math.floor(Math.random() * users.length)];
-      name = u.fullName;
-      email = u.email;
-      userId = u._id;
-    } else {
-      const idx = Math.floor(Math.random() * mockNames.length);
-      name = mockNames[idx];
-      email = mockEmails[idx];
-      userId = null;
-    }
-
-    const planObj = plans[Math.floor(Math.random() * plans.length)];
-    if (planObj.price === 0) continue; // Skip free plans from transactions list
-
-    const status = statuses[Math.floor(Math.random() * statuses.length)];
-    const orderId = `ORDER_${userId || 'GUEST'}_${date.getTime()}_${i}`;
-
-    transactionsToInsert.push({
-      userId,
-      name,
-      email,
-      plan: planObj.name,
-      amount: planObj.price,
-      status,
-      orderId,
-      date
-    });
-  }
-
-  await Transaction.insertMany(transactionsToInsert);
-  console.log(`Seeded ${transactionsToInsert.length} mock transactions.`);
-};
-
 const getRevenueStats = async (req, res, next) => {
   try {
-    // 1. Ensure transactions are seeded
-    await seedMockTransactions();
-
     const { timeframe } = req.query;
     const now = new Date();
     let startDate = new Date();
@@ -108,12 +29,23 @@ const getRevenueStats = async (req, res, next) => {
     ]);
     const totalRevenueYTD = ytdResult.length > 0 ? ytdResult[0].total : 0;
 
-    // 2. MRR - Sum of Pro ($49) and Enterprise ($299) subscription values for active users
+    // 2. MRR - Sum of subscription values for active users
+    const SubscriptionPlan = require('../models/SubscriptionPlan');
+    const plans = await SubscriptionPlan.find({});
+    const planPriceMap = {};
+    plans.forEach(p => {
+      planPriceMap[p.name.toLowerCase()] = p.price;
+    });
+
     const users = await User.find({ status: 'Active' });
     let dynamicMRR = 0;
     users.forEach(u => {
-      if (u.plan === 'Pro') dynamicMRR += 49;
-      else if (u.plan === 'Enterprise') dynamicMRR += 299;
+      if (u.plan) {
+        const userPlanKey = u.plan.toLowerCase();
+        if (planPriceMap[userPlanKey] !== undefined) {
+          dynamicMRR += planPriceMap[userPlanKey];
+        }
+      }
     });
 
     const mrr = dynamicMRR;
@@ -121,8 +53,70 @@ const getRevenueStats = async (req, res, next) => {
 
     // 3. Conversion Rate - Percentage of users on paid plans
     const totalUsers = await User.countDocuments({});
-    const paidUsers = await User.countDocuments({ plan: { $in: ['Pro', 'Enterprise'] } });
+    const paidPlanNames = plans.filter(p => p.price > 0).map(p => p.name);
+    const paidUsers = await User.countDocuments({ plan: { $in: paidPlanNames } });
     const conversionRate = totalUsers > 0 ? parseFloat(((paidUsers / totalUsers) * 100).toFixed(1)) : 0;
+
+    // Calculate Trends & Goals Progress dynamically
+    // A. YTD Trend (Compare current YTD with previous year's YTD up to current day-of-year)
+    const prevYearStart = new Date(currentYear - 1, 0, 1);
+    const prevYearEnd = new Date(now);
+    prevYearEnd.setFullYear(now.getFullYear() - 1);
+    const prevYtdResult = await Transaction.aggregate([
+      { $match: { status: 'COMPLETED', date: { $gte: prevYearStart, $lte: prevYearEnd } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+    const prevYtdRevenue = prevYtdResult.length > 0 ? prevYtdResult[0].total : 0;
+    let ytdTrendVal = 0;
+    if (prevYtdRevenue > 0) {
+      ytdTrendVal = ((totalRevenueYTD - prevYtdRevenue) / prevYtdRevenue) * 100;
+    } else {
+      ytdTrendVal = totalRevenueYTD > 0 ? 100 : 0;
+    }
+    const ytdTrend = `${ytdTrendVal >= 0 ? '+' : ''}${ytdTrendVal.toFixed(1)}%`;
+
+    // B. MRR Trend (Compare current active MRR with active MRR 30 days ago)
+    const prevUsers = await User.find({
+      status: 'Active',
+      createdAt: { $lt: startDate }
+    });
+    let prevMRR = 0;
+    prevUsers.forEach(u => {
+      if (u.plan) {
+        const userPlanKey = u.plan.toLowerCase();
+        if (planPriceMap[userPlanKey] !== undefined) {
+          prevMRR += planPriceMap[userPlanKey];
+        }
+      }
+    });
+    let mrrTrendVal = 0;
+    if (prevMRR > 0) {
+      mrrTrendVal = ((dynamicMRR - prevMRR) / prevMRR) * 100;
+    } else {
+      mrrTrendVal = dynamicMRR > 0 ? 100 : 0;
+    }
+    const mrrTrend = `${mrrTrendVal >= 0 ? '+' : ''}${mrrTrendVal.toFixed(1)}%`;
+    const arrTrend = mrrTrend;
+
+    // C. Conversion Rate Trend (Compare current conversion rate with conversion rate 30 days ago)
+    const totalUsers30d = await User.countDocuments({ createdAt: { $lt: startDate } });
+    const paidUsers30d = await User.countDocuments({
+      plan: { $in: paidPlanNames },
+      createdAt: { $lt: startDate }
+    });
+    const conversionRate30d = totalUsers30d > 0 ? parseFloat(((paidUsers30d / totalUsers30d) * 100).toFixed(1)) : 0;
+    let conversionTrendVal = conversionRate - conversionRate30d;
+    const conversionTrend = `${conversionTrendVal >= 0 ? '+' : ''}${conversionTrendVal.toFixed(1)}%`;
+
+    // D. Progress towards targets
+    const TARGET_MRR = 1000;
+    const TARGET_ARR = 12000;
+    const TARGET_YTD = 25000;
+
+    const mrrProgress = Math.min(100, Math.round((mrr / TARGET_MRR) * 100));
+    const arrProgress = Math.min(100, Math.round((arr / TARGET_ARR) * 100));
+    const ytdProgress = Math.min(100, Math.round((totalRevenueYTD / TARGET_YTD) * 100));
+    const conversionProgress = Math.min(100, Math.round(conversionRate));
 
     // B. Calculate Chart Data
     // Group completed transactions in the timeframe by date
@@ -196,6 +190,15 @@ const getRevenueStats = async (req, res, next) => {
         arr: formatValue(arr),
         totalRevenueYTD: formatValue(totalRevenueYTD),
         conversionRate: `${conversionRate}%`,
+        totalUsers,
+        mrrTrend,
+        arrTrend,
+        ytdTrend,
+        conversionTrend,
+        mrrProgress,
+        arrProgress,
+        ytdProgress,
+        conversionProgress,
         rawMrr: mrr,
         rawArr: arr,
         rawYtd: totalRevenueYTD,

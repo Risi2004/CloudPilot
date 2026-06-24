@@ -19,23 +19,26 @@ function PlanBreakdown({ planData, stats }) {
       }
     });
   } else {
-    // Fallback defaults
-    enterpriseCount = 45;
-    proCount = 30;
-    starterCount = 25;
+    // Default to zero if no data exists
+    enterpriseCount = 0;
+    proCount = 0;
+    starterCount = 0;
   }
 
-  const total = enterpriseCount + proCount + starterCount || 1;
-  const enterprisePct = parseFloat(((enterpriseCount / total) * 100).toFixed(0));
-  const proPct = parseFloat(((proCount / total) * 100).toFixed(0));
-  const starterPct = 100 - enterprisePct - proPct;
+  const total = enterpriseCount + proCount + starterCount || 0;
+  const enterprisePct = total > 0 ? parseFloat(((enterpriseCount / total) * 100).toFixed(0)) : 0;
+  const proPct = total > 0 ? parseFloat(((proCount / total) * 100).toFixed(0)) : 0;
+  const starterPct = total > 0 ? 100 - enterprisePct - proPct : 0;
 
   const enterpriseLength = 314.16 * (enterprisePct / 100);
   const proLength = 314.16 * (proPct / 100);
   const starterLength = 314.16 * (starterPct / 100);
 
   // Format total users display
-  const displayTotal = stats?.rawConversion ? '4' : '12.4k'; // if seeded, total users is small
+  // Format total users display
+  const displayTotal = stats?.totalUsers !== undefined 
+    ? (stats.totalUsers >= 1000 ? `${(stats.totalUsers / 1000).toFixed(1)}k` : stats.totalUsers) 
+    : '0';
 
   return (
     <div className="plan-breakdown-card">

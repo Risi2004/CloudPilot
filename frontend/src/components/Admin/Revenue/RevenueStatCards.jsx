@@ -12,36 +12,36 @@ function RevenueStatCards({ stats }) {
       id: 'mrr',
       title: 'MONTHLY RECURRING REVENUE',
       value: mrr,
-      trend: '+12.4%',
-      isPositive: true,
-      progressWidth: '78%',
+      trend: stats?.mrrTrend || '+0.0%',
+      isPositive: !stats?.mrrTrend?.startsWith('-'),
+      progressWidth: `${stats?.mrrProgress !== undefined ? stats.mrrProgress : 0}%`,
       barClass: 'purple-gradient'
     },
     {
       id: 'arr',
       title: 'ANNUAL RECURRING REVENUE',
       value: arr,
-      trend: '+8.1%',
-      isPositive: true,
-      progressWidth: '64%',
+      trend: stats?.arrTrend || '+0.0%',
+      isPositive: !stats?.arrTrend?.startsWith('-'),
+      progressWidth: `${stats?.arrProgress !== undefined ? stats.arrProgress : 0}%`,
       barClass: 'green-gradient'
     },
     {
       id: 'ytd',
       title: 'TOTAL REVENUE (YTD)',
       value: ytd,
-      trend: '-2.3%',
-      isPositive: false,
-      progressWidth: '82%',
+      trend: stats?.ytdTrend || '+0.0%',
+      isPositive: !stats?.ytdTrend?.startsWith('-'),
+      progressWidth: `${stats?.ytdProgress !== undefined ? stats.ytdProgress : 0}%`,
       barClass: 'cyan-gradient'
     },
     {
       id: 'conversion',
       title: 'CONVERSION RATE',
       value: conversion,
-      trend: '+4.1%',
-      isPositive: true,
-      progressWidth: '55%',
+      trend: stats?.conversionTrend || '+0.0%',
+      isPositive: !stats?.conversionTrend?.startsWith('-'),
+      progressWidth: `${stats?.conversionProgress !== undefined ? stats.conversionProgress : 0}%`,
       barClass: 'purple-blue-gradient'
     }
   ];

@@ -8,18 +8,20 @@ const height = 220;
 function RevenueTrendChart({ trendData }) {
   const [hoveredPoint, setHoveredPoint] = useState(null);
 
-  // If no trendData or empty, use fallback defaults
-  const rawData = trendData && trendData.length > 0 ? trendData : [
-    { name: 'JAN', Revenue: 110000 },
-    { name: 'FEB', Revenue: 135000 },
-    { name: 'MAR', Revenue: 125000 },
-    { name: 'APR', Revenue: 178000 },
-    { name: 'MAY', Revenue: 202000 },
-    { name: 'JUN', Revenue: 255000 },
-    { name: 'JUL', Revenue: 240000 },
-    { name: 'AUG', Revenue: 310000 },
-    { name: 'SEP', Revenue: 292000 }
-  ];
+  const rawData = trendData || [];
+
+  if (rawData.length === 0) {
+    return (
+      <div className="revenue-trend-card">
+        <div className="chart-card-header">
+          <h3 className="chart-card-title">Revenue Trend</h3>
+        </div>
+        <div className="chart-body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '180px', color: '#64748b' }}>
+          <span>No completed transactions in this timeframe.</span>
+        </div>
+      </div>
+    );
+  }
 
   const maxRevenue = Math.max(...rawData.map(d => d.Revenue), 1);
   const dataPoints = rawData.map((d, i) => {
