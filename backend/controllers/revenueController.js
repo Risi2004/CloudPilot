@@ -116,9 +116,7 @@ const getRevenueStats = async (req, res, next) => {
       else if (u.plan === 'Enterprise') dynamicMRR += 299;
     });
 
-    // Provide a baseline value + dynamic DB scaling so it looks premium
-    const baseMRR = 482900;
-    const mrr = baseMRR + dynamicMRR;
+    const mrr = dynamicMRR;
     const arr = mrr * 12;
 
     // 3. Conversion Rate - Percentage of users on paid plans
@@ -186,13 +184,17 @@ const getRevenueStats = async (req, res, next) => {
       .sort({ date: -1 })
       .limit(20);
 
+    const formatValue = (val) => {
+      if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
+      if (val >= 1000) return `$${(val / 1000).toFixed(1)}k`;
+      return `$${val}`;
+    };
+
     res.status(200).json({
       stats: {
-        mrr: `$${(mrr / 1000).toFixed(1)}k`,
-        arr: `$${(arr / 1000000).toFixed(1)}M`,
-        totalRevenueYTD: totalRevenueYTD >= 1000000 
-          ? `$${(totalRevenueYTD / 1000000).toFixed(1)}M` 
-          : `$${(totalRevenueYTD / 1000).toFixed(1)}k`,
+        mrr: formatValue(mrr),
+        arr: formatValue(arr),
+        totalRevenueYTD: formatValue(totalRevenueYTD),
         conversionRate: `${conversionRate}%`,
         rawMrr: mrr,
         rawArr: arr,
