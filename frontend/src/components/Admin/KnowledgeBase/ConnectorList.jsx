@@ -63,6 +63,8 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
 
   // Hidden File input ref
   const fileInputRef = useRef(null);
+  // Hidden Folder input ref
+  const folderInputRef = useRef(null);
 
   // Auto-dismiss notification alerts
   useEffect(() => {
@@ -236,25 +238,27 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
     if (!fileList || fileList.length === 0 || !currentFolder) return;
 
     const rawFiles = Array.from(fileList);
-    if (rawFiles.length > 10) {
-      setErrorMessage('You can only upload up to 10 files at a time.');
+    if (rawFiles.length > 1000) {
+      setErrorMessage('You can only upload up to 1000 files at a time.');
       return;
     }
 
-    // Pre-Upload Validation
+    // Pre-Upload Validation & Filtering
     const acceptedExtensions = ['.pdf', '.md', '.txt', '.json', '.yaml', '.yml', '.tf'];
     const maxSizeBytes = 25 * 1024 * 1024; // 25 MB
 
-    for (const file of rawFiles) {
+    const validFiles = rawFiles.filter(file => {
       const fileExt = '.' + file.name.split('.').pop().toLowerCase();
-      if (!acceptedExtensions.includes(fileExt)) {
-        setErrorMessage(`Unrecognized or unsupported file format: ${file.name}. Only PDF, MD, TXT, JSON, YAML, and TF files are supported.`);
-        return;
-      }
-      if (file.size > maxSizeBytes) {
-        setErrorMessage(`File exceeds size limit (25MB): ${file.name} (${(file.size / (1024 * 1024)).toFixed(1)} MB).`);
-        return;
-      }
+      const isAcceptedExt = acceptedExtensions.includes(fileExt);
+      const isUnderLimit = file.size <= maxSizeBytes;
+      return isAcceptedExt && isUnderLimit;
+    });
+
+    const skippedCount = rawFiles.length - validFiles.length;
+
+    if (validFiles.length === 0) {
+      setErrorMessage('No supported files (PDF, MD, TXT, JSON, YAML, TF under 25MB) were found in the upload.');
+      return;
     }
 
     setIsSubmitting(true);
@@ -265,6 +269,7 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
     const signal = abortControllerRef.current.signal;
     
     let uploadedCount = 0;
+    let failedCount = 0;
 
     const uploadSingleFile = (file) => {
       return new Promise((resolve, reject) => {
@@ -309,6 +314,7 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
               },
               body: JSON.stringify({
                 name: file.name,
+                relativePath: file.webkitRelativePath || '',
                 dataSourceId: currentFolder._id,
                 fileData: base64Data,
                 size: fileSizeStr,
@@ -337,19 +343,49 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
     };
 
     try {
-      let idx = 0;
-      for (const file of rawFiles) {
-        if (signal.aborted) {
-          throw new DOMException('Aborted', 'AbortError');
+      let currentIndex = 0;
+      const concurrencyLimit = 5;
+
+      const runWorker = async () => {
+        while (currentIndex < validFiles.length && !signal.aborted) {
+          const index = currentIndex++;
+          const file = validFiles[index];
+          
+          setUploadStatus({ 
+            current: uploadedCount + failedCount + 1, 
+            total: validFiles.length, 
+            name: file.name 
+          });
+
+          try {
+            await uploadSingleFile(file);
+            uploadedCount++;
+          } catch (err) {
+            console.error(`Error uploading ${file.name}:`, err);
+            failedCount++;
+            if (err.name === 'AbortError' || signal.aborted) {
+              throw err;
+            }
+          }
         }
-        setUploadStatus({ current: idx + 1, total: rawFiles.length, name: file.name });
-        await uploadSingleFile(file);
-        uploadedCount++;
-        idx++;
+      };
+
+      const workers = [];
+      for (let i = 0; i < Math.min(concurrencyLimit, validFiles.length); i++) {
+        workers.push(runWorker());
       }
-      setSuccessMessage(`Successfully uploaded and indexed ${uploadedCount} file(s)!`);
+      await Promise.all(workers);
+
+      let msg = `Successfully uploaded and indexed ${uploadedCount} file(s)!`;
+      if (skippedCount > 0) {
+        msg += ` Skipped ${skippedCount} unsupported or oversized file(s).`;
+      }
+      if (failedCount > 0) {
+        msg += ` Failed to upload ${failedCount} file(s).`;
+      }
+      setSuccessMessage(msg);
     } catch (err) {
-      if (err.name === 'AbortError') {
+      if (err.name === 'AbortError' || signal.aborted) {
         setErrorMessage('Upload process canceled.');
       } else {
         setErrorMessage(err.message || 'Error uploading files.');
@@ -364,6 +400,13 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
   };
 
   const handleFileChange = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      processFilesUpload(e.target.files);
+    }
+    e.target.value = ''; // clear input
+  };
+
+  const handleFolderChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
       processFilesUpload(e.target.files);
     }
@@ -406,11 +449,69 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
     setIsDragging(false);
     dragCounter.current = 0;
 
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      if (!currentFolder) {
-        setErrorMessage('Please navigate into a directory folder before uploading files.');
-        return;
+    if (!currentFolder) {
+      setErrorMessage('Please navigate into a directory folder before uploading files.');
+      return;
+    }
+
+    const items = e.dataTransfer.items;
+    if (items && items.length > 0) {
+      const filesArray = [];
+
+      // Recursive helper to traverse FileSystemEntry
+      const traverseEntry = async (entry, path = '') => {
+        if (entry.isFile) {
+          const file = await new Promise((resolve) => entry.file(resolve));
+          // Define a webkitRelativePath property on the file object
+          Object.defineProperty(file, 'webkitRelativePath', {
+            value: path ? `${path}/${file.name}` : file.name,
+            writable: true
+          });
+          filesArray.push(file);
+        } else if (entry.isDirectory) {
+          const dirReader = entry.createReader();
+          
+          // Read all entries in directory (handles pagination/batching)
+          const readAllEntries = async () => {
+            const allEntries = [];
+            let readBatch = async () => {
+              const entries = await new Promise((resolve) => dirReader.readEntries(resolve));
+              if (entries.length > 0) {
+                allEntries.push(...entries);
+                await readBatch();
+              }
+            };
+            await readBatch();
+            return allEntries;
+          };
+
+          const entries = await readAllEntries();
+          for (const childEntry of entries) {
+            await traverseEntry(childEntry, path ? `${path}/${entry.name}` : entry.name);
+          }
+        }
+      };
+
+      setLoading(true);
+      try {
+        const promises = [];
+        for (let i = 0; i < items.length; i++) {
+          const entry = items[i].webkitGetAsEntry();
+          if (entry) {
+            promises.push(traverseEntry(entry));
+          }
+        }
+        await Promise.all(promises);
+      } catch (err) {
+        console.error('Error scanning folder:', err);
+      } finally {
+        setLoading(false);
       }
+
+      if (filesArray.length > 0) {
+        processFilesUpload(filesArray);
+      }
+    } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       processFilesUpload(e.dataTransfer.files);
     }
   };
@@ -488,6 +589,15 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
         style={{ display: 'none' }} 
         onChange={handleFileChange} 
         accept=".pdf,.md,.txt,.json,.yaml,.yml,.tf"
+        multiple
+      />
+      <input 
+        type="file" 
+        ref={folderInputRef}
+        style={{ display: 'none' }} 
+        onChange={handleFolderChange} 
+        webkitdirectory=""
+        directory=""
         multiple
       />
 
@@ -747,18 +857,32 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
         </button>
 
         {currentFolder && (
-          <button 
-            className="explorer-action-dashed-btn add-file" 
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isSubmitting}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="17 8 12 3 7 8"></polyline>
-              <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
-            {isSubmitting ? 'Uploading...' : 'Add File'}
-          </button>
+          <>
+            <button 
+              className="explorer-action-dashed-btn add-file" 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isSubmitting}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              {isSubmitting ? 'Uploading...' : 'Add File'}
+            </button>
+            <button 
+              className="explorer-action-dashed-btn add-folder-upload" 
+              onClick={() => folderInputRef.current?.click()}
+              disabled={isSubmitting}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                <polyline points="12 11 12 17 9 14 15 14"></polyline>
+                <line x1="12" y1="11" x2="12" y2="17"></line>
+              </svg>
+              Upload Folder
+            </button>
+          </>
         )}
       </div>
 
