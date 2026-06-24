@@ -130,6 +130,24 @@ const payhereNotify = async (req, res, next) => {
       user.lastActivity = new Date();
       await user.save();
 
+      // Create and save Transaction in database
+      const Transaction = require('../models/Transaction');
+      try {
+        const transaction = new Transaction({
+          userId: user._id,
+          name: user.fullName,
+          email: user.email,
+          plan: `${planName} (Monthly)`,
+          amount: parseFloat(payhere_amount) || 0,
+          status: 'COMPLETED',
+          orderId: order_id || `ORDER_WEBHOOK_${Date.now()}`,
+          date: new Date()
+        });
+        await transaction.save();
+      } catch (txErr) {
+        console.error('[PayHere Webhook] Error saving transaction:', txErr);
+      }
+
       console.log(`[PayHere Webhook] Subscription upgraded: User ${user.email} -> ${planName} Plan (Order: ${order_id})`);
 
       // Dispatch digital payment receipt email asynchronously
@@ -213,6 +231,24 @@ const confirmPayment = async (req, res, next) => {
     user.plan = plan.name;
     user.lastActivity = new Date();
     await user.save();
+
+    // Create and save Transaction in database
+    const Transaction = require('../models/Transaction');
+    try {
+      const transaction = new Transaction({
+        userId: user._id,
+        name: user.fullName,
+        email: user.email,
+        plan: `${plan.name} (Monthly)`,
+        amount: plan.price,
+        status: 'COMPLETED',
+        orderId: orderId || `ORDER_SANDBOX_${Date.now()}`,
+        date: new Date()
+      });
+      await transaction.save();
+    } catch (txErr) {
+      console.error('[Local Payment Confirmation] Error saving transaction:', txErr);
+    }
 
     console.log(`[Local Payment Confirmation] Saved user plan in DB: User ${user.email} -> ${plan.name} (Order: ${orderId})`);
 

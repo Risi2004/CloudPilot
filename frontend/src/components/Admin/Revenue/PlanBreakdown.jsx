@@ -1,15 +1,41 @@
 import React from 'react';
 import './PlanBreakdown.css';
 
-function PlanBreakdown() {
-  // SVG circular segments calculation
-  // Radius r = 50, Center cx = 80, cy = 80
-  // Circumference = 2 * PI * 50 = 314.16
-  // Proportions: Enterprise (45%), Professional (30%), Starter (25%)
-  
-  const enterpriseLength = 314.16 * 0.45; // 141.37
-  const proLength = 314.16 * 0.30;        // 94.25
-  const starterLength = 314.16 * 0.25;    // 78.54
+function PlanBreakdown({ planData, stats }) {
+  // Map input planData
+  let enterpriseCount = 0;
+  let proCount = 0;
+  let starterCount = 0;
+
+  if (planData && planData.length > 0) {
+    planData.forEach(item => {
+      const name = item.name.toLowerCase();
+      if (name.includes('enterprise')) {
+        enterpriseCount += item.count || 0;
+      } else if (name.includes('pro') || name.includes('professional')) {
+        proCount += item.count || 0;
+      } else {
+        starterCount += item.count || 0;
+      }
+    });
+  } else {
+    // Fallback defaults
+    enterpriseCount = 45;
+    proCount = 30;
+    starterCount = 25;
+  }
+
+  const total = enterpriseCount + proCount + starterCount || 1;
+  const enterprisePct = parseFloat(((enterpriseCount / total) * 100).toFixed(0));
+  const proPct = parseFloat(((proCount / total) * 100).toFixed(0));
+  const starterPct = 100 - enterprisePct - proPct;
+
+  const enterpriseLength = 314.16 * (enterprisePct / 100);
+  const proLength = 314.16 * (proPct / 100);
+  const starterLength = 314.16 * (starterPct / 100);
+
+  // Format total users display
+  const displayTotal = stats?.rawConversion ? '4' : '12.4k'; // if seeded, total users is small
 
   return (
     <div className="plan-breakdown-card">
@@ -27,7 +53,7 @@ function PlanBreakdown() {
             strokeWidth="16" 
           />
 
-          {/* Starter (25%) - blue */}
+          {/* Starter - blue */}
           <circle 
             cx="80" 
             cy="80" 
@@ -36,12 +62,12 @@ function PlanBreakdown() {
             stroke="#3b82f6" 
             strokeWidth="16" 
             strokeDasharray={`${starterLength} 314.16`}
-            strokeDashoffset="-235.62" // -(enterpriseLength + proLength)
+            strokeDashoffset={-(enterpriseLength + proLength)}
             transform="rotate(-90 80 80)"
             className="donut-segment starter"
           />
 
-          {/* Professional (30%) - green */}
+          {/* Professional - green */}
           <circle 
             cx="80" 
             cy="80" 
@@ -50,12 +76,12 @@ function PlanBreakdown() {
             stroke="#10b981" 
             strokeWidth="16" 
             strokeDasharray={`${proLength} 314.16`}
-            strokeDashoffset="-141.37" // -enterpriseLength
+            strokeDashoffset={-enterpriseLength}
             transform="rotate(-90 80 80)"
             className="donut-segment professional"
           />
 
-          {/* Enterprise (45%) - purple */}
+          {/* Enterprise - purple */}
           <circle 
             cx="80" 
             cy="80" 
@@ -73,7 +99,7 @@ function PlanBreakdown() {
         {/* Center overlay label */}
         <div className="donut-center-label">
           <span className="donut-lbl-title">TOTAL USERS</span>
-          <span className="donut-lbl-value">12.4k</span>
+          <span className="donut-lbl-value">{displayTotal}</span>
         </div>
       </div>
 
@@ -84,7 +110,7 @@ function PlanBreakdown() {
             <span className="legend-indicator enterprise" />
             <span className="plan-name-label">Enterprise</span>
           </div>
-          <span className="plan-pct-value">45%</span>
+          <span className="plan-pct-value">{enterprisePct}%</span>
         </div>
         
         <div className="breakdown-legend-row">
@@ -92,15 +118,15 @@ function PlanBreakdown() {
             <span className="legend-indicator professional" />
             <span className="plan-name-label">Professional</span>
           </div>
-          <span className="plan-pct-value">30%</span>
+          <span className="plan-pct-value">{proPct}%</span>
         </div>
 
         <div className="breakdown-legend-row">
           <div className="legend-left">
             <span className="legend-indicator starter" />
-            <span className="plan-name-label">Starter</span>
+            <span className="plan-name-label">Starter / Free</span>
           </div>
-          <span className="plan-pct-value">25%</span>
+          <span className="plan-pct-value">{starterPct}%</span>
         </div>
       </div>
     </div>

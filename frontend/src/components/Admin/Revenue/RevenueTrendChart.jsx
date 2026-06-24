@@ -1,39 +1,63 @@
 import React, { useState } from 'react';
 import './RevenueTrendChart.css';
 
-const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP'];
-
-const DATA_POINTS = [
-  { index: 0, month: 'JAN', x: 50, actualY: 190, projY: 190, actualVal: '$110k', projVal: '$110k' },
-  { index: 1, month: 'FEB', x: 110, actualY: 170, projY: 175, actualVal: '$135k', projVal: '$128k' },
-  { index: 2, month: 'MAR', x: 170, actualY: 178, projY: 180, actualVal: '$125k', projVal: '$120k' },
-  { index: 3, month: 'APR', x: 230, actualY: 145, projY: 158, actualVal: '$178k', projVal: '$158k' },
-  { index: 4, month: 'MAY', x: 290, actualY: 130, projY: 145, actualVal: '$202k', projVal: '$178k' },
-  { index: 5, month: 'JUN', x: 350, actualY: 102, projY: 125, actualVal: '$255k', projVal: '$210k' },
-  { index: 6, month: 'JUL', x: 410, actualY: 110, projY: 122, actualVal: '$240k', projVal: '$215k' },
-  { index: 7, month: 'AUG', x: 470, actualY: 78, projY: 105, actualVal: '$310k', projVal: '$250k' },
-  { index: 8, month: 'SEP', x: 530, actualY: 88, projY: 112, actualVal: '$292k', projVal: '$238k' }
-];
-
 // SVG Dimensions
 const width = 580;
 const height = 220;
 
-function RevenueTrendChart() {
+function RevenueTrendChart({ trendData }) {
   const [hoveredPoint, setHoveredPoint] = useState(null);
+
+  // If no trendData or empty, use fallback defaults
+  const rawData = trendData && trendData.length > 0 ? trendData : [
+    { name: 'JAN', Revenue: 110000 },
+    { name: 'FEB', Revenue: 135000 },
+    { name: 'MAR', Revenue: 125000 },
+    { name: 'APR', Revenue: 178000 },
+    { name: 'MAY', Revenue: 202000 },
+    { name: 'JUN', Revenue: 255000 },
+    { name: 'JUL', Revenue: 240000 },
+    { name: 'AUG', Revenue: 310000 },
+    { name: 'SEP', Revenue: 292000 }
+  ];
+
+  const maxRevenue = Math.max(...rawData.map(d => d.Revenue), 1);
+  const dataPoints = rawData.map((d, i) => {
+    const x = rawData.length > 1 ? 50 + i * (480 / (rawData.length - 1)) : 50;
+    // Map value to Y coordinates between 200 (base) and 50 (top)
+    const actualY = 200 - (d.Revenue / maxRevenue) * 140; 
+    // Mock projected Y as slightly offset
+    const projY = actualY - 10 + Math.sin(i) * 15;
+
+    const formatMoney = (val) => {
+      if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
+      if (val >= 1000) return `$${(val / 1000).toFixed(0)}k`;
+      return `$${val}`;
+    };
+
+    return {
+      index: i,
+      month: d.name,
+      x,
+      actualY,
+      projY,
+      actualVal: formatMoney(d.Revenue),
+      projVal: formatMoney(d.Revenue * 1.08)
+    };
+  });
 
   // Generate SVG path strings
   const getLinePath = (key) => {
-    return DATA_POINTS.reduce((path, p, i) => {
+    return dataPoints.reduce((path, p, i) => {
       const y = key === 'actual' ? p.actualY : p.projY;
       if (i === 0) return `M ${p.x} ${y}`;
       
       // Control points for smooth bezier curve
-      const prev = DATA_POINTS[i - 1];
+      const prev = dataPoints[i - 1];
       const prevY = key === 'actual' ? prev.actualY : prev.projY;
-      const cp1x = prev.x + 25;
+      const cp1x = prev.x + (p.x - prev.x) / 2;
       const cp1y = prevY;
-      const cp2x = p.x - 25;
+      const cp2x = p.x - (p.x - prev.x) / 2;
       const cp2y = y;
       
       return `${path} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p.x} ${y}`;
@@ -42,8 +66,8 @@ function RevenueTrendChart() {
 
   const getAreaPath = () => {
     const linePath = getLinePath('actual');
-    const firstPoint = DATA_POINTS[0];
-    const lastPoint = DATA_POINTS[DATA_POINTS.length - 1];
+    const firstPoint = dataPoints[0];
+    const lastPoint = dataPoints[dataPoints.length - 1];
     return `${linePath} L ${lastPoint.x} 200 L ${firstPoint.x} 200 Z`;
   };
 
@@ -101,7 +125,7 @@ function RevenueTrendChart() {
           />
 
           {/* X Axis Labels */}
-          {DATA_POINTS.map((p) => (
+          {dataPoints.map((p) => (
             <text 
               key={p.index} 
               x={p.x} 
@@ -125,7 +149,7 @@ function RevenueTrendChart() {
           )}
 
           {/* Dots on top of lines */}
-          {DATA_POINTS.map((p) => {
+          {dataPoints.map((p) => {
             const isHovered = hoveredPoint && hoveredPoint.index === p.index;
             return (
               <g key={p.index}>
@@ -149,7 +173,7 @@ function RevenueTrendChart() {
           })}
 
           {/* Hover trigger areas */}
-          {DATA_POINTS.map((p) => (
+          {dataPoints.map((p) => (
             <rect
               key={p.index}
               x={p.x - 20}

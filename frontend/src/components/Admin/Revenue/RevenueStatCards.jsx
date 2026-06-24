@@ -1,46 +1,51 @@
 import React from 'react';
 import './RevenueStatCards.css';
 
-const STATS_DATA = [
-  {
-    id: 'mrr',
-    title: 'MONTHLY RECURRING REVENUE',
-    value: '$482.9k',
-    trend: '+12.4%',
-    isPositive: true,
-    progressWidth: '78%',
-    barClass: 'purple-gradient'
-  },
-  {
-    id: 'arr',
-    title: 'ANNUAL RECURRING REVENUE',
-    value: '$5.8M',
-    trend: '+8.1%',
-    isPositive: true,
-    progressWidth: '64%',
-    barClass: 'green-gradient'
-  },
-  {
-    id: 'ytd',
-    title: 'TOTAL REVENUE (YTD)',
-    value: '$3.2M',
-    trend: '-2.3%',
-    isPositive: false,
-    progressWidth: '82%',
-    barClass: 'cyan-gradient'
-  },
-  {
-    id: 'conversion',
-    title: 'CONVERSION RATE',
-    value: '24.8%',
-    trend: '+4.1%',
-    isPositive: true,
-    progressWidth: '55%',
-    barClass: 'purple-blue-gradient'
-  }
-];
+function RevenueStatCards({ stats }) {
+  const mrr = stats?.mrr || '$0';
+  const arr = stats?.arr || '$0';
+  const ytd = stats?.totalRevenueYTD || '$0';
+  const conversion = stats?.conversionRate || '0%';
 
-function RevenueStatCards() {
+  const STATS_DATA = [
+    {
+      id: 'mrr',
+      title: 'MONTHLY RECURRING REVENUE',
+      value: mrr,
+      trend: '+12.4%',
+      isPositive: true,
+      progressWidth: '78%',
+      barClass: 'purple-gradient'
+    },
+    {
+      id: 'arr',
+      title: 'ANNUAL RECURRING REVENUE',
+      value: arr,
+      trend: '+8.1%',
+      isPositive: true,
+      progressWidth: '64%',
+      barClass: 'green-gradient'
+    },
+    {
+      id: 'ytd',
+      title: 'TOTAL REVENUE (YTD)',
+      value: ytd,
+      trend: '-2.3%',
+      isPositive: false,
+      progressWidth: '82%',
+      barClass: 'cyan-gradient'
+    },
+    {
+      id: 'conversion',
+      title: 'CONVERSION RATE',
+      value: conversion,
+      trend: '+4.1%',
+      isPositive: true,
+      progressWidth: '55%',
+      barClass: 'purple-blue-gradient'
+    }
+  ];
+
   return (
     <div className="revenue-stats-grid">
       {STATS_DATA.map((stat) => (
