@@ -341,7 +341,13 @@ const sendPaymentReceiptEmail = async (email, fullName, planName, amount, curren
           This is an automated payment receipt. Please retain this email for your records. For questions regarding your billing transaction, contact support.
         </p>
       </div>
-    `
+    `,
+    attachments: [
+      {
+        filename: `receipt_${orderId}.txt`,
+        content: `CLOUDPILOT BILLING SYSTEM\n==========================\nPAYMENT RECEIPT\n\nOrder ID: ${orderId}\nDate: ${currentDate}\nCustomer Name: ${fullName}\nCustomer Email: ${email}\nUpgrade Tier: ${planName} Plan\nBilling Period: Monthly Recurring\nTotal Amount: ${amount} ${currency}\n\nStatus: PAID / COMPLETED\n\nThank you for choosing CloudPilot!`
+      }
+    ]
   };
 
   if (!transporter) {

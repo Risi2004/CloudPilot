@@ -375,7 +375,10 @@ const verifyToken = async (req, res, next) => {
         fullName: user.fullName,
         profileImageKey: user.profileImageKey,
         role: user.role,
-        plan: user.plan
+        plan: user.plan,
+        billingCycle: user.billingCycle,
+        autoRenew: user.autoRenew,
+        subscriptionExpiresAt: user.subscriptionExpiresAt
       }
     });
   } catch (err) {

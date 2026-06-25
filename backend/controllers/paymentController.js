@@ -11,7 +11,7 @@ const md5 = (string) => {
 // Initiate payment checkout session (Admin/User)
 const initiatePayment = async (req, res, next) => {
   try {
-    const { planId, promoCode } = req.body;
+    const { planId, promoCode, billingCycle, autoRenew } = req.body;
     const userId = req.user._id;
 
     if (!planId) {
@@ -23,7 +23,14 @@ const initiatePayment = async (req, res, next) => {
       return res.status(404).json({ message: 'Subscription plan not found.' });
     }
 
+    const selectedCycle = billingCycle === 'annually' ? 'annually' : 'monthly';
+    const autoRenewalOpt = autoRenew !== false;
+
     let finalPrice = plan.price;
+    if (selectedCycle === 'annually') {
+      finalPrice = plan.price * 12 * 0.8; // 20% discount
+    }
+
     let appliedPromo = null;
 
     // Apply promo code if provided
@@ -58,6 +65,22 @@ const initiatePayment = async (req, res, next) => {
     const hashedSecret = md5(merchantSecret).toUpperCase();
     const rawString = merchantId + orderId + formattedAmount + currency + hashedSecret;
     const hash = md5(rawString).toUpperCase();
+
+    // Save PENDING Transaction in DB
+    const Transaction = require('../models/Transaction');
+    const transaction = new Transaction({
+      userId,
+      name: req.user.fullName,
+      email: req.user.email,
+      plan: `${plan.name} (${selectedCycle === 'annually' ? 'Annually' : 'Monthly'})`,
+      amount: finalPrice,
+      status: 'PENDING',
+      billingCycle: selectedCycle,
+      autoRenew: autoRenewalOpt,
+      orderId: orderId,
+      date: new Date()
+    });
+    await transaction.save();
 
     // Prepare customer details
     const fullNameParts = req.user.fullName.trim().split(/\s+/);
@@ -125,28 +148,48 @@ const payhereNotify = async (req, res, next) => {
         return res.status(404).json({ message: 'User not found.' });
       }
 
-      // Upgrade user subscription plan in database
-      user.plan = planName;
-      user.lastActivity = new Date();
-      await user.save();
-
-      // Create and save Transaction in database
+      // Find the pending transaction to retrieve billingCycle and autoRenew options
       const Transaction = require('../models/Transaction');
-      try {
-        const transaction = new Transaction({
+      let transaction = await Transaction.findOne({ orderId: order_id });
+      
+      let cycle = 'monthly';
+      let autoR = true;
+
+      if (transaction) {
+        transaction.status = 'COMPLETED';
+        transaction.date = new Date();
+        await transaction.save();
+
+        cycle = transaction.billingCycle || 'monthly';
+        autoR = transaction.autoRenew !== false;
+      } else {
+        // Fallback transaction creation
+        transaction = new Transaction({
           userId: user._id,
           name: user.fullName,
           email: user.email,
           plan: `${planName} (Monthly)`,
           amount: parseFloat(payhere_amount) || 0,
           status: 'COMPLETED',
+          billingCycle: 'monthly',
+          autoRenew: true,
           orderId: order_id || `ORDER_WEBHOOK_${Date.now()}`,
           date: new Date()
         });
         await transaction.save();
-      } catch (txErr) {
-        console.error('[PayHere Webhook] Error saving transaction:', txErr);
       }
+
+      // Calculate expiration date
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + (cycle === 'annually' ? 365 : 30));
+
+      // Upgrade user subscription plan details in database
+      user.plan = planName;
+      user.billingCycle = cycle;
+      user.autoRenew = autoR;
+      user.subscriptionExpiresAt = expiresAt;
+      user.lastActivity = new Date();
+      await user.save();
 
       console.log(`[PayHere Webhook] Subscription upgraded: User ${user.email} -> ${planName} Plan (Order: ${order_id})`);
 
@@ -210,7 +253,7 @@ const subscribeFree = async (req, res, next) => {
 // Confirm payment locally (useful for local development where webhook IPN cannot reach localhost)
 const confirmPayment = async (req, res, next) => {
   try {
-    const { orderId, planId } = req.body;
+    const { orderId, planId, billingCycle, autoRenew } = req.body;
     const userId = req.user._id;
 
     if (!planId) {
@@ -227,25 +270,52 @@ const confirmPayment = async (req, res, next) => {
       return res.status(404).json({ message: 'User not found.' });
     }
 
+    const cycle = billingCycle === 'annually' ? 'annually' : 'monthly';
+    const autoR = autoRenew !== false;
+
+    let price = plan.price;
+    if (cycle === 'annually') {
+      price = plan.price * 12 * 0.8;
+    }
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + (cycle === 'annually' ? 365 : 30));
+
     // Direct sandbox upgrade (useful for local offline / tunnel-free development testing)
     user.plan = plan.name;
+    user.billingCycle = cycle;
+    user.autoRenew = autoR;
+    user.subscriptionExpiresAt = expiresAt;
     user.lastActivity = new Date();
     await user.save();
 
     // Create and save Transaction in database
     const Transaction = require('../models/Transaction');
     try {
-      const transaction = new Transaction({
-        userId: user._id,
-        name: user.fullName,
-        email: user.email,
-        plan: `${plan.name} (Monthly)`,
-        amount: plan.price,
-        status: 'COMPLETED',
-        orderId: orderId || `ORDER_SANDBOX_${Date.now()}`,
-        date: new Date()
-      });
-      await transaction.save();
+      let transaction = await Transaction.findOne({ orderId: orderId });
+      if (transaction) {
+        transaction.status = 'COMPLETED';
+        transaction.amount = price;
+        transaction.plan = `${plan.name} (${cycle === 'annually' ? 'Annually' : 'Monthly'})`;
+        transaction.billingCycle = cycle;
+        transaction.autoRenew = autoR;
+        transaction.date = new Date();
+        await transaction.save();
+      } else {
+        transaction = new Transaction({
+          userId: user._id,
+          name: user.fullName,
+          email: user.email,
+          plan: `${plan.name} (${cycle === 'annually' ? 'Annually' : 'Monthly'})`,
+          amount: price,
+          status: 'COMPLETED',
+          billingCycle: cycle,
+          autoRenew: autoR,
+          orderId: orderId || `ORDER_SANDBOX_${Date.now()}`,
+          date: new Date()
+        });
+        await transaction.save();
+      }
     } catch (txErr) {
       console.error('[Local Payment Confirmation] Error saving transaction:', txErr);
     }

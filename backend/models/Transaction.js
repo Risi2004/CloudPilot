@@ -31,6 +31,15 @@ const transactionSchema = new mongoose.Schema({
     enum: ['COMPLETED', 'PENDING', 'FAILED'],
     default: 'COMPLETED'
   },
+  billingCycle: {
+    type: String,
+    enum: ['monthly', 'annually', 'none'],
+    default: 'none'
+  },
+  autoRenew: {
+    type: Boolean,
+    default: true
+  },
   orderId: {
     type: String,
     required: true,
