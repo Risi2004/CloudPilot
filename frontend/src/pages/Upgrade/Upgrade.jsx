@@ -129,6 +129,7 @@ function Upgrade() {
       if (res.ok) {
         alert(data.message);
         fetchUser(); // Refresh user details
+        window.dispatchEvent(new Event('profileUpdate')); // Sync navbar badge instantly
       } else {
         alert(data.message || 'Failed to cancel subscription renewal.');
       }
