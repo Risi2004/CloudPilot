@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Revenue.css';
 
 // Layout and widgets
@@ -9,11 +9,67 @@ import PlanBreakdown from '../../../components/Admin/Revenue/PlanBreakdown';
 import AcquisitionVolume from '../../../components/Admin/Revenue/AcquisitionVolume';
 import RecentTransactions from '../../../components/Admin/Revenue/RecentTransactions';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 function Revenue() {
   const [timeframe, setTimeframe] = useState('30d');
+  const [revenueData, setRevenueData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const fetchRevenueData = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/revenue/stats?timeframe=${timeframe}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setRevenueData(data);
+      } else {
+        setError(data.message || 'Failed to fetch revenue analytics.');
+      }
+    } catch (e) {
+      console.error('Error fetching revenue data:', e);
+      setError('Connection to server failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRevenueData();
+  }, [timeframe]);
 
   const handleExportCSV = () => {
-    alert('Preparing transaction data exports...\nCSV download will begin shortly.');
+    if (!revenueData || !revenueData.recentTransactions) return;
+    
+    // Construct CSV headers & rows
+    const headers = ['Transaction ID', 'Customer Name', 'Email', 'Plan Purchased', 'Amount', 'Status', 'Date'];
+    const rows = revenueData.recentTransactions.map(tx => [
+      tx.orderId,
+      tx.name,
+      tx.email,
+      tx.plan,
+      tx.amount,
+      tx.status,
+      new Date(tx.date).toLocaleDateString()
+    ]);
+    
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `cloudpilot_revenue_report_${timeframe}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -59,6 +115,7 @@ function Revenue() {
               <button 
                 className="revenue-export-btn"
                 onClick={handleExportCSV}
+                disabled={loading || !revenueData}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="btn-icon">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -70,28 +127,39 @@ function Revenue() {
             </div>
           </div>
 
-          {/* Stats Section */}
-          <RevenueStatCards />
+          {error && <div className="revenue-error-banner">{error}</div>}
 
-          {/* Middle Row: Trend Line Chart and Plan Breakdown Circle */}
-          <div className="revenue-middle-row">
-            <div className="middle-col-chart">
-              <RevenueTrendChart />
+          {loading ? (
+            <div className="revenue-loading-overlay">
+              <div className="revenue-spinner" />
+              <span>Fetching financial ledger data...</span>
             </div>
-            <div className="middle-col-donut">
-              <PlanBreakdown />
-            </div>
-          </div>
+          ) : (
+            <>
+              {/* Stats Section */}
+              <RevenueStatCards stats={revenueData?.stats} />
 
-          {/* Daily Acquisition Bar Chart */}
-          <div className="revenue-bar-row">
-            <AcquisitionVolume />
-          </div>
+              {/* Middle Row: Trend Line Chart and Plan Breakdown Circle */}
+              <div className="revenue-middle-row">
+                <div className="middle-col-chart">
+                  <RevenueTrendChart trendData={revenueData?.trendChart} />
+                </div>
+                <div className="middle-col-donut">
+                  <PlanBreakdown planData={revenueData?.planBreakdown} stats={revenueData?.stats} />
+                </div>
+              </div>
 
-          {/* Transaction History Section */}
-          <div className="revenue-table-row">
-            <RecentTransactions />
-          </div>
+              {/* Daily Acquisition Bar Chart */}
+              <div className="revenue-bar-row">
+                <AcquisitionVolume acquisitionData={revenueData?.acquisitionVolume} />
+              </div>
+
+              {/* Transaction History Section */}
+              <div className="revenue-table-row">
+                <RecentTransactions transactions={revenueData?.recentTransactions} />
+              </div>
+            </>
+          )}
 
         </div>
       </main>

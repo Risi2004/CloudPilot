@@ -284,6 +284,14 @@ const sendPaymentReceiptEmail = async (email, fullName, planName, amount, curren
     hour: '2-digit',
     minute: '2-digit'
   });
+
+  const { generateInvoicePdfBuffer } = require('./pdfGenerator');
+  let pdfBuffer = null;
+  try {
+    pdfBuffer = await generateInvoicePdfBuffer(fullName, email, planName, amount, currency, orderId, currentDate);
+  } catch (pdfErr) {
+    console.error('Failed to generate professional PDF invoice buffer:', pdfErr);
+  }
   
   const mailOptions = {
     from: process.env.SMTP_FROM || '"CloudPilot" <no-reply@cloudpilot.io>',
@@ -341,7 +349,17 @@ const sendPaymentReceiptEmail = async (email, fullName, planName, amount, curren
           This is an automated payment receipt. Please retain this email for your records. For questions regarding your billing transaction, contact support.
         </p>
       </div>
-    `
+    `,
+    attachments: [
+      pdfBuffer ? {
+        filename: `receipt_${orderId}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      } : {
+        filename: `receipt_${orderId}.txt`,
+        content: `CLOUDPILOT BILLING SYSTEM\n==========================\nPAYMENT RECEIPT\n\nOrder ID: ${orderId}\nDate: ${currentDate}\nCustomer Name: ${fullName}\nCustomer Email: ${email}\nUpgrade Tier: ${planName} Plan\nBilling Period: Monthly Recurring\nTotal Amount: ${amount} ${currency}\n\nStatus: PAID / COMPLETED\n\nThank you for choosing CloudPilot!`
+      }
+    ]
   };
 
   if (!transporter) {
@@ -358,6 +376,80 @@ const sendPaymentReceiptEmail = async (email, fullName, planName, amount, curren
     console.warn('------------------------------------');
   }
 };
+
+const sendCancelSubscriptionEmail = async (email, fullName, planName, expiresAt) => {
+  const transporter = getTransporter();
+  const formattedExpiry = expiresAt ? new Date(expiresAt).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  }) : 'N/A';
+
+  const mailOptions = {
+    from: process.env.SMTP_FROM || '"CloudPilot" <no-reply@cloudpilot.io>',
+    to: email,
+    subject: `CloudPilot Subscription Renewal Cancelled`,
+    text: `Hello ${fullName},\n\nThis email confirms that your subscription renewal for the ${planName} Plan has been cancelled. Your active features will remain available until your current billing period ends on ${formattedExpiry}.\n\nThank you for choosing CloudPilot!`,
+    html: `
+      <div style="background-color: #030712; color: #ffffff; padding: 40px; font-family: sans-serif; border-radius: 12px; max-width: 600px; margin: 0 auto; border: 1px solid #1e293b;">
+        <h2 style="color: #f59e0b; font-size: 24px; font-weight: bold; border-bottom: 1px solid #1e293b; padding-bottom: 10px; margin-bottom: 20px;">CLOUDPILOT BILLING</h2>
+        
+        <p style="color: #f1f5f9; font-size: 16px; font-weight: 600; margin-top: 20px;">Hello ${fullName},</p>
+        <p style="color: #94a3b8; font-size: 15px; line-height: 1.6;">
+          This message is to confirm that the auto-renewal for your <strong>${planName} Plan</strong> has been cancelled. 
+        </p>
+
+        <div style="background: rgba(245, 158, 11, 0.03); border: 1px solid rgba(245, 158, 11, 0.15); border-radius: 8px; padding: 25px; margin: 25px 0;">
+          <h3 style="color: #f59e0b; margin: 0 0 15px 0; font-size: 16px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(245, 158, 11, 0.1); padding-bottom: 10px;">Subscription Status</h3>
+          
+          <table style="width: 100%; border-collapse: collapse; color: #94a3b8; font-size: 14px;">
+            <tr>
+              <td style="padding: 6px 0; font-weight: 600; color: #f1f5f9; width: 40%;">Current Plan:</td>
+              <td style="padding: 6px 0; color: #e2e8f0; font-weight: bold;">${planName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-weight: 600; color: #f1f5f9;">Auto-Renewal:</td>
+              <td style="padding: 6px 0; color: #ef4444; font-weight: bold;">Disabled (Cancelled)</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-weight: 600; color: #f1f5f9;">Access Expiry Date:</td>
+              <td style="padding: 6px 0; color: #f1f5f9; font-weight: bold;">${formattedExpiry}</td>
+            </tr>
+          </table>
+        </div>
+
+        <p style="color: #94a3b8; font-size: 15px; line-height: 1.6;">
+          Your subscription features remain fully active and accessible until <strong>${formattedExpiry}</strong>. No further charges will be made. You can resume auto-renewal at any time by selecting a plan on the Upgrade page.
+        </p>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="\${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" style="background-color: #f59e0b; color: #030712; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 24px; border-radius: 6px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2); display: inline-block;">
+            GO TO DASHBOARD
+          </a>
+        </div>
+        
+        <p style="color: #64748b; font-size: 12px; line-height: 1.5; border-top: 1px solid #1e293b; padding-top: 15px; margin-top: 30px;">
+          This is an automated billing notification. If you did not authorize this request, please contact support immediately.
+        </p>
+      </div>
+    `
+  };
+
+  if (!transporter) {
+    console.log(`[MOCK EMAIL] To: \${email} | Subject: \${mailOptions.subject} | Subscription cancellation confirmation logged`);
+    return;
+  }
+
+  try {
+    await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.error('SMTP cancellation email dispatch failed. Error:', error.message);
+    console.warn('-------- SMTP FAIL FALLBACK --------');
+    console.warn(`[MOCK EMAIL] To: \${email} | Subject: \${mailOptions.subject} | Subscription cancellation confirmation logged`);
+    console.warn('------------------------------------');
+  }
+};
+
 
 /**
  * Sends an email when a user raises a support ticket, informing them to wait for 2 working days.
@@ -550,6 +642,7 @@ module.exports = {
   sendPaymentReceiptEmail,
   sendTicketOpenedEmail,
   sendTicketClosedEmail,
-  sendNotificationEmail
+  sendNotificationEmail,
+  sendCancelSubscriptionEmail
 };
 

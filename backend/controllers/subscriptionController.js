@@ -140,10 +140,48 @@ const seedSubscriptionPlans = async () => {
   }
 };
 
+const cancelSubscription = async (req, res, next) => {
+  try {
+    const User = require('../models/User');
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    if (user.plan === 'Free') {
+      return res.status(400).json({ message: 'No active paid subscription to cancel.' });
+    }
+
+    // Disable autoRenew
+    user.autoRenew = false;
+    await user.save();
+
+    // Dispatch cancellation email asynchronously
+    const { sendCancelSubscriptionEmail } = require('../utils/mailer');
+    sendCancelSubscriptionEmail(user.email, user.fullName, user.plan, user.subscriptionExpiresAt)
+      .catch(err => console.error('[Cancellation Email Telemetry] Failed to dispatch cancellation email:', err));
+
+    res.status(200).json({
+      message: 'Your subscription renewal has been cancelled. The plan features remain active until the end of your chosen cycle.',
+      user: {
+        email: user.email,
+        fullName: user.fullName,
+        plan: user.plan,
+        autoRenew: user.autoRenew,
+        subscriptionExpiresAt: user.subscriptionExpiresAt,
+        billingCycle: user.billingCycle
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getSubscriptions,
   createSubscription,
   updateSubscription,
   deleteSubscription,
-  seedSubscriptionPlans
+  seedSubscriptionPlans,
+  cancelSubscription
 };

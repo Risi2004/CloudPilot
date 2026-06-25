@@ -139,11 +139,13 @@ const deleteNotification = async (req, res, next) => {
 // Get notifications for logged in user
 const getMyNotifications = async (req, res, next) => {
   try {
+    const userCreatedAt = req.user.createdAt || new Date(0);
     const notifications = await Notification.find({
       $or: [
         { targetTiers: req.user.plan },
         { targetTiers: 'All' }
-      ]
+      ],
+      createdAt: { $gte: userCreatedAt }
     }).sort({ createdAt: -1 });
 
     const response = notifications.map((n) => ({
@@ -173,8 +175,10 @@ const markNotificationRead = async (req, res, next) => {
     }
 
     // Check if user is eligible to read it
+    const userCreatedAt = req.user.createdAt || new Date(0);
     const planMatch = notification.targetTiers.includes('All') || notification.targetTiers.includes(req.user.plan);
-    if (!planMatch) {
+    const timeMatch = new Date(notification.createdAt) >= new Date(userCreatedAt);
+    if (!planMatch || !timeMatch) {
       return res.status(403).json({ message: 'Access denied to this notification.' });
     }
 

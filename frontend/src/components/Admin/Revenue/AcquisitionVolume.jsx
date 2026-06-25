@@ -1,30 +1,39 @@
 import React, { useState } from 'react';
 import './AcquisitionVolume.css';
 
-const DAILY_DATA = [
-  { day: 'Day 1', val: 24, label: 'Oct 15' },
-  { day: 'Day 2', val: 38, label: 'Oct 16' },
-  { day: 'Day 3', val: 30, label: 'Oct 17' },
-  { day: 'Day 4', val: 72, label: 'Oct 18' },
-  { day: 'Day 5', val: 48, label: 'Oct 19' },
-  { day: 'Day 6', val: 20, label: 'Oct 20' },
-  { day: 'Day 7', val: 42, label: 'Oct 21' },
-  { day: 'Day 8', val: 60, label: 'Oct 22' },
-  { day: 'Day 9', val: 32, label: 'Oct 23' },
-  { day: 'Day 10', val: 55, label: 'Oct 24' }
-];
-
-function AcquisitionVolume() {
+function AcquisitionVolume({ acquisitionData }) {
   const [hoveredBar, setHoveredBar] = useState(null);
+
+  const rawData = acquisitionData || [];
+
+  if (rawData.length === 0) {
+    return (
+      <div className="acquisition-volume-card">
+        <div className="acquisition-header">
+          <h3 className="acquisition-title">Acquisition Volume</h3>
+          <p className="acquisition-subtitle">Daily new subscriber sign-ups across all regions.</p>
+        </div>
+        <div className="chart-body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80px', color: '#64748b' }}>
+          <span>No sign-ups in this timeframe.</span>
+        </div>
+      </div>
+    );
+  }
+
+  const DAILY_DATA = rawData.map((d, i) => ({
+    day: `Day ${i + 1}`,
+    val: d.Volume,
+    label: d.name
+  }));
 
   // SVG parameters
   const svgWidth = 720;
   const svgHeight = 120;
-  const maxVal = 80;
+  const maxVal = Math.max(...DAILY_DATA.map(d => d.val), 10);
   
   // Bar width and spacing
-  const barWidth = 42;
-  const gap = 24;
+  const barWidth = Math.max(10, Math.min(42, (680 / DAILY_DATA.length) - 15));
+  const gap = Math.max(5, (680 - barWidth * DAILY_DATA.length) / (DAILY_DATA.length - 1 || 1));
   const startX = 20;
 
   return (

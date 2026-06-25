@@ -36,6 +36,19 @@ const userSchema = new mongoose.Schema({
     enum: ['Active', 'Suspended'],
     default: 'Active'
   },
+  billingCycle: {
+    type: String,
+    enum: ['monthly', 'annually', 'none'],
+    default: 'none'
+  },
+  autoRenew: {
+    type: Boolean,
+    default: true
+  },
+  subscriptionExpiresAt: {
+    type: Date,
+    default: null
+  },
   lastActivity: {
     type: Date,
     default: Date.now

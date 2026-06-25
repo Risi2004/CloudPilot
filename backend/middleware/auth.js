@@ -22,6 +22,49 @@ const protect = async (req, res, next) => {
 
     req.user = user;
 
+    // Check for plan expiration dynamically
+    if (user.plan !== 'Free' && user.subscriptionExpiresAt && new Date() > new Date(user.subscriptionExpiresAt)) {
+      if (user.autoRenew) {
+        // Auto-renew subscription
+        const daysToAdd = user.billingCycle === 'annually' ? 365 : 30;
+        const extensionDate = new Date(user.subscriptionExpiresAt);
+        extensionDate.setDate(extensionDate.getDate() + daysToAdd);
+        user.subscriptionExpiresAt = extensionDate;
+        await user.save();
+
+        // Save a renewal transaction record
+        const Transaction = require('../models/Transaction');
+        try {
+          const SubscriptionPlan = require('../models/SubscriptionPlan');
+          const planRecord = await SubscriptionPlan.findOne({ name: user.plan });
+          const planPrice = planRecord ? planRecord.price : (user.plan === 'Enterprise' ? 299 : 49);
+          const finalPrice = user.billingCycle === 'annually' ? planPrice * 12 * 0.8 : planPrice;
+          
+          const transaction = new Transaction({
+            userId: user._id,
+            name: user.fullName,
+            email: user.email,
+            plan: `${user.plan} (${user.billingCycle === 'annually' ? 'Annually' : 'Monthly'}) [Renewal]`,
+            amount: finalPrice,
+            status: 'COMPLETED',
+            billingCycle: user.billingCycle,
+            autoRenew: user.autoRenew,
+            orderId: `RENEW_${user._id}_${Date.now()}`,
+            date: new Date()
+          });
+          await transaction.save();
+        } catch (txErr) {
+          console.error('[Auto-Renew telemetry] Failed to create renewal transaction log:', txErr);
+        }
+      } else {
+        // Subscription expired, downgrade to Free plan
+        user.plan = 'Free';
+        user.billingCycle = 'none';
+        user.subscriptionExpiresAt = null;
+        await user.save();
+      }
+    }
+
     // Rate-limit lastActivity updates to at most once per 60 seconds to avoid DB bottlenecks
     const now = new Date();
     if (!user.lastActivity || (now - new Date(user.lastActivity)) > 60 * 1000) {
