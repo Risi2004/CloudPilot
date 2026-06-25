@@ -330,6 +330,7 @@ function Upgrade() {
               );
 
               const isCurrentPlan = currentUser && currentUser.plan === plan.name;
+              const isFreePlanDisabled = plan.name === 'Free' && currentUser && currentUser.plan !== 'Free';
 
               const originalPrice = plan.price;
               let finalPrice = originalPrice;
@@ -346,7 +347,7 @@ function Upgrade() {
               return (
                 <div 
                   key={plan._id} 
-                  className={`upgrade-plan-card ${plan.isHighlighted ? 'highlighted' : ''}`}
+                  className={`upgrade-plan-card ${plan.isHighlighted ? 'highlighted' : ''} ${isFreePlanDisabled ? 'disabled-free-card' : ''}`}
                 >
                   {plan.isHighlighted && plan.badge && (
                     <div className="upgrade-badge-wrapper">
@@ -365,21 +366,11 @@ function Upgrade() {
                   <div className="plan-card-pricing">
                     {isDiscounted ? (
                       <div className="price-split-wrapper">
-                        <span className="plan-price-val discounted">
-                          $
-                          <span className={finalPrice === 0 && currentUser && currentUser.plan !== 'Free' ? 'blur-price' : ''}>
-                            {finalPrice.toFixed(0)}
-                          </span>
-                        </span>
+                        <span className="plan-price-val discounted">${finalPrice.toFixed(0)}</span>
                         <span className="plan-price-val-crossed">${originalPrice}</span>
                       </div>
                     ) : (
-                      <span className="plan-price-val">
-                        $
-                        <span className={originalPrice === 0 && currentUser && currentUser.plan !== 'Free' ? 'blur-price' : ''}>
-                          {originalPrice}
-                        </span>
-                      </span>
+                      <span className="plan-price-val">${originalPrice}</span>
                     )}
                     <span className="plan-price-period">/mo</span>
                   </div>
@@ -404,9 +395,9 @@ function Upgrade() {
                   </ul>
 
                   <button 
-                    onClick={() => !isCurrentPlan && handleSelectPlan(plan)} 
+                    onClick={() => !isCurrentPlan && !isFreePlanDisabled && handleSelectPlan(plan)} 
                     className={`plan-select-btn ${plan.isHighlighted ? 'primary' : 'outline'} ${isCurrentPlan ? 'current-active' : ''}`}
-                    disabled={isCurrentPlan}
+                    disabled={isCurrentPlan || isFreePlanDisabled}
                   >
                     {isCurrentPlan ? 'Current Plan' : 'Select Plan'}
                   </button>

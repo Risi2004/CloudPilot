@@ -718,11 +718,11 @@
   color: #34d399 !important;
 }
 
-.blur-price {
-  filter: blur(5px);
-  user-select: none;
+.disabled-free-card {
+  filter: blur(3px);
+  opacity: 0.45;
   pointer-events: none;
-  display: inline-block;
-  opacity: 0.6;
+  user-select: none;
 }
+
 
