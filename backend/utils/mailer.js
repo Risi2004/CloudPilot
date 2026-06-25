@@ -284,6 +284,14 @@ const sendPaymentReceiptEmail = async (email, fullName, planName, amount, curren
     hour: '2-digit',
     minute: '2-digit'
   });
+
+  const { generateInvoicePdfBuffer } = require('./pdfGenerator');
+  let pdfBuffer = null;
+  try {
+    pdfBuffer = await generateInvoicePdfBuffer(fullName, email, planName, amount, currency, orderId, currentDate);
+  } catch (pdfErr) {
+    console.error('Failed to generate professional PDF invoice buffer:', pdfErr);
+  }
   
   const mailOptions = {
     from: process.env.SMTP_FROM || '"CloudPilot" <no-reply@cloudpilot.io>',
@@ -343,7 +351,11 @@ const sendPaymentReceiptEmail = async (email, fullName, planName, amount, curren
       </div>
     `,
     attachments: [
-      {
+      pdfBuffer ? {
+        filename: `receipt_${orderId}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      } : {
         filename: `receipt_${orderId}.txt`,
         content: `CLOUDPILOT BILLING SYSTEM\n==========================\nPAYMENT RECEIPT\n\nOrder ID: ${orderId}\nDate: ${currentDate}\nCustomer Name: ${fullName}\nCustomer Email: ${email}\nUpgrade Tier: ${planName} Plan\nBilling Period: Monthly Recurring\nTotal Amount: ${amount} ${currency}\n\nStatus: PAID / COMPLETED\n\nThank you for choosing CloudPilot!`
       }
