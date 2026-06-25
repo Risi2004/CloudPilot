@@ -702,3 +702,27 @@
   background: #4f46e5;
   border-color: #4f46e5;
 }
+
+/* Active current plan and blurred price styles */
+.plan-select-btn.current-active {
+  background: rgba(16, 185, 129, 0.1) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  color: #34d399 !important;
+  cursor: default;
+  box-shadow: none !important;
+}
+
+.plan-select-btn.current-active:hover {
+  background: rgba(16, 185, 129, 0.1) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  color: #34d399 !important;
+}
+
+.blur-price {
+  filter: blur(5px);
+  user-select: none;
+  pointer-events: none;
+  display: inline-block;
+  opacity: 0.6;
+}
+

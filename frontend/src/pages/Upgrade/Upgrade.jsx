@@ -328,6 +328,8 @@ function Upgrade() {
                 appliedPromo.targetPlanId === plan._id
               );
 
+              const isCurrentPlan = currentUser && currentUser.plan === plan.name;
+
               const originalPrice = plan.price;
               let finalPrice = originalPrice;
               const isDiscounted = isPromoApplicable && originalPrice > 0;
@@ -362,11 +364,21 @@ function Upgrade() {
                   <div className="plan-card-pricing">
                     {isDiscounted ? (
                       <div className="price-split-wrapper">
-                        <span className="plan-price-val discounted">${finalPrice.toFixed(0)}</span>
+                        <span className="plan-price-val discounted">
+                          $
+                          <span className={finalPrice === 0 && currentUser && currentUser.plan !== 'Free' ? 'blur-price' : ''}>
+                            {finalPrice.toFixed(0)}
+                          </span>
+                        </span>
                         <span className="plan-price-val-crossed">${originalPrice}</span>
                       </div>
                     ) : (
-                      <span className="plan-price-val">${originalPrice}</span>
+                      <span className="plan-price-val">
+                        $
+                        <span className={originalPrice === 0 && currentUser && currentUser.plan !== 'Free' ? 'blur-price' : ''}>
+                          {originalPrice}
+                        </span>
+                      </span>
                     )}
                     <span className="plan-price-period">/mo</span>
                   </div>
@@ -391,10 +403,11 @@ function Upgrade() {
                   </ul>
 
                   <button 
-                    onClick={() => handleSelectPlan(plan)} 
-                    className={`plan-select-btn ${plan.isHighlighted ? 'primary' : 'outline'}`}
+                    onClick={() => !isCurrentPlan && handleSelectPlan(plan)} 
+                    className={`plan-select-btn ${plan.isHighlighted ? 'primary' : 'outline'} ${isCurrentPlan ? 'current-active' : ''}`}
+                    disabled={isCurrentPlan}
                   >
-                    Select Plan
+                    {isCurrentPlan ? 'Current Plan' : 'Select Plan'}
                   </button>
                 </div>
               );

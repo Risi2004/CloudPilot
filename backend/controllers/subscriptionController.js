@@ -156,6 +156,11 @@ const cancelSubscription = async (req, res, next) => {
     user.autoRenew = false;
     await user.save();
 
+    // Dispatch cancellation email asynchronously
+    const { sendCancelSubscriptionEmail } = require('../utils/mailer');
+    sendCancelSubscriptionEmail(user.email, user.fullName, user.plan, user.subscriptionExpiresAt)
+      .catch(err => console.error('[Cancellation Email Telemetry] Failed to dispatch cancellation email:', err));
+
     res.status(200).json({
       message: 'Your subscription renewal has been cancelled. The plan features remain active until the end of your chosen cycle.',
       user: {
