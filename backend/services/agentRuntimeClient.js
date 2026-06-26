@@ -33,6 +33,45 @@ function agentRuntimeCwd() {
   return path.resolve(__dirname, '../../agent-runtime');
 }
 
+function stripAnsi(text) {
+  return text.replace(/\u001b\[[0-9;]*m/g, '');
+}
+
+/**
+ * Extract the JSON object from subprocess stdout.
+ * LiteLLM may emit colored help text before the payload on some platforms.
+ */
+function extractJsonPayload(stdout) {
+  const cleaned = stripAnsi(stdout).trim();
+  if (!cleaned) {
+    throw new Error('Repository analysis returned empty output.');
+  }
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    if (start === -1 || end === -1 || end <= start) {
+      throw new Error(
+        'Repository analysis did not return valid JSON. Check Ollama is running and OLLAMA_BASE_URL / OLLAMA_MODEL in backend .env.',
+      );
+    }
+    const candidate = cleaned.slice(start, end + 1);
+    return JSON.parse(candidate);
+  }
+}
+
+function buildChildEnv() {
+  return {
+    ...process.env,
+    NO_COLOR: '1',
+    FORCE_COLOR: '0',
+    TERM: 'dumb',
+    PYTHONUNBUFFERED: '1',
+  };
+}
+
 /**
  * Run RepositoryAnalysisService via the agent-runtime CLI and return parsed JSON.
  */
@@ -43,7 +82,7 @@ function runRepositoryAnalysis(source) {
 
     const child = spawn(command, args, {
       cwd,
-      env: { ...process.env },
+      env: buildChildEnv(),
       windowsHide: true,
     });
 
@@ -72,24 +111,26 @@ function runRepositoryAnalysis(source) {
       clearTimeout(timeout);
 
       if (code !== 0) {
-        const detail = (stderr || stdout).trim();
+        const detail = stripAnsi((stderr || stdout).trim());
+        if (/ollama|connection|litellm/i.test(detail)) {
+          reject(
+            new Error(
+              'AI model unavailable. Ensure Ollama is running (`ollama serve`) and OLLAMA_BASE_URL / OLLAMA_MODEL match your local model in backend .env.',
+            ),
+          );
+          return;
+        }
         reject(new Error(detail || `Repository analysis exited with code ${code}`));
         return;
       }
 
-      const trimmed = stdout.trim();
-      if (!trimmed) {
-        reject(new Error('Repository analysis returned empty output.'));
-        return;
-      }
-
       try {
-        resolve(JSON.parse(trimmed));
+        resolve(extractJsonPayload(stdout));
       } catch (err) {
-        reject(new Error(`Failed to parse repository analysis JSON: ${err.message}`));
+        reject(err);
       }
     });
   });
 }
 
-module.exports = { runRepositoryAnalysis };
+module.exports = { runRepositoryAnalysis, extractJsonPayload, stripAnsi };

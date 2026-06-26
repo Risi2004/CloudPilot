@@ -105,3 +105,10 @@ class ScanContext:
     def root_package_json(self) -> dict[str, Any] | None:
         """Return the root package.json when present."""
         return self.read_json(Path("package.json"))
+
+    def package_json_paths(self) -> list[Path]:
+        """Return all package.json paths, preferring the repository root first."""
+        return sorted(
+            self.find_files("package.json"),
+            key=lambda path: (path.as_posix() != "package.json", path.as_posix()),
+        )

@@ -10,6 +10,19 @@ from google.adk.models.lite_llm import LiteLlm
 from cloudpilot.config.env import AISettings, load_settings
 
 
+def _quiet_litellm_console() -> None:
+    """Keep LiteLLM from printing colored help text to stdout (breaks JSON CLI output)."""
+    os.environ.setdefault("NO_COLOR", "1")
+    os.environ.setdefault("FORCE_COLOR", "0")
+    try:
+        import litellm
+
+        litellm.suppress_debug_info = True
+        litellm.set_verbose(False)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def configure_runtime(settings: AISettings | None = None) -> AISettings:
     """
     Apply process-wide environment configuration required by LiteLLM and ADK.
@@ -17,6 +30,7 @@ def configure_runtime(settings: AISettings | None = None) -> AISettings:
     LiteLLM's Ollama integration reads OLLAMA_API_BASE for non-generation calls,
     so CloudPilot maps OLLAMA_BASE_URL to that variable at runtime.
     """
+    _quiet_litellm_console()
     resolved = settings or load_settings()
 
     os.environ["OLLAMA_API_BASE"] = resolved.ollama_base_url

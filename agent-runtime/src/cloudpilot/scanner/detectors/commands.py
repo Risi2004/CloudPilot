@@ -14,14 +14,16 @@ class CommandsDetector:
     def detect(self, context: ScanContext, result: ScanResult) -> None:
         commands = CommandsInfo()
 
-        package_json = context.root_package_json()
-        if package_json:
+        for rel_path in context.package_json_paths():
+            package_json = context.read_json(rel_path) or {}
             scripts = package_json.get("scripts") or {}
-            commands.source = "package.json"
-            commands.install = _infer_install_command(context, result)
-            commands.build = scripts.get("build")
-            commands.dev = _first_script(scripts, ("dev", "start:dev", "serve"))
-            commands.start = _first_script(scripts, ("start", "serve", "start:prod"))
+            if not scripts:
+                continue
+            commands.source = commands.source or rel_path.as_posix()
+            commands.install = commands.install or _infer_install_command(context, result)
+            commands.build = commands.build or scripts.get("build")
+            commands.dev = commands.dev or _first_script(scripts, ("dev", "start:dev", "serve"))
+            commands.start = commands.start or _first_script(scripts, ("start", "serve", "start:prod"))
 
         if context.has_file("Makefile"):
             makefile = context.read_text(context.find_files("Makefile")[0]) or ""

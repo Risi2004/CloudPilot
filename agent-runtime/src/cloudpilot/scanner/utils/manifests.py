@@ -63,12 +63,13 @@ def collect_dependencies(context: ScanContext) -> tuple[set[str], set[str], list
     development: set[str] = set()
     source_files: list[str] = []
 
-    package_json = context.root_package_json()
-    if package_json:
-        source_files.append("package.json")
-        prod, dev = merge_dependency_names(package_json)
-        production.update(name.lower() for name in prod)
-        development.update(name.lower() for name in dev)
+    for rel_path in context.package_json_paths():
+        source_files.append(rel_path.as_posix())
+        package_json = context.read_json(rel_path)
+        if package_json:
+            prod, dev = merge_dependency_names(package_json)
+            production.update(name.lower() for name in prod)
+            development.update(name.lower() for name in dev)
 
     for rel_path in context.find_files("requirements.txt"):
         source_files.append(rel_path.as_posix())

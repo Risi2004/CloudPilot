@@ -63,3 +63,26 @@ def test_spring_boot_marker_detected_in_pom(tmp_path: Path) -> None:
     FrameworkDetector().detect(context, result)
 
     assert "spring boot" in result.frameworks.backend
+
+
+def test_detects_frameworks_from_nested_package_json(tmp_path: Path) -> None:
+    root = tmp_path / "monorepo"
+    backend = root / "backend"
+    frontend = root / "frontend"
+    backend.mkdir(parents=True)
+    frontend.mkdir(parents=True)
+    (backend / "package.json").write_text(
+        json.dumps({"dependencies": {"express": "^4.0.0", "mongoose": "^8.0.0"}}),
+        encoding="utf-8",
+    )
+    (frontend / "package.json").write_text(
+        json.dumps({"dependencies": {"react": "^18.0.0"}}),
+        encoding="utf-8",
+    )
+
+    context = build_context(root)
+    result = ScanResult(repository=RepositoryInfo(name="monorepo", path=str(root)))
+    FrameworkDetector().detect(context, result)
+
+    assert "react" in result.frameworks.frontend
+    assert "express" in result.frameworks.backend

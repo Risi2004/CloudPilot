@@ -34,6 +34,13 @@ const analyzeRepository = async (req, res, next) => {
     if (message.includes('timed out') || message.includes('agent runtime')) {
       return res.status(504).json({ message });
     }
+    if (
+      message.includes('valid JSON') ||
+      message.includes('Ollama') ||
+      message.includes('AI model unavailable')
+    ) {
+      return res.status(502).json({ message });
+    }
     next(err);
   }
 };

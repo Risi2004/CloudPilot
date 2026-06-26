@@ -19,13 +19,20 @@ class RuntimeDetector:
         version_files: list[str] = []
 
         if context.has_file("package.json"):
-            version_files.append("package.json")
-            engines = (context.root_package_json() or {}).get("engines") or {}
-            node_version = engines.get("node")
-            if node_version:
-                runtimes.append(RuntimeEntry(name="node.js", version=str(node_version), source_file="package.json"))
-            elif not any(item.name == "node.js" for item in runtimes):
-                runtimes.append(RuntimeEntry(name="node.js", source_file="package.json"))
+            for rel_path in context.package_json_paths():
+                version_files.append(rel_path.as_posix())
+                engines = (context.read_json(rel_path) or {}).get("engines") or {}
+                node_version = engines.get("node")
+                if node_version:
+                    runtimes.append(
+                        RuntimeEntry(
+                            name="node.js",
+                            version=str(node_version),
+                            source_file=rel_path.as_posix(),
+                        )
+                    )
+                elif not any(item.name == "node.js" for item in runtimes):
+                    runtimes.append(RuntimeEntry(name="node.js", source_file=rel_path.as_posix()))
 
         for rel_path in context.find_files(".nvmrc"):
             version_files.append(rel_path.as_posix())

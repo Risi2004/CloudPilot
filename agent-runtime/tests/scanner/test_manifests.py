@@ -48,3 +48,28 @@ def test_collect_package_names_lower_normalizes_npm_case(tmp_path: Path) -> None
     context = build_context(root)
     names = collect_package_names_lower(context)
     assert "react" in names
+
+
+def test_collect_dependencies_from_nested_package_json(tmp_path: Path) -> None:
+    root = tmp_path / "monorepo"
+    backend = root / "backend"
+    frontend = root / "frontend"
+    backend.mkdir(parents=True)
+    frontend.mkdir(parents=True)
+    (backend / "package.json").write_text(
+        json.dumps({"dependencies": {"express": "^4.0.0", "mongoose": "^8.0.0"}}),
+        encoding="utf-8",
+    )
+    (frontend / "package.json").write_text(
+        json.dumps({"dependencies": {"react": "^18.0.0", "react-dom": "^18.0.0"}}),
+        encoding="utf-8",
+    )
+
+    context = build_context(root)
+    production, _, source_files = collect_dependencies(context)
+
+    assert "backend/package.json" in source_files
+    assert "frontend/package.json" in source_files
+    assert "express" in production
+    assert "mongoose" in production
+    assert "react" in production

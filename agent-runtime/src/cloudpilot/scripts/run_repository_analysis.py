@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 
 from cloudpilot.agents.repository_analysis.service import RepositoryAnalysisService
@@ -26,7 +27,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    logging.basicConfig(level=getattr(logging, args.log_level))
+    logging.basicConfig(level=getattr(logging, args.log_level), stream=sys.stderr)
+
+    # LiteLLM prints colored banners to stdout by default; keep stdout JSON-only.
+    os.environ.setdefault("NO_COLOR", "1")
+    os.environ.setdefault("FORCE_COLOR", "0")
 
     try:
         result = RepositoryAnalysisService().analyze(args.source)
@@ -40,7 +45,8 @@ def main(argv: list[str] | None = None) -> int:
 
         Path(args.output).write_text(rendered + "\n", encoding="utf-8")
     else:
-        print(rendered)
+        sys.stdout.write(rendered)
+        sys.stdout.write("\n")
     return 0
 
 
