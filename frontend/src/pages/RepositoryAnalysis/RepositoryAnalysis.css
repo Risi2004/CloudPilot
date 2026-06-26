@@ -18,6 +18,10 @@
   text-align: center;
 }
 
+.repo-analysis-content-wide {
+  max-width: 960px;
+}
+
 .repo-title {
   font-size: 48px;
   font-weight: 800;

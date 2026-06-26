@@ -1,12 +1,23 @@
 import React from 'react';
+import { displayNarrativeText, formatFrameworks, formatLanguages } from '../../services/repositoryAnalysis';
 
-function AnalysisSummary({ data }) {
-  const totalCost = data.iac?.monthlyCost?.find(c => c.total)?.total || 'Estimated: $36.30 / mo';
-  const displayCost = totalCost.replace('Total Estimate: ', '').replace('Estimated: ', '');
+function AnalysisSummary({ result }) {
+  const { facts, analysis, source } = result;
+  const language = formatLanguages(facts);
+  const framework = formatFrameworks(facts);
+  const runtime = facts.runtime?.primary || 'Not detected';
+  const packageManager = facts.packageManager?.primary || 'Not detected';
+  const healthIssues = facts.health?.issues?.length || 0;
+  const deploymentPlatforms =
+    (facts.deployment?.detected_platforms || []).join(', ') || 'None detected';
+  const readiness = displayNarrativeText(analysis?.deployment_readiness) || '—';
+  const architecture =
+    facts.architecture?.primary ||
+    (facts.architecture?.types || []).join(', ') ||
+    'Not classified';
 
   return (
     <div className="analysis-summary-grid">
-      {/* Language */}
       <div className="summary-card">
         <div className="summary-card-header">
           <span className="summary-card-icon language">
@@ -16,74 +27,64 @@ function AnalysisSummary({ data }) {
           </span>
           <span className="summary-card-label">PRIMARY LANGUAGE</span>
         </div>
-        <div className="summary-card-value">{data.language}</div>
-        <div className="summary-card-badge positive">100% Parsed</div>
+        <div className="summary-card-value" title={language}>{language}</div>
+        <div className="summary-card-badge positive">{facts.repository?.file_count || 0} files scanned</div>
       </div>
 
-      {/* Framework */}
       <div className="summary-card">
         <div className="summary-card-header">
           <span className="summary-card-icon framework">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
               <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
-              <line x1="6" y1="6" x2="6.01" y2="6"></line>
-              <line x1="6" y1="18" x2="6.01" y2="18"></line>
             </svg>
           </span>
-          <span className="summary-card-label">DETECTED FRAMEWORK</span>
+          <span className="summary-card-label">FRAMEWORKS</span>
         </div>
-        <div className="summary-card-value">{data.framework}</div>
-        <div className="summary-card-badge info">Active Runtime</div>
+        <div className="summary-card-value" title={framework}>{framework}</div>
+        <div className="summary-card-badge info">{architecture}</div>
       </div>
 
-      {/* Payment Gateway */}
       <div className="summary-card">
         <div className="summary-card-header">
           <span className="summary-card-icon payments">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="2" y="5" width="20" height="14" rx="2" ry="2"></rect>
-              <line x1="2" y1="10" x2="22" y2="10"></line>
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 6v6l4 2"></path>
             </svg>
           </span>
-          <span className="summary-card-label">PAYMENT GATEWAY</span>
+          <span className="summary-card-label">RUNTIME</span>
         </div>
-        <div className="summary-card-value">{data.paymentGateway}</div>
-        <div className="summary-card-badge positive">Integrations Detected</div>
+        <div className="summary-card-value">{runtime}</div>
+        <div className="summary-card-badge info">{packageManager}</div>
       </div>
 
-      {/* Infrastructure Cost */}
       <div className="summary-card">
         <div className="summary-card-header">
           <span className="summary-card-icon cost">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="12" y1="1" x2="12" y2="23"></line>
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             </svg>
           </span>
-          <span className="summary-card-label">ESTIMATED RUNTIME COST</span>
+          <span className="summary-card-label">DEPLOYMENT READINESS</span>
         </div>
-        <div className="summary-card-value">{displayCost}</div>
-        <div className="summary-card-badge warning">Optimized AWS</div>
+        <div className="summary-card-value analysis-summary-truncate" title={readiness}>{readiness}</div>
+        <div className="summary-card-badge warning">{deploymentPlatforms}</div>
       </div>
 
-      {/* Target Containerization */}
       <div className="summary-card">
         <div className="summary-card-header">
           <span className="summary-card-icon container">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
             </svg>
           </span>
-          <span className="summary-card-label">CONTAINER RECIPE</span>
+          <span className="summary-card-label">CLONE METHOD</span>
         </div>
-        <div className="summary-card-value">{data.containerization?.baseImage}</div>
-        <div className="summary-card-badge positive">Dockerfile Ready</div>
+        <div className="summary-card-value">{source?.clone_method || source?.kind || '—'}</div>
+        <div className="summary-card-badge positive">{source?.default_branch || 'main'}</div>
       </div>
 
-      {/* Vulnerabilities scan */}
       <div className="summary-card">
         <div className="summary-card-header">
           <span className="summary-card-icon security">
@@ -91,10 +92,12 @@ function AnalysisSummary({ data }) {
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             </svg>
           </span>
-          <span className="summary-card-label">SECURITY AUDIT</span>
+          <span className="summary-card-label">HEALTH CHECKS</span>
         </div>
-        <div className="summary-card-value">PASS (Secure)</div>
-        <div className="summary-card-badge positive">0 Issues Found</div>
+        <div className="summary-card-value">{healthIssues === 0 ? 'No issues' : `${healthIssues} issue(s)`}</div>
+        <div className={`summary-card-badge ${healthIssues === 0 ? 'positive' : 'warning'}`}>
+          {facts.health?.has_dockerfile ? 'Dockerfile found' : 'No Dockerfile'}
+        </div>
       </div>
     </div>
   );

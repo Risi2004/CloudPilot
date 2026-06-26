@@ -1,85 +1,74 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './AnalysisLoader.css';
 
-function AnalysisLoader({ repoUrl, onComplete }) {
-  const [logs, setLogs] = useState([]);
-  const [percent, setPercent] = useState(0);
+const STATUS_MESSAGES = [
+  'Connecting to CloudPilot agent runtime...',
+  'Cloning repository (git or tarball fallback)...',
+  'Walking repository file tree...',
+  'Running deterministic scanners (frameworks, runtime, dependencies)...',
+  'Detecting deployment files and CI/CD systems...',
+  'Generating AI narrative with local Qwen model...',
+  'Finalizing structured analysis report...',
+];
 
-  const logMessages = [
-    { text: 'Initializing CloudPilot multi-agent engine...', delay: 200 },
-    { text: 'Connecting to secure GitHub gateway...', delay: 500 },
-    { text: 'Accessing repository: ' + repoUrl, delay: 900 },
-    { text: 'Cloning source tree into sandbox workspace...', delay: 1400 },
-    { text: 'Indexing file structures & directory nodes...', delay: 2000 },
-    { text: 'Scanning configuration files (package.json, requirements.txt, pom.xml)...', delay: 2500 },
-    { text: 'Detecting codebase language runtimes and frameworks...', delay: 3100 },
-    { text: 'Analyzing code blocks for external APIs & integrations...', delay: 3800 },
-    { text: 'Detecting payment gateways, DB adaptors, and mail channels...', delay: 4300 },
-    { text: 'Synthesizing containerization recommendations (Dockerfile recipe)...', delay: 4800 },
-    { text: 'Assembling cloud architecture blueprints & infrastructure costs...', delay: 5400 },
-    { text: 'Compiling analysis reports & telemetry metrics...', delay: 6000 }
-  ];
+function AnalysisLoader({ repoUrl }) {
+  const [messageIndex, setMessageIndex] = useState(0);
+  const [logs, setLogs] = useState([
+    { text: `Starting analysis for ${repoUrl}`, time: new Date().toLocaleTimeString(), type: 'info' },
+  ]);
+  const terminalBodyRef = useRef(null);
+  const terminalEndRef = useRef(null);
 
   useEffect(() => {
-    let currentLogIndex = 0;
-    const logTimers = [];
+    const el = terminalBodyRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+    terminalEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+  }, [logs]);
 
-    // Log messages push loop
-    logMessages.forEach((msg, idx) => {
-      const timer = setTimeout(() => {
-        setLogs(prev => [...prev, {
-          text: msg.text,
-          time: new Date().toLocaleTimeString(),
-          type: msg.text.startsWith('Accessing') || msg.text.startsWith('Indexing') ? 'info' : 'success'
-        }]);
-      }, msg.delay);
-      logTimers.push(timer);
-    });
-
-    // Percentage counter
-    const progressTimer = setInterval(() => {
-      setPercent(prev => {
-        if (prev >= 100) {
-          clearInterval(progressTimer);
-          return 100;
-        }
-        return prev + 1;
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMessageIndex((prev) => {
+        const next = (prev + 1) % STATUS_MESSAGES.length;
+        setLogs((current) => {
+          const text = STATUS_MESSAGES[next];
+          if (current[current.length - 1]?.text === text) {
+            return current;
+          }
+          return [
+            ...current,
+            {
+              text,
+              time: new Date().toLocaleTimeString(),
+              type: 'success',
+            },
+          ];
+        });
+        return next;
       });
-    }, 62);
+    }, 4500);
 
-    // Call onComplete after logs complete
-    const completionTimer = setTimeout(() => {
-      onComplete();
-    }, 6800);
-
-    return () => {
-      logTimers.forEach(clearTimeout);
-      clearInterval(progressTimer);
-      clearTimeout(completionTimer);
-    };
-  }, []);
+    return () => clearInterval(interval);
+  }, [repoUrl]);
 
   return (
     <div className="analysis-loader-container">
       <div className="loader-hud">
-        {/* Core HUD circle loader */}
         <div className="hud-radial-wrapper">
-          <div className="hud-radial-progress" style={{ '--percent': percent }}>
+          <div className="hud-radial-progress hud-radial-indeterminate">
             <div className="hud-inner-circle">
-              <span className="hud-percent-text">{percent}%</span>
-              <span className="hud-label-text">SCANNING</span>
+              <span className="hud-label-text">ANALYZING</span>
             </div>
           </div>
         </div>
 
-        {/* HUD Details */}
         <div className="hud-details">
-          <h2 className="hud-title">Autonomous Code Audit</h2>
-          <p className="hud-subtitle">Analyzing system files, payment gateways, and package dependencies.</p>
+          <h2 className="hud-title">Repository Analysis In Progress</h2>
+          <p className="hud-subtitle">{STATUS_MESSAGES[messageIndex]}</p>
+          <p className="hud-subtitle hud-repo-url">{repoUrl}</p>
         </div>
       </div>
 
-      {/* Terminal logs panel */}
       <div className="analysis-terminal">
         <div className="terminal-header">
           <div className="terminal-actions">
@@ -87,9 +76,9 @@ function AnalysisLoader({ repoUrl, onComplete }) {
             <span className="terminal-dot yellow"></span>
             <span className="terminal-dot green"></span>
           </div>
-          <span className="terminal-title">cloudpilot-agent@audit:~</span>
+          <span className="terminal-title">cloudpilot-agent@repository-analysis</span>
         </div>
-        <div className="terminal-body">
+        <div className="terminal-body" ref={terminalBodyRef}>
           {logs.map((log, index) => (
             <div key={index} className="terminal-line">
               <span className="line-timestamp">[{log.time}]</span>
@@ -100,6 +89,7 @@ function AnalysisLoader({ repoUrl, onComplete }) {
             <span className="line-timestamp">[{new Date().toLocaleTimeString()}]</span>
             <span className="terminal-cursor"> █</span>
           </div>
+          <div ref={terminalEndRef} className="terminal-scroll-anchor" aria-hidden="true" />
         </div>
       </div>
     </div>

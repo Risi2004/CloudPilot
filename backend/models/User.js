@@ -53,6 +53,13 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+  github: {
+    userId: { type: String, default: null },
+    username: { type: String, default: null },
+    accessToken: { type: String, default: null, select: false },
+    scope: { type: String, default: null },
+    connectedAt: { type: Date, default: null },
+  },
   createdAt: {
     type: Date,
     default: Date.now

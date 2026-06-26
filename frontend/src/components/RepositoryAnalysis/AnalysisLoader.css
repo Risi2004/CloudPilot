@@ -29,17 +29,38 @@
   justify-content: center;
 }
 
-.hud-radial-progress {
+.hud-radial-progress,
+.hud-radial-indeterminate {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: radial-gradient(closest-side, #030712 80%, transparent 0 100%),
-              conic-gradient(#00d4ff calc(var(--percent) * 1%), rgba(255, 255, 255, 0.05) 0);
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 0 20px rgba(0, 212, 255, 0.1);
+}
+
+.hud-radial-progress {
+  background: radial-gradient(closest-side, #030712 80%, transparent 0 100%),
+              conic-gradient(#00d4ff calc(var(--percent) * 1%), rgba(255, 255, 255, 0.05) 0);
   transition: background 0.1s linear;
+}
+
+.hud-radial-indeterminate {
+  background: radial-gradient(closest-side, #030712 78%, transparent 0 100%),
+              conic-gradient(from 0deg, #00d4ff, rgba(0, 212, 255, 0.1), #00d4ff);
+  animation: hud-spin 1.2s linear infinite;
+}
+
+@keyframes hud-spin {
+  to { transform: rotate(360deg); }
+}
+
+.hud-repo-url {
+  font-family: monospace;
+  font-size: 12px;
+  color: #64748b;
+  word-break: break-all;
 }
 
 .hud-inner-circle {
@@ -135,10 +156,18 @@
   min-height: 200px;
   max-height: 280px;
   overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: auto;
   font-family: 'Courier New', Courier, monospace;
   font-size: 13px;
   line-height: 1.6;
   text-align: left;
+}
+
+.terminal-scroll-anchor {
+  height: 1px;
+  width: 100%;
+  flex-shrink: 0;
 }
 
 .terminal-line {
