@@ -1,6 +1,6 @@
 const express = require('express');
 const { getDataSources, addDataSource, getFiles, uploadFile, editDataSource, deleteDataSource, deleteFile, editFile, viewFileContent, getBucketSize } = require('../controllers/knowledgeController');
-const { synchronizeKnowledgeBase, getLatestSyncReport, listSyncReports, getKnowledgeSyncProgress, getActiveKnowledgeSync } = require('../controllers/knowledgeSyncController');
+const { synchronizeKnowledgeBase, getLatestSyncReport, listSyncReports, getKnowledgeSyncProgress, getActiveKnowledgeSync, listSyncFolders } = require('../controllers/knowledgeSyncController');
 const { protect, admin } = require('../middleware/auth');
 
 const router = express.Router();
@@ -20,6 +20,7 @@ router.delete('/files/:id', deleteFile);
 router.get('/files/:id/view', viewFileContent);
 router.get('/storage-size', getBucketSize);
 router.post('/sync', synchronizeKnowledgeBase);
+router.get('/sync/folders', listSyncFolders);
 router.get('/sync/progress/:syncId', getKnowledgeSyncProgress);
 router.get('/sync/active', getActiveKnowledgeSync);
 router.get('/sync/latest', getLatestSyncReport);

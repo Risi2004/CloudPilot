@@ -19,8 +19,17 @@ async function parseResponse(response) {
   return payload;
 }
 
+export async function fetchSyncFolders() {
+  const response = await fetch(`${API_URL}/api/knowledge/sync/folders`, {
+    headers: authHeaders(),
+  });
+  return parseResponse(response);
+}
+
 export async function startKnowledgeSync(options = {}) {
   const body = {};
+  if (options.syncAll) body.syncAll = true;
+  if (options.dataSourceIds?.length) body.dataSourceIds = options.dataSourceIds;
   if (options.dataSourceId) body.dataSourceId = options.dataSourceId;
   if (options.folderPrefix) body.folderPrefix = options.folderPrefix;
   if (options.scopeLabel) body.scopeLabel = options.scopeLabel;

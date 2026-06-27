@@ -3,13 +3,16 @@ const {
   getLatestSyncStats,
   getSyncProgress,
   getActiveSyncJob,
+  listSyncFolderOptions,
 } = require('../services/knowledgeSyncService');
 const KnowledgeSyncReport = require('../models/KnowledgeSyncReport');
 
 const synchronizeKnowledgeBase = async (req, res, next) => {
   try {
-    const { dataSourceId, folderPrefix, scopeLabel } = req.body || {};
+    const { syncAll, dataSourceIds, dataSourceId, folderPrefix, scopeLabel } = req.body || {};
     const job = await startKnowledgeSyncJob(req.user._id, {
+      syncAll: Boolean(syncAll),
+      dataSourceIds: dataSourceIds || (dataSourceId ? [dataSourceId] : undefined),
       dataSourceId: dataSourceId || null,
       folderPrefix: folderPrefix || null,
       scopeLabel: scopeLabel || null,
@@ -72,10 +75,20 @@ const listSyncReports = async (req, res, next) => {
   }
 };
 
+const listSyncFolders = async (req, res, next) => {
+  try {
+    const folders = await listSyncFolderOptions();
+    res.status(200).json({ folders });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   synchronizeKnowledgeBase,
   getKnowledgeSyncProgress,
   getActiveKnowledgeSync,
   getLatestSyncReport,
   listSyncReports,
+  listSyncFolders,
 };

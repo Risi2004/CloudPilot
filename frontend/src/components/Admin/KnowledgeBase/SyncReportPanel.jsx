@@ -10,6 +10,8 @@ function SyncReportPanel({ report, summary }) {
 
   const errors = data.errors || [];
   const scopeLabel = data.scopeLabel || data.scope_label;
+  const displayScope =
+    scopeLabel && scopeLabel.length > 80 ? `${scopeLabel.slice(0, 77)}...` : scopeLabel;
   const errorCount = errors.length;
 
   return (
@@ -29,7 +31,11 @@ function SyncReportPanel({ report, summary }) {
           </button>
           <div>
             <h3>Synchronization Report</h3>
-            {scopeLabel && <span className="sync-report-scope">Scope: {scopeLabel}</span>}
+            {displayScope && (
+              <span className="sync-report-scope" title={scopeLabel}>
+                Scope: {displayScope}
+              </span>
+            )}
           </div>
         </div>
         <div className="sync-report-header-meta">

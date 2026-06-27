@@ -33,7 +33,7 @@ const FILE_ICONS = {
   )
 };
 
-function ConnectorList({ onContentsChanged, onSyncScopeChange }) {
+function ConnectorList({ onContentsChanged, onExplorerFolderChange }) {
   // Navigation stack state
   const [folderPath, setFolderPath] = useState([]);
   const currentFolder = folderPath.length > 0 ? folderPath[folderPath.length - 1] : null;
@@ -123,14 +123,14 @@ function ConnectorList({ onContentsChanged, onSyncScopeChange }) {
   }, [folderPath]);
 
   useEffect(() => {
-    if (!onSyncScopeChange) return;
+    if (!onExplorerFolderChange) return;
     const current = folderPath.length > 0 ? folderPath[folderPath.length - 1] : null;
-    onSyncScopeChange({
+    onExplorerFolderChange({
       dataSourceId: current?._id ?? null,
       folderKey: current?.folderKey ?? 'knowledge-base/',
       label: current?.name ?? 'All folders',
     });
-  }, [folderPath, onSyncScopeChange]);
+  }, [folderPath, onExplorerFolderChange]);
 
   // Handle Breadcrumb Navigation
   const navigateToBreadcrumb = (index) => {
@@ -659,9 +659,6 @@ function ConnectorList({ onContentsChanged, onSyncScopeChange }) {
             Back
           </button>
         )}
-        <span className="explorer-sync-scope-hint">
-          Sync uses this folder{folderPath.length === 0 ? ' tree (all folders)' : ' and subfolders'}
-        </span>
       </div>
 
       {/* Main Explorer Directory List */}

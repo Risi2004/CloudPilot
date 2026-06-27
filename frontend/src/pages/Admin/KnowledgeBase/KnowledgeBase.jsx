@@ -7,6 +7,7 @@ import ConnectorList from '../../../components/Admin/KnowledgeBase/ConnectorList
 import OptimizationInsight from '../../../components/Admin/KnowledgeBase/OptimizationInsight';
 import SyncReportPanel from '../../../components/Admin/KnowledgeBase/SyncReportPanel';
 import SyncProgressPanel from '../../../components/Admin/KnowledgeBase/SyncProgressPanel';
+import SyncFolderModal from '../../../components/Admin/KnowledgeBase/SyncFolderModal';
 import '../../../components/Admin/KnowledgeBase/SyncReportPanel.css';
 import {
   startKnowledgeSync,
@@ -18,7 +19,7 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-const DEFAULT_SYNC_SCOPE = {
+const DEFAULT_EXPLORER_FOLDER = {
   dataSourceId: null,
   folderKey: 'knowledge-base/',
   label: 'All folders',
@@ -26,7 +27,8 @@ const DEFAULT_SYNC_SCOPE = {
 
 function KnowledgeBase() {
   const [isSyncing, setIsSyncing] = useState(false);
-  const [syncScope, setSyncScope] = useState(DEFAULT_SYNC_SCOPE);
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [explorerFolder, setExplorerFolder] = useState(DEFAULT_EXPLORER_FOLDER);
   const [syncProgress, setSyncProgress] = useState(null);
   const [syncReport, setSyncReport] = useState(null);
   const [syncSummary, setSyncSummary] = useState(null);
@@ -110,26 +112,20 @@ function KnowledgeBase() {
     };
   }, [resumeSyncPolling]);
 
-  const handleSynchronize = async () => {
+  const runSynchronization = async (syncOptions) => {
     if (isSyncing) return;
 
     setIsSyncing(true);
     setSyncError(null);
     setSyncProgress({
       status: 'running',
-      phaseLabel: `Starting synchronization for ${syncScope.label}...`,
-      scopeLabel: syncScope.label,
-      folderPrefix: syncScope.folderKey,
+      phaseLabel: 'Starting synchronization...',
       progressPercent: 0,
       elapsedMs: 0,
     });
 
     try {
-      const { syncId } = await startKnowledgeSync({
-        dataSourceId: syncScope.dataSourceId,
-        folderPrefix: syncScope.folderKey,
-        scopeLabel: syncScope.label,
-      });
+      const { syncId } = await startKnowledgeSync(syncOptions);
       const result = await waitForKnowledgeSync(syncId, {
         onProgress: setSyncProgress,
       });
@@ -144,7 +140,15 @@ function KnowledgeBase() {
     }
   };
 
-  const syncButtonLabel = syncScope.dataSourceId ? 'Synchronize Folder' : 'Synchronize All';
+  const handleSynchronizeClick = () => {
+    if (isSyncing) return;
+    setShowSyncModal(true);
+  };
+
+  const handleSyncConfirm = async ({ syncAll, dataSourceIds }) => {
+    setShowSyncModal(false);
+    await runSynchronization(syncAll ? { syncAll: true } : { dataSourceIds });
+  };
 
   return (
     <div className="admin-dashboard-container">
@@ -160,13 +164,10 @@ function KnowledgeBase() {
 
             <div className="header-right">
               <div className="sync-action-group">
-                <span className="sync-scope-label" title={syncScope.folderKey}>
-                  Scope: {syncScope.label}
-                </span>
                 <button
                   type="button"
                   className="kb-action-btn primary"
-                  onClick={handleSynchronize}
+                  onClick={handleSynchronizeClick}
                   disabled={isSyncing}
                 >
                   {isSyncing ? (
@@ -182,13 +183,20 @@ function KnowledgeBase() {
                         <polyline points="23 4 23 10 17 10"></polyline>
                         <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
                       </svg>
-                      {syncButtonLabel}
+                      Synchronize Database
                     </>
                   )}
                 </button>
               </div>
             </div>
           </div>
+
+          <SyncFolderModal
+            open={showSyncModal}
+            onClose={() => setShowSyncModal(false)}
+            onConfirm={handleSyncConfirm}
+            initialFolderId={explorerFolder.dataSourceId}
+          />
 
           {syncError && <div className="knowledge-sync-error">{syncError}</div>}
 
@@ -208,7 +216,7 @@ function KnowledgeBase() {
           <div className="knowledge-explorer-row">
             <ConnectorList
               onContentsChanged={fetchStorageSize}
-              onSyncScopeChange={setSyncScope}
+              onExplorerFolderChange={setExplorerFolder}
             />
           </div>
 

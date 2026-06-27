@@ -8,13 +8,19 @@ function SyncProgressPanel({ progress }) {
   const percent = Math.min(100, Math.max(0, progress.progressPercent ?? 0));
   const isRunning = progress.status === 'running';
   const scopeLabel = progress.scopeLabel;
+  const displayScope =
+    scopeLabel && scopeLabel.length > 80 ? `${scopeLabel.slice(0, 77)}...` : scopeLabel;
 
   return (
     <div className="sync-progress-panel">
       <div className="sync-progress-header">
         <div>
           <h3>{isRunning ? 'Synchronizing Knowledge Base' : 'Synchronization Status'}</h3>
-          {scopeLabel && <p className="sync-progress-scope">Scope: {scopeLabel}</p>}
+          {displayScope && (
+            <p className="sync-progress-scope" title={scopeLabel}>
+              Scope: {displayScope}
+            </p>
+          )}
           <p className="sync-progress-phase">{progress.phaseLabel}</p>
         </div>
         <span className="sync-progress-percent">{percent}%</span>

@@ -97,6 +97,88 @@ async function resolveSyncScope(options = {}) {
   };
 }
 
+async function resolveSyncScopes(options = {}) {
+  const { syncAll, dataSourceIds, dataSourceId, folderPrefix, scopeLabel } = options;
+
+  if (dataSourceId || folderPrefix) {
+    return [await resolveSyncScope({ dataSourceId, folderPrefix, scopeLabel })];
+  }
+
+  if (syncAll) {
+    return [await resolveSyncScope({})];
+  }
+
+  const ids = Array.isArray(dataSourceIds) ? dataSourceIds.filter(Boolean) : [];
+  if (ids.length) {
+    const scopes = await Promise.all(ids.map((id) => resolveSyncScope({ dataSourceId: id })));
+    return collapseSyncScopes(scopes);
+  }
+
+  return [await resolveSyncScope({})];
+}
+
+function collapseSyncScopes(syncScopes) {
+  if (syncScopes.length <= 1) return syncScopes;
+
+  const sorted = [...syncScopes].sort(
+    (left, right) => left.folderPrefix.length - right.folderPrefix.length,
+  );
+  const kept = [];
+
+  for (const scope of sorted) {
+    const isNested = kept.some(
+      (parent) =>
+        scope.folderPrefix !== parent.folderPrefix &&
+        scope.folderPrefix.startsWith(parent.folderPrefix),
+    );
+    if (!isNested) kept.push(scope);
+  }
+
+  return kept;
+}
+
+function buildScopeSummary(syncScopes) {
+  if (syncScopes.length === 1) {
+    return {
+      scopeLabel: syncScopes[0].scopeLabel,
+      folderPrefix: syncScopes[0].folderPrefix,
+    };
+  }
+
+  const names = syncScopes.map((scope) => scope.scopeLabel);
+  const previewNames = names.slice(0, 3);
+  const hiddenCount = names.length - previewNames.length;
+  let scopeLabel = `${syncScopes.length} folders (${previewNames.join(', ')}`;
+  if (hiddenCount > 0) {
+    scopeLabel += `, +${hiddenCount} more`;
+  }
+  scopeLabel += ')';
+
+  return {
+    scopeLabel,
+    folderPrefix: syncScopes.map((scope) => scope.folderPrefix).join('; '),
+  };
+}
+
+function isInSyncScope(fileKey, syncScopes) {
+  return syncScopes.some((scope) => isUnderFolderPrefix(fileKey, scope.folderPrefix));
+}
+
+async function listMarkdownObjectsForScopes(syncScopes) {
+  const objectMap = new Map();
+
+  for (const scope of syncScopes) {
+    const items = await listKnowledgeObjects(scope.folderPrefix);
+    for (const item of items) {
+      if (isMarkdownKey(item.key)) {
+        objectMap.set(item.key, item);
+      }
+    }
+  }
+
+  return Array.from(objectMap.values());
+}
+
 async function findDataSourceForKey(fileKey, dataSourceByFolderKey, allDataSources) {
   let folderKey = `${fileKey.slice(0, fileKey.lastIndexOf('/') + 1)}`;
   while (folderKey.startsWith(KNOWLEDGE_PREFIX)) {
@@ -155,28 +237,27 @@ function emitProgress(onProgress, partial) {
   }
 }
 
-async function runKnowledgeSynchronization(userId, onProgress, scope = {}) {
-  const syncScope = await resolveSyncScope(scope);
+async function runKnowledgeSynchronization(userId, onProgress, options = {}) {
+  const syncScopes = await resolveSyncScopes(options);
+  const { scopeLabel, folderPrefix } = buildScopeSummary(syncScopes);
   const started = Date.now();
 
   emitProgress(onProgress, {
     phase: 'listing',
-    phaseLabel: `Listing markdown files in ${syncScope.scopeLabel}...`,
-    scopeLabel: syncScope.scopeLabel,
-    folderPrefix: syncScope.folderPrefix,
+    phaseLabel: 'Listing markdown files...',
+    scopeLabel,
+    folderPrefix,
     progressPercent: 2,
   });
 
-  const objects = (await listKnowledgeObjects(syncScope.folderPrefix)).filter((item) =>
-    isMarkdownKey(item.key),
-  );
+  const objects = await listMarkdownObjectsForScopes(syncScopes);
   const totalFiles = objects.length;
 
   emitProgress(onProgress, {
     phase: 'preparing',
-    phaseLabel: `Checking file hashes (0/${totalFiles}) in ${syncScope.scopeLabel}...`,
-    scopeLabel: syncScope.scopeLabel,
-    folderPrefix: syncScope.folderPrefix,
+    phaseLabel: `Checking file hashes (0/${totalFiles})...`,
+    scopeLabel,
+    folderPrefix,
     totalFiles,
     progressPercent: 5,
   });
@@ -189,7 +270,7 @@ async function runKnowledgeSynchronization(userId, onProgress, scope = {}) {
     fileKey: { $regex: /\.md$/i },
   });
   const scopedExistingFiles = existingMarkdownFiles.filter((file) =>
-    isUnderFolderPrefix(file.fileKey, syncScope.folderPrefix),
+    isInSyncScope(file.fileKey, syncScopes),
   );
 
   const deletedDocumentIds = scopedExistingFiles
@@ -273,10 +354,10 @@ async function runKnowledgeSynchronization(userId, onProgress, scope = {}) {
   emitProgress(onProgress, {
     phase: manifestFiles.length ? 'embedding' : 'finalizing',
     phaseLabel: manifestFiles.length
-      ? `Embedding vectors (0/${manifestFiles.length} files) in ${syncScope.scopeLabel}...`
-      : `No changed files in ${syncScope.scopeLabel} — saving report...`,
-    scopeLabel: syncScope.scopeLabel,
-    folderPrefix: syncScope.folderPrefix,
+      ? `Embedding vectors (0/${manifestFiles.length} files)...`
+      : 'No changed files — saving report...',
+    scopeLabel,
+    folderPrefix,
     filesToIndex: manifestFiles.length,
     unchangedFiles: unchangedCount,
     totalBatches,
@@ -285,8 +366,8 @@ async function runKnowledgeSynchronization(userId, onProgress, scope = {}) {
   });
 
   const aggregateReport = {
-    scope_label: syncScope.scopeLabel,
-    folder_prefix: syncScope.folderPrefix,
+    scope_label: scopeLabel,
+    folder_prefix: folderPrefix,
     new_documents: 0,
     updated_documents: 0,
     deleted_documents: deletedDocumentIds.length,
@@ -306,9 +387,9 @@ async function runKnowledgeSynchronization(userId, onProgress, scope = {}) {
 
     emitProgress(onProgress, {
       phase: 'embedding',
-      phaseLabel: `Embedding batch ${batchNumber}/${totalBatches} (${indexedSoFar}/${manifestFiles.length} files) in ${syncScope.scopeLabel}...`,
-      scopeLabel: syncScope.scopeLabel,
-      folderPrefix: syncScope.folderPrefix,
+      phaseLabel: `Embedding batch ${batchNumber}/${totalBatches} (${indexedSoFar}/${manifestFiles.length} files)...`,
+      scopeLabel,
+      folderPrefix,
       currentBatch: batchNumber,
       totalBatches,
       indexedFiles: indexedSoFar,
@@ -381,8 +462,8 @@ async function runKnowledgeSynchronization(userId, onProgress, scope = {}) {
 
   const savedReport = await KnowledgeSyncReport.create({
     triggeredBy: userId,
-    scopeLabel: syncScope.scopeLabel,
-    folderPrefix: syncScope.folderPrefix,
+    scopeLabel,
+    folderPrefix,
     newDocuments: aggregateReport.new_documents,
     updatedDocuments: aggregateReport.updated_documents,
     deletedDocuments: aggregateReport.deleted_documents,
@@ -396,9 +477,9 @@ async function runKnowledgeSynchronization(userId, onProgress, scope = {}) {
 
   emitProgress(onProgress, {
     phase: 'completed',
-    phaseLabel: `Synchronization complete (${syncScope.scopeLabel})`,
-    scopeLabel: syncScope.scopeLabel,
-    folderPrefix: syncScope.folderPrefix,
+    phaseLabel: `Synchronization complete (${scopeLabel})`,
+    scopeLabel,
+    folderPrefix,
     progressPercent: 100,
     indexedFiles: manifestFiles.length,
     filesToIndex: manifestFiles.length,
@@ -412,14 +493,30 @@ async function runKnowledgeSynchronization(userId, onProgress, scope = {}) {
   };
 }
 
+async function listSyncFolderOptions() {
+  const sources = await DataSource.find({}).sort({ folderKey: 1 }).lean();
+  return sources.map((source) => {
+    const relative = source.folderKey.replace(KNOWLEDGE_PREFIX, '').replace(/\/$/, '');
+    return {
+      _id: source._id.toString(),
+      name: source.name,
+      folderKey: source.folderKey,
+      parentId: source.parentId ? source.parentId.toString() : null,
+      path: relative,
+      depth: relative ? relative.split('/').length : 0,
+    };
+  });
+}
+
 function startKnowledgeSyncJob(userId, options = {}) {
-  return resolveSyncScope(options).then((syncScope) => {
+  return resolveSyncScopes(options).then((syncScopes) => {
+    const { scopeLabel, folderPrefix } = buildScopeSummary(syncScopes);
     const job = startSyncJob(userId, {
-      scopeLabel: syncScope.scopeLabel,
-      folderPrefix: syncScope.folderPrefix,
+      scopeLabel,
+      folderPrefix,
     });
 
-    runKnowledgeSynchronization(userId, (partial) => updateProgress(partial), syncScope)
+    runKnowledgeSynchronization(userId, (partial) => updateProgress(partial), options)
       .then((result) => {
         completeSyncJob(result);
       })
@@ -447,6 +544,8 @@ module.exports = {
   getSyncProgress,
   getActiveSyncJob,
   resolveSyncScope,
+  resolveSyncScopes,
+  listSyncFolderOptions,
   derivePlatformCategory,
   documentIdFromFileKey,
 };
