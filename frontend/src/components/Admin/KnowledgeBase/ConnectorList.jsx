@@ -33,7 +33,7 @@ const FILE_ICONS = {
   )
 };
 
-function ConnectorList({ rebuildTriggered, onContentsChanged }) {
+function ConnectorList({ onContentsChanged, onSyncScopeChange }) {
   // Navigation stack state
   const [folderPath, setFolderPath] = useState([]);
   const currentFolder = folderPath.length > 0 ? folderPath[folderPath.length - 1] : null;
@@ -122,15 +122,15 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
     fetchContents();
   }, [folderPath]);
 
-  // Sync state if rebuild vector DB is triggered
   useEffect(() => {
-    if (rebuildTriggered) {
-      setSubfolders((prev) => 
-        prev.map((c) => c.key === 'terraform' ? { ...c, status: 'Synced' } : c)
-      );
-      setSuccessMessage('Vector DB rebuilt successfully!');
-    }
-  }, [rebuildTriggered]);
+    if (!onSyncScopeChange) return;
+    const current = folderPath.length > 0 ? folderPath[folderPath.length - 1] : null;
+    onSyncScopeChange({
+      dataSourceId: current?._id ?? null,
+      folderKey: current?.folderKey ?? 'knowledge-base/',
+      label: current?.name ?? 'All folders',
+    });
+  }, [folderPath, onSyncScopeChange]);
 
   // Handle Breadcrumb Navigation
   const navigateToBreadcrumb = (index) => {
@@ -659,6 +659,9 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
             Back
           </button>
         )}
+        <span className="explorer-sync-scope-hint">
+          Sync uses this folder{folderPath.length === 0 ? ' tree (all folders)' : ' and subfolders'}
+        </span>
       </div>
 
       {/* Main Explorer Directory List */}

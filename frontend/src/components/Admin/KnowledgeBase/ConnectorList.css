@@ -100,11 +100,20 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   background: rgba(15, 23, 42, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.03);
   border-radius: 10px;
   padding: 10px 16px;
   margin-bottom: 20px;
+}
+
+.explorer-sync-scope-hint {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+  margin-left: auto;
 }
 
 .breadcrumbs-trail {

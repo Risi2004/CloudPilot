@@ -22,3 +22,6 @@ build/
 
 # Local clone scratch
 cloudpilot-clones/
+
+# ChromaDB persistence
+data/chroma/

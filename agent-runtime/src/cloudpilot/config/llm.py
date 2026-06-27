@@ -18,7 +18,8 @@ def _quiet_litellm_console() -> None:
         import litellm
 
         litellm.suppress_debug_info = True
-        litellm.set_verbose(False)
+        if callable(getattr(litellm, "set_verbose", None)):
+            litellm.set_verbose(False)
     except Exception:  # noqa: BLE001
         pass
 

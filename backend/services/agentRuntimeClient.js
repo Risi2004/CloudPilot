@@ -2,6 +2,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 
 const DEFAULT_TIMEOUT_MS = 10 * 60 * 1000;
+const SYNC_TIMEOUT_MS = Number(process.env.KNOWLEDGE_SYNC_TIMEOUT_MS || 30 * 60 * 1000);
 
 function resolvePythonExecutable() {
   if (process.env.AGENT_RUNTIME_PYTHON) {
@@ -11,6 +12,102 @@ function resolvePythonExecutable() {
     return 'C:\\cpvenv\\Scripts\\python.exe';
   }
   return 'python3';
+}
+
+function agentRuntimeCwd() {
+  if (process.env.AGENT_RUNTIME_DIR) {
+    return process.env.AGENT_RUNTIME_DIR;
+  }
+  return path.resolve(__dirname, '../../agent-runtime');
+}
+
+function stripAnsi(text) {
+  return text.replace(/\u001b\[[0-9;]*m/g, '');
+}
+
+function extractJsonPayload(stdout, errorHint) {
+  const cleaned = stripAnsi(stdout).trim();
+  if (!cleaned) {
+    throw new Error(errorHint || 'Agent runtime returned empty output.');
+  }
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    if (start === -1 || end === -1 || end <= start) {
+      throw new Error(errorHint || 'Agent runtime did not return valid JSON.');
+    }
+    return JSON.parse(cleaned.slice(start, end + 1));
+  }
+}
+
+function buildChildEnv() {
+  const cwd = agentRuntimeCwd();
+  const srcPath = path.join(cwd, 'src');
+  const pythonPath = [srcPath, process.env.PYTHONPATH].filter(Boolean).join(path.delimiter);
+  return {
+    ...process.env,
+    NO_COLOR: '1',
+    FORCE_COLOR: '0',
+    TERM: 'dumb',
+    PYTHONUNBUFFERED: '1',
+    PYTHONPATH: pythonPath,
+  };
+}
+
+function runPythonModule(moduleName, stdinPayload, timeoutMs, startErrorMessage) {
+  return new Promise((resolve, reject) => {
+    const python = resolvePythonExecutable();
+    const cwd = agentRuntimeCwd();
+    const child = spawn(python, ['-m', moduleName], {
+      cwd,
+      env: buildChildEnv(),
+      windowsHide: true,
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    const timeout = setTimeout(() => {
+      child.kill('SIGTERM');
+      reject(new Error('Agent runtime request timed out.'));
+    }, timeoutMs);
+
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+
+    child.on('error', (err) => {
+      clearTimeout(timeout);
+      reject(new Error(`${startErrorMessage}: ${err.message}`));
+    });
+
+    if (stdinPayload) {
+      child.stdin.write(JSON.stringify(stdinPayload));
+      child.stdin.end();
+    }
+
+    child.on('close', (code) => {
+      clearTimeout(timeout);
+      if (code !== 0) {
+        const detail = stripAnsi((stderr || stdout).trim());
+        reject(new Error(detail || `Agent runtime exited with code ${code}`));
+        return;
+      }
+
+      try {
+        resolve(extractJsonPayload(stdout));
+      } catch (err) {
+        reject(err);
+      }
+    });
+  });
 }
 
 function resolveAnalyzeCommand(source) {
@@ -26,55 +123,6 @@ function resolveAnalyzeCommand(source) {
   };
 }
 
-function agentRuntimeCwd() {
-  if (process.env.AGENT_RUNTIME_DIR) {
-    return process.env.AGENT_RUNTIME_DIR;
-  }
-  return path.resolve(__dirname, '../../agent-runtime');
-}
-
-function stripAnsi(text) {
-  return text.replace(/\u001b\[[0-9;]*m/g, '');
-}
-
-/**
- * Extract the JSON object from subprocess stdout.
- * LiteLLM may emit colored help text before the payload on some platforms.
- */
-function extractJsonPayload(stdout) {
-  const cleaned = stripAnsi(stdout).trim();
-  if (!cleaned) {
-    throw new Error('Repository analysis returned empty output.');
-  }
-
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    const start = cleaned.indexOf('{');
-    const end = cleaned.lastIndexOf('}');
-    if (start === -1 || end === -1 || end <= start) {
-      throw new Error(
-        'Repository analysis did not return valid JSON. Check Ollama is running and OLLAMA_BASE_URL / OLLAMA_MODEL in backend .env.',
-      );
-    }
-    const candidate = cleaned.slice(start, end + 1);
-    return JSON.parse(candidate);
-  }
-}
-
-function buildChildEnv() {
-  return {
-    ...process.env,
-    NO_COLOR: '1',
-    FORCE_COLOR: '0',
-    TERM: 'dumb',
-    PYTHONUNBUFFERED: '1',
-  };
-}
-
-/**
- * Run RepositoryAnalysisService via the agent-runtime CLI and return parsed JSON.
- */
 function runRepositoryAnalysis(source) {
   return new Promise((resolve, reject) => {
     const { command, args } = resolveAnalyzeCommand(source);
@@ -125,7 +173,12 @@ function runRepositoryAnalysis(source) {
       }
 
       try {
-        resolve(extractJsonPayload(stdout));
+        resolve(
+          extractJsonPayload(
+            stdout,
+            'Repository analysis did not return valid JSON. Check Ollama is running and OLLAMA_BASE_URL / OLLAMA_MODEL in backend .env.',
+          ),
+        );
       } catch (err) {
         reject(err);
       }
@@ -133,4 +186,28 @@ function runRepositoryAnalysis(source) {
   });
 }
 
-module.exports = { runRepositoryAnalysis, extractJsonPayload, stripAnsi };
+function runKnowledgeSync(manifest) {
+  return runPythonModule(
+    'cloudpilot.scripts.sync_knowledge_base',
+    manifest,
+    SYNC_TIMEOUT_MS,
+    'Failed to start knowledge sync runtime',
+  );
+}
+
+function runDocumentationQuery(payload) {
+  return runPythonModule(
+    'cloudpilot.scripts.run_documentation_query',
+    payload,
+    Number(process.env.KNOWLEDGE_QUERY_TIMEOUT_MS || DEFAULT_TIMEOUT_MS),
+    'Failed to start documentation query runtime',
+  );
+}
+
+module.exports = {
+  runRepositoryAnalysis,
+  runKnowledgeSync,
+  runDocumentationQuery,
+  extractJsonPayload,
+  stripAnsi,
+};

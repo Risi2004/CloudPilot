@@ -33,9 +33,13 @@ node_modules/
 /agent-runtime/**/*.egg-info/
 *.egg-info/
 
-# Local repository clones (CLOUDPILOT_CLONE_DIR inside repo)
+# Local repository clone scratch (optional)
 cloudpilot-clones/
 .agent-clones/
+
+# ChromaDB vector store persistence
+data/chroma/
+**/data/chroma/
 
 # Build outputs
 /frontend/dist/

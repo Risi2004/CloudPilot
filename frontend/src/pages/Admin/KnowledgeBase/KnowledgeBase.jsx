@@ -1,25 +1,47 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './KnowledgeBase.css';
 
-// Layout and widgets
 import AdminSidebar from '../../../components/Admin/AdminDashboard/AdminSidebar';
 import VectorStats from '../../../components/Admin/KnowledgeBase/VectorStats';
 import ConnectorList from '../../../components/Admin/KnowledgeBase/ConnectorList';
 import OptimizationInsight from '../../../components/Admin/KnowledgeBase/OptimizationInsight';
+import SyncReportPanel from '../../../components/Admin/KnowledgeBase/SyncReportPanel';
+import SyncProgressPanel from '../../../components/Admin/KnowledgeBase/SyncProgressPanel';
+import '../../../components/Admin/KnowledgeBase/SyncReportPanel.css';
+import {
+  startKnowledgeSync,
+  waitForKnowledgeSync,
+  getActiveKnowledgeSync,
+  getLatestSyncReport,
+  formatSyncTimestamp,
+} from '../../../services/knowledgeSync';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+const DEFAULT_SYNC_SCOPE = {
+  dataSourceId: null,
+  folderKey: 'knowledge-base/',
+  label: 'All folders',
+};
+
 function KnowledgeBase() {
-  const [rebuildTriggered, setRebuildTriggered] = useState(false);
-  const [isRebuilding, setIsRebuilding] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncScope, setSyncScope] = useState(DEFAULT_SYNC_SCOPE);
+  const [syncProgress, setSyncProgress] = useState(null);
+  const [syncReport, setSyncReport] = useState(null);
+  const [syncSummary, setSyncSummary] = useState(null);
+  const [syncError, setSyncError] = useState(null);
   const [storageSize, setStorageSize] = useState('-');
   const [mdFileCount, setMdFileCount] = useState('-');
+  const [totalVectors, setTotalVectors] = useState('-');
+  const [lastSyncedAt, setLastSyncedAt] = useState('-');
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const fetchStorageSize = async () => {
+  const fetchStorageSize = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_URL}/api/knowledge/storage-size`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       if (res.ok) {
@@ -29,85 +51,170 @@ function KnowledgeBase() {
     } catch (e) {
       console.error('Error fetching storage size:', e);
     }
-  };
+  }, []);
+
+  const fetchLatestSync = useCallback(async () => {
+    try {
+      const data = await getLatestSyncReport();
+      setTotalVectors(data.totalVectors ?? 0);
+      setLastSyncedAt(formatSyncTimestamp(data.lastSyncedAt));
+      if (data.latestReport) {
+        setSyncReport(data.latestReport);
+      }
+    } catch (e) {
+      console.error('Error fetching sync stats:', e);
+    }
+  }, []);
+
+  const resumeSyncPolling = useCallback(async (syncId) => {
+    setIsSyncing(true);
+    setSyncError(null);
+
+    try {
+      const result = await waitForKnowledgeSync(syncId, {
+        onProgress: setSyncProgress,
+      });
+      setSyncReport(result.report);
+      setSyncSummary(result.summary);
+      setRefreshKey((value) => value + 1);
+    } catch (err) {
+      setSyncError(err.message || 'Knowledge synchronization failed.');
+    } finally {
+      setIsSyncing(false);
+      setSyncProgress(null);
+    }
+  }, []);
 
   useEffect(() => {
     fetchStorageSize();
-  }, [rebuildTriggered]);
+    fetchLatestSync();
+  }, [fetchStorageSize, fetchLatestSync, refreshKey]);
 
-  const handleRebuildDB = () => {
-    if (isRebuilding) return;
+  useEffect(() => {
+    let cancelled = false;
 
-    setIsRebuilding(true);
-    // Simulate vector rebuilding process
-    setTimeout(() => {
-      setIsRebuilding(false);
-      setRebuildTriggered(true);
-      alert('Vector Database rebuilt successfully!\nPruned 14 redundant chunks.\nTerraform Connector synchronized.');
-    }, 2000);
+    const checkActiveSync = async () => {
+      try {
+        const data = await getActiveKnowledgeSync();
+        if (cancelled || !data.active || !data.progress?.syncId) return;
+        await resumeSyncPolling(data.progress.syncId);
+      } catch (e) {
+        console.error('Error checking active sync:', e);
+      }
+    };
+
+    checkActiveSync();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [resumeSyncPolling]);
+
+  const handleSynchronize = async () => {
+    if (isSyncing) return;
+
+    setIsSyncing(true);
+    setSyncError(null);
+    setSyncProgress({
+      status: 'running',
+      phaseLabel: `Starting synchronization for ${syncScope.label}...`,
+      scopeLabel: syncScope.label,
+      folderPrefix: syncScope.folderKey,
+      progressPercent: 0,
+      elapsedMs: 0,
+    });
+
+    try {
+      const { syncId } = await startKnowledgeSync({
+        dataSourceId: syncScope.dataSourceId,
+        folderPrefix: syncScope.folderKey,
+        scopeLabel: syncScope.label,
+      });
+      const result = await waitForKnowledgeSync(syncId, {
+        onProgress: setSyncProgress,
+      });
+      setSyncReport(result.report);
+      setSyncSummary(result.summary);
+      setRefreshKey((value) => value + 1);
+    } catch (err) {
+      setSyncError(err.message || 'Knowledge synchronization failed.');
+    } finally {
+      setIsSyncing(false);
+      setSyncProgress(null);
+    }
   };
+
+  const syncButtonLabel = syncScope.dataSourceId ? 'Synchronize Folder' : 'Synchronize All';
 
   return (
     <div className="admin-dashboard-container">
-      {/* Left Sidebar */}
       <AdminSidebar activeTab="knowledge-base" />
 
-      {/* Right Content Area */}
       <main className="admin-dashboard-main">
         <div className="admin-subview">
-          
-          {/* Header Row */}
           <div className="knowledge-header-row">
             <div className="header-left">
               <span className="kb-super-label">SEMANTIC INDEXING</span>
               <h1 className="knowledge-page-title">Neural Repository</h1>
             </div>
-            
+
             <div className="header-right">
-              {/* Rebuild Vector DB trigger */}
-              <button 
-                className="kb-action-btn primary" 
-                onClick={handleRebuildDB}
-                disabled={isRebuilding}
-              >
-                {isRebuilding ? (
-                  <span className="rebuilding-spinner-text">
-                    <svg className="kb-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                      <circle cx="12" cy="12" r="10" strokeDasharray="40 20" strokeLinecap="round" />
-                    </svg>
-                    Rebuilding...
-                  </span>
-                ) : (
-                  <>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="btn-icon">
-                      <polyline points="23 4 23 10 17 10"></polyline>
-                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-                    </svg>
-                    Rebuild Vector DB
-                  </>
-                )}
-              </button>
+              <div className="sync-action-group">
+                <span className="sync-scope-label" title={syncScope.folderKey}>
+                  Scope: {syncScope.label}
+                </span>
+                <button
+                  type="button"
+                  className="kb-action-btn primary"
+                  onClick={handleSynchronize}
+                  disabled={isSyncing}
+                >
+                  {isSyncing ? (
+                    <span className="rebuilding-spinner-text">
+                      <svg className="kb-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                        <circle cx="12" cy="12" r="10" strokeDasharray="40 20" strokeLinecap="round" />
+                      </svg>
+                      Synchronizing...
+                    </span>
+                  ) : (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="btn-icon">
+                        <polyline points="23 4 23 10 17 10"></polyline>
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                      </svg>
+                      {syncButtonLabel}
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Full-width Stats Card Row */}
-          <div className="knowledge-stats-row">
-            <VectorStats storageCapacity={storageSize} mdFileCount={mdFileCount} />
-          </div>
+          {syncError && <div className="knowledge-sync-error">{syncError}</div>}
 
-          {/* Full-width Explorer Card Row */}
-          <div className="knowledge-explorer-row">
-            <ConnectorList 
-              rebuildTriggered={rebuildTriggered} 
-              onContentsChanged={fetchStorageSize}
+          {isSyncing && <SyncProgressPanel progress={syncProgress} />}
+
+          <div className="knowledge-stats-row">
+            <VectorStats
+              storageCapacity={storageSize}
+              mdFileCount={mdFileCount}
+              totalVectors={totalVectors}
+              lastSyncedAt={lastSyncedAt}
             />
           </div>
 
-          {/* Bottom Full-width Insights Row */}
+          <SyncReportPanel report={syncReport} summary={syncSummary} />
+
+          <div className="knowledge-explorer-row">
+            <ConnectorList
+              onContentsChanged={fetchStorageSize}
+              onSyncScopeChange={setSyncScope}
+            />
+          </div>
+
           <div className="knowledge-insight-row">
             <OptimizationInsight />
           </div>
-
         </div>
       </main>
     </div>

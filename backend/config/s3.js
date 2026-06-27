@@ -273,10 +273,64 @@ const renameR2Folder = async (oldFolderKey, newFolderKey) => {
   await s3Client.send(folderMarkerCommand);
 };
 
+const streamToBuffer = async (stream) => {
+  const chunks = [];
+  for await (const chunk of stream) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  return Buffer.concat(chunks);
+};
+
+/**
+ * Download an object from R2 as UTF-8 text.
+ * @param {string} key
+ * @returns {Promise<string>}
+ */
+const getObjectText = async (key) => {
+  const { stream } = await getPrivateImageStream(key);
+  const buffer = await streamToBuffer(stream);
+  return buffer.toString('utf-8');
+};
+
+/**
+ * List all object keys under a prefix (non-recursive delimiter disabled).
+ * @param {string} prefix
+ * @returns {Promise<Array<{ key: string, size: number }>>}
+ */
+const listKnowledgeObjects = async (prefix = 'knowledge-base/') => {
+  const bucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME;
+  if (!bucketName) {
+    throw new Error('CLOUDFLARE_R2_BUCKET_NAME is not configured.');
+  }
+
+  const objects = [];
+  let continuationToken;
+  let isTruncated = true;
+
+  while (isTruncated) {
+    const command = new ListObjectsV2Command({
+      Bucket: bucketName,
+      Prefix: prefix,
+      ContinuationToken: continuationToken,
+    });
+    const response = await s3Client.send(command);
+    for (const item of response.Contents || []) {
+      if (!item.Key || item.Key.endsWith('/')) continue;
+      objects.push({ key: item.Key, size: item.Size || 0 });
+    }
+    isTruncated = Boolean(response.IsTruncated);
+    continuationToken = response.NextContinuationToken;
+  }
+
+  return objects;
+};
+
 module.exports = {
   s3Client,
   uploadBase64Image,
   getPrivateImageStream,
+  getObjectText,
+  listKnowledgeObjects,
   deleteImage,
   createFolder,
   uploadKnowledgeFile,
