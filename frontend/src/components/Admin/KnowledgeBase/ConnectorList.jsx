@@ -66,6 +66,14 @@ function ConnectorList({ onContentsChanged, onExplorerFolderChange }) {
   // Hidden Folder input ref
   const folderInputRef = useRef(null);
 
+  const [showSyncStatus, setShowSyncStatus] = useState(() => {
+    return localStorage.getItem('showSyncStatus') !== 'false';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('showSyncStatus', showSyncStatus);
+  }, [showSyncStatus]);
+
   // Auto-dismiss notification alerts
   useEffect(() => {
     if (successMessage) {
@@ -82,14 +90,17 @@ function ConnectorList({ onContentsChanged, onExplorerFolderChange }) {
   }, [errorMessage]);
 
   // Fetch folders and files in current folder
-  const fetchContents = async () => {
-    setLoading(true);
+  const fetchContents = async (forceStatusFetch = false) => {
+    if (!forceStatusFetch) {
+      setLoading(true);
+    }
     try {
       const token = localStorage.getItem('token');
       const parentIdVal = currentFolder ? currentFolder._id : 'null';
+      const shouldIncludeStatus = forceStatusFetch || showSyncStatus;
 
-      // 1. Fetch subfolders
-      const folderRes = await fetch(`${API_URL}/api/knowledge/data-sources?parentId=${parentIdVal}`, {
+      // 1. Fetch subfolders (passing shouldIncludeStatus)
+      const folderRes = await fetch(`${API_URL}/api/knowledge/data-sources?parentId=${parentIdVal}&includeStatus=${shouldIncludeStatus}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const folderData = await folderRes.json();
@@ -97,7 +108,7 @@ function ConnectorList({ onContentsChanged, onExplorerFolderChange }) {
       // 2. Fetch files inside this datasource
       let fileList = [];
       if (currentFolder) {
-        const fileRes = await fetch(`${API_URL}/api/knowledge/files?dataSourceId=${currentFolder._id}`, {
+        const fileRes = await fetch(`${API_URL}/api/knowledge/files?dataSourceId=${currentFolder._id}&includeStatus=${shouldIncludeStatus}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const fileData = await fileRes.json();
@@ -114,7 +125,16 @@ function ConnectorList({ onContentsChanged, onExplorerFolderChange }) {
       console.error('Error fetching explorer contents:', e);
       setErrorMessage('Failed to connect to server.');
     } finally {
-      setLoading(false);
+      if (!forceStatusFetch) {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleToggleSyncStatus = (checked) => {
+    setShowSyncStatus(checked);
+    if (checked) {
+      fetchContents(true);
     }
   };
 
@@ -618,6 +638,16 @@ function ConnectorList({ onContentsChanged, onExplorerFolderChange }) {
 
         {/* Search & Actions block */}
         <div className="header-actions-row">
+          <label className="sync-status-toggle-wrapper">
+            <input 
+              type="checkbox" 
+              checked={showSyncStatus}
+              onChange={(e) => handleToggleSyncStatus(e.target.checked)}
+              className="sync-status-toggle-input"
+            />
+            <div className="sync-status-toggle-switch" />
+            <span className="sync-status-toggle-text">Show Sync Status</span>
+          </label>
           <input 
             type="text" 
             placeholder="Search items..." 
@@ -690,10 +720,19 @@ function ConnectorList({ onContentsChanged, onExplorerFolderChange }) {
                 </div>
                 
                 <div className="connector-status-right">
-                  <span className="status-badge-synced">
-                    <span className="status-dot green" />
-                    Synced
-                  </span>
+                  {showSyncStatus && (
+                    folder.status === 'Synced' ? (
+                      <span className="status-badge-synced">
+                        <span className="status-dot green" />
+                        Synced
+                      </span>
+                    ) : (
+                      <span className="status-badge-notsynced">
+                        <span className="status-dot red" />
+                        Not Synced
+                      </span>
+                    )
+                  )}
 
                   {/* Actions for Edit & Delete Folder */}
                   <div className="connector-row-actions">
@@ -774,14 +813,33 @@ function ConnectorList({ onContentsChanged, onExplorerFolderChange }) {
                 </div>
                 
                 <div className="connector-status-right">
-                  <span className={`vector-status-badge ${file.status.toLowerCase()}`}>
-                    {file.status === 'Indexing' && (
+                  {showSyncStatus ? (
+                    file.status === 'Indexing' ? (
+                      <span className="vector-status-badge indexing">
+                        <svg className="indexing-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                          <circle cx="12" cy="12" r="10" strokeDasharray="30 20" strokeLinecap="round" />
+                        </svg>
+                        Indexing
+                      </span>
+                    ) : file.embeddingStatus === 'Indexed' ? (
+                      <span className="status-badge-synced">
+                        <span className="status-dot green" />
+                        Synced
+                      </span>
+                    ) : (
+                      <span className="status-badge-notsynced">
+                        <span className="status-dot red" />
+                        Not Synced
+                      </span>
+                    )
+                  ) : file.status === 'Indexing' ? (
+                    <span className="vector-status-badge indexing">
                       <svg className="indexing-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                         <circle cx="12" cy="12" r="10" strokeDasharray="30 20" strokeLinecap="round" />
                       </svg>
-                    )}
-                    {file.status}
-                  </span>
+                      Indexing
+                    </span>
+                  ) : null}
 
                   {/* Actions for File */}
                   <div className="connector-row-actions">

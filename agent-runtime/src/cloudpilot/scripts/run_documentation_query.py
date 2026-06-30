@@ -33,8 +33,7 @@ def main(argv: list[str] | None = None) -> int:
         print(str(exc), file=sys.stderr)
         return 1
 
-    sys.stdout.write(result.to_json())
-    sys.stdout.write("\n")
+    sys.stdout.write(f"__JSON_OUTPUT__:{result.to_json()}\n")
     return 0
 
 

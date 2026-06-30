@@ -31,6 +31,17 @@ function extractJsonPayload(stdout, errorHint) {
     throw new Error(errorHint || 'Agent runtime returned empty output.');
   }
 
+  const lines = cleaned.split('\n');
+  const prefixedLine = lines.find((line) => line.trim().startsWith('__JSON_OUTPUT__:'));
+  if (prefixedLine) {
+    const jsonStr = prefixedLine.trim().substring('__JSON_OUTPUT__:'.length).trim();
+    try {
+      return JSON.parse(jsonStr);
+    } catch (e) {
+      // fallback
+    }
+  }
+
   try {
     return JSON.parse(cleaned);
   } catch {

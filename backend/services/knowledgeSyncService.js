@@ -226,6 +226,7 @@ async function ensureKnowledgeFileRecord(objectMeta, dataSourceByFolderKey, allD
       file.dataSourceId = dataSource._id;
       file.sourceName = dataSource.name;
     }
+    await file.save();
   }
 
   return file;
@@ -292,6 +293,21 @@ async function runKnowledgeSynchronization(userId, onProgress, options = {}) {
     const objectMeta = objects[fileIndex];
     try {
       const file = await ensureKnowledgeFileRecord(objectMeta, dataSourceByFolderKey, dataSources);
+
+      // Skip files exceeding 2MB size limit
+      const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024;
+      if (objectMeta.size && objectMeta.size > MAX_FILE_SIZE_BYTES) {
+        file.status = 'Failed';
+        file.embeddingStatus = 'Failed';
+        file.syncError = `File size (${(objectMeta.size / 1024 / 1024).toFixed(2)} MB) exceeds maximum limit of 2.00 MB.`;
+        await file.save();
+        prepErrors.push({
+          fileKey: objectMeta.key,
+          message: file.syncError,
+        });
+        continue;
+      }
+
       const content = sanitizeTextForEmbedding(await getObjectText(objectMeta.key));
       const contentHash = sha256(content);
 
@@ -397,11 +413,29 @@ async function runKnowledgeSynchronization(userId, onProgress, options = {}) {
       progressPercent: 15 + Math.round((indexedSoFar / Math.max(manifestFiles.length, 1)) * 80),
     });
 
-    const batchReport = await runKnowledgeSync({
-      files: batch,
-      deleted_document_ids: index === 0 ? deletedDocumentIds : [],
-      unchanged_count: index === 0 ? unchangedCount : 0,
-    });
+    let batchReport;
+    try {
+      batchReport = await runKnowledgeSync({
+        files: batch,
+        deleted_document_ids: index === 0 ? deletedDocumentIds : [],
+        unchanged_count: index === 0 ? unchangedCount : 0,
+      });
+    } catch (err) {
+      const errorMsg = err.message || 'Batch synchronization failed.';
+      aggregateReport.errors.push({
+        message: `Batch ${batchNumber} failed: ${errorMsg}`,
+      });
+      for (const item of batch) {
+        const file = await KnowledgeFile.findOne({ fileKey: item.file_key });
+        if (file) {
+          file.status = 'Failed';
+          file.embeddingStatus = 'Failed';
+          file.syncError = errorMsg;
+          await file.save();
+        }
+      }
+      continue;
+    }
 
     aggregateReport.new_documents += batchReport.new_documents || 0;
     aggregateReport.updated_documents += batchReport.updated_documents || 0;
@@ -493,8 +527,71 @@ async function runKnowledgeSynchronization(userId, onProgress, options = {}) {
   };
 }
 
+async function getFolderSyncStatuses(parentFolderIds) {
+  const allSources = await DataSource.find({}).lean();
+  const allFiles = await KnowledgeFile.find({}).lean();
+
+  const childrenMap = new Map();
+  for (const s of allSources) {
+    if (s.parentId) {
+      const pId = s.parentId.toString();
+      if (!childrenMap.has(pId)) childrenMap.set(pId, []);
+      childrenMap.get(pId).push(s._id.toString());
+    }
+  }
+
+  const getDescendantIds = (folderIdStr) => {
+    const ids = [folderIdStr];
+    const stack = [folderIdStr];
+    while (stack.length > 0) {
+      const current = stack.pop();
+      const children = childrenMap.get(current);
+      if (children) {
+        for (const child of children) {
+          ids.push(child);
+          stack.push(child);
+        }
+      }
+    }
+    return ids;
+  };
+
+  const filesBySource = new Map();
+  for (const file of allFiles) {
+    const sId = file.dataSourceId.toString();
+    if (!filesBySource.has(sId)) filesBySource.set(sId, []);
+    filesBySource.get(sId).push(file);
+  }
+
+  const results = new Map();
+  for (const folderId of parentFolderIds) {
+    const folderIdStr = folderId.toString();
+    const descIds = getDescendantIds(folderIdStr);
+
+    let totalFilesCount = 0;
+    let unindexedCount = 0;
+
+    for (const dId of descIds) {
+      const sourceFiles = filesBySource.get(dId) || [];
+      totalFilesCount += sourceFiles.length;
+      for (const file of sourceFiles) {
+        if (file.embeddingStatus !== 'Indexed') {
+          unindexedCount++;
+        }
+      }
+    }
+
+    results.set(folderIdStr, totalFilesCount === 0 || unindexedCount === 0 ? 'Synced' : 'Needs Update');
+  }
+
+  return results;
+}
+
 async function listSyncFolderOptions() {
   const sources = await DataSource.find({}).sort({ folderKey: 1 }).lean();
+  const folderIds = sources.map((s) => s._id);
+  const statusMap = await getFolderSyncStatuses(folderIds);
+
   return sources.map((source) => {
     const relative = source.folderKey.replace(KNOWLEDGE_PREFIX, '').replace(/\/$/, '');
     return {
@@ -504,8 +601,29 @@ async function listSyncFolderOptions() {
       parentId: source.parentId ? source.parentId.toString() : null,
       path: relative,
       depth: relative ? relative.split('/').length : 0,
+      status: statusMap.get(source._id.toString()) || 'Synced',
     };
   });
+}
+
+async function cleanUpIndexingFiles(syncScopes, errorMessage) {
+  try {
+    const existingMarkdownFiles = await KnowledgeFile.find({
+      fileKey: { $regex: /\.md$/i },
+      status: 'Indexing',
+    });
+    const scopedFiles = existingMarkdownFiles.filter((file) =>
+      isInSyncScope(file.fileKey, syncScopes)
+    );
+    for (const file of scopedFiles) {
+      file.status = 'Failed';
+      file.embeddingStatus = 'Failed';
+      file.syncError = errorMessage || 'Sync aborted due to a synchronization error.';
+      await file.save();
+    }
+  } catch (err) {
+    console.error('Failed to cleanup indexing files:', err);
+  }
 }
 
 function startKnowledgeSyncJob(userId, options = {}) {
@@ -520,8 +638,10 @@ function startKnowledgeSyncJob(userId, options = {}) {
       .then((result) => {
         completeSyncJob(result);
       })
-      .catch((err) => {
-        failSyncJob(err.message || 'Knowledge synchronization failed.');
+      .catch(async (err) => {
+        const errorMsg = err.message || 'Knowledge synchronization failed.';
+        failSyncJob(errorMsg);
+        await cleanUpIndexingFiles(syncScopes, errorMsg);
       });
 
     return job;

@@ -7,9 +7,46 @@ const generateKey = (name) => {
   return name.trim().toLowerCase().replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-');
 };
 
+// Helper to recursively compute folder sync status based on underlying files
+const getFolderSyncStatus = async (folderId) => {
+  const childIds = [folderId];
+  const queue = [folderId];
+  while (queue.length > 0) {
+    const currentId = queue.shift();
+    const children = await DataSource.find({ parentId: currentId }).select('_id');
+    for (const child of children) {
+      childIds.push(child._id);
+      queue.push(child._id);
+    }
+  }
+
+  const filesCount = await KnowledgeFile.countDocuments({ dataSourceId: { $in: childIds } });
+  if (filesCount === 0) {
+    return 'Synced';
+  }
+
+  const unindexedCount = await KnowledgeFile.countDocuments({
+    dataSourceId: { $in: childIds },
+    embeddingStatus: { $ne: 'Indexed' }
+  });
+
+  return unindexedCount > 0 ? 'Needs Update' : 'Synced';
+};
+
 const getDataSources = async (req, res, next) => {
   try {
     const parentId = req.query.parentId && req.query.parentId !== 'null' ? req.query.parentId : null;
+    const includeStatus = req.query.includeStatus === 'true';
+
+    // If includeStatus is false, skip R2 check entirely to make navigation instant!
+    if (!includeStatus) {
+      const mongoSources = await DataSource.find({ parentId }).sort({ name: 1 }).lean();
+      const sourcesList = mongoSources.map(source => ({
+        ...source,
+        status: 'Synced'
+      }));
+      return res.status(200).json({ sources: sourcesList });
+    }
 
     let parentFolderKey = 'knowledge-base/';
     if (parentId) {
@@ -50,9 +87,14 @@ const getDataSources = async (req, res, next) => {
     } catch (s3Err) {
       console.error('Error listing folders from Cloudflare R2:', s3Err);
       // Fallback to MongoDB list in case of connection/credentials issue
-      const mongoSources = await DataSource.find({ parentId }).sort({ createdAt: 1 });
+      const mongoSources = await DataSource.find({ parentId }).sort({ createdAt: 1 }).lean();
+      const sourcesList = [];
+      for (const source of mongoSources) {
+        source.status = await getFolderSyncStatus(source._id);
+        sourcesList.push(source);
+      }
       return res.status(200).json({ 
-        sources: mongoSources, 
+        sources: sourcesList, 
         warning: 'Could not connect to Cloudflare R2. Showing local database sources.' 
       });
     }
@@ -63,14 +105,12 @@ const getDataSources = async (req, res, next) => {
 
     for (const folderName of r2Folders) {
       const key = folderName.toLowerCase();
-      const dbMatch = allDbSources.find(
+      let dbMatch = allDbSources.find(
         s => s.key === key || s.name.toLowerCase() === key
       );
 
-      if (dbMatch) {
-        sourcesList.push(dbMatch);
-      } else {
-        const newDS = new DataSource({
+      if (!dbMatch) {
+        dbMatch = new DataSource({
           name: folderName,
           key,
           folderKey: `${parentFolderKey}${folderName}/`,
@@ -78,9 +118,14 @@ const getDataSources = async (req, res, next) => {
           sub: 'R2 Folder',
           status: 'Synced'
         });
-        await newDS.save();
-        sourcesList.push(newDS);
+        await dbMatch.save();
       }
+
+      // Compute folder status dynamically based on database files
+      const computedStatus = await getFolderSyncStatus(dbMatch._id);
+      const folderObj = dbMatch.toObject();
+      folderObj.status = computedStatus;
+      sourcesList.push(folderObj);
     }
 
     sourcesList.sort((a, b) => a.name.localeCompare(b.name));
@@ -89,6 +134,7 @@ const getDataSources = async (req, res, next) => {
     next(err);
   }
 };
+
 
 const addDataSource = async (req, res, next) => {
   try {
@@ -148,6 +194,18 @@ const addDataSource = async (req, res, next) => {
 const getFiles = async (req, res, next) => {
   try {
     const { dataSourceId } = req.query;
+    const includeStatus = req.query.includeStatus === 'true';
+
+    // If includeStatus is false, skip R2 check entirely to make file listing instant!
+    if (!includeStatus) {
+      let query = {};
+      if (dataSourceId && dataSourceId !== 'null') {
+        query.dataSourceId = dataSourceId;
+      }
+      const filesList = await KnowledgeFile.find(query).sort({ name: 1 }).lean();
+      return res.status(200).json({ files: filesList });
+    }
+
     let query = {};
     if (dataSourceId && dataSourceId !== 'null') {
       query.dataSourceId = dataSourceId;

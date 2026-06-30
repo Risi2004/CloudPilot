@@ -56,6 +56,39 @@ function collapseToTopLevelSelections(selectedIds, folders) {
   });
 }
 
+const ChevronIcon = ({ expanded, ...props }) => (
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="3"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{
+      transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+      transition: 'transform 0.15s ease',
+      color: '#94a3b8',
+    }}
+    {...props}
+  >
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+);
+
+function isFolderCollapsed(folderId, collapsedIds, folderMap) {
+  let currentId = folderId;
+  while (currentId) {
+    const parentId = folderMap.get(currentId)?.parentId;
+    if (parentId && collapsedIds.has(parentId)) {
+      return true;
+    }
+    currentId = parentId;
+  }
+  return false;
+}
+
 function SyncFolderModal({ open, onClose, onConfirm, initialFolderId = null }) {
   const normalizedInitialId = initialFolderId ? String(initialFolderId) : null;
   const [folders, setFolders] = useState([]);
@@ -65,6 +98,7 @@ function SyncFolderModal({ open, onClose, onConfirm, initialFolderId = null }) {
   const [selectedIds, setSelectedIds] = useState(() =>
     normalizedInitialId ? new Set([normalizedInitialId]) : new Set(),
   );
+  const [collapsedIds, setCollapsedIds] = useState(new Set());
 
   useEffect(() => {
     if (!open) return;
@@ -81,6 +115,25 @@ function SyncFolderModal({ open, onClose, onConfirm, initialFolderId = null }) {
         if (cancelled) return;
         const loadedFolders = data.folders || [];
         setFolders(loadedFolders);
+
+        // Collapse all folders that have children by default, except ancestors of normalizedInitialId
+        const childrenMap = buildChildrenByParentId(loadedFolders);
+        const parents = loadedFolders.filter((f) => childrenMap.has(f._id)).map((f) => f._id);
+        const initialCollapsed = new Set(parents);
+
+        if (normalizedInitialId) {
+          const folderMap = new Map(loadedFolders.map((f) => [f._id, f]));
+          let currentId = normalizedInitialId;
+          while (currentId) {
+            const parentId = folderMap.get(currentId)?.parentId;
+            if (parentId) {
+              initialCollapsed.delete(parentId);
+            }
+            currentId = parentId;
+          }
+        }
+        setCollapsedIds(initialCollapsed);
+
         if (normalizedInitialId) {
           setSelectedIds(
             expandFolderSelection(new Set([normalizedInitialId]), loadedFolders),
@@ -121,6 +174,18 @@ function SyncFolderModal({ open, onClose, onConfirm, initialFolderId = null }) {
         else next.add(id);
       }
 
+      return next;
+    });
+  };
+
+  const toggleCollapse = (folderId) => {
+    setCollapsedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderId)) {
+        next.delete(folderId);
+      } else {
+        next.add(folderId);
+      }
       return next;
     });
   };
@@ -169,26 +234,61 @@ function SyncFolderModal({ open, onClose, onConfirm, initialFolderId = null }) {
           ) : folders.length === 0 ? (
             <div className="sync-folder-empty">No folders found in the knowledge base.</div>
           ) : (
-            folders.map((folder) => (
-              <label
-                key={folder._id}
-                className={`sync-folder-option${syncAll ? ' disabled' : ''}`}
-                style={{ paddingLeft: `${12 + folder.depth * 16}px` }}
-              >
-                <input
-                  type="checkbox"
-                  checked={!syncAll && selectedIds.has(folder._id)}
-                  disabled={syncAll}
-                  onChange={() => toggleFolder(folder._id)}
-                />
-                <span className="sync-folder-option-label">
-                  <strong>{folder.name}</strong>
-                  {folder.path ? (
-                    <span className="sync-folder-option-path">{folder.path}</span>
-                  ) : null}
-                </span>
-              </label>
-            ))
+            (() => {
+              const childrenByParentId = buildChildrenByParentId(folders);
+              const folderMap = new Map(folders.map((f) => [f._id, f]));
+
+              return folders.map((folder) => {
+                const isParent = childrenByParentId.has(folder._id);
+                const isCollapsed = collapsedIds.has(folder._id);
+                const isHidden = isFolderCollapsed(folder._id, collapsedIds, folderMap);
+
+                if (isHidden) return null;
+
+                const isAlreadySynced = folder.status === 'Synced';
+                const isRowDisabled = syncAll || isAlreadySynced;
+
+                return (
+                  <div
+                    key={folder._id}
+                    className={`sync-folder-row${isRowDisabled ? ' disabled' : ''}`}
+                    style={{ paddingLeft: `${4 + folder.depth * 16}px` }}
+                  >
+                    {isParent ? (
+                      <button
+                        type="button"
+                        className="sync-folder-toggle-btn"
+                        onClick={() => toggleCollapse(folder._id)}
+                        title={isCollapsed ? 'Expand folder' : 'Collapse folder'}
+                      >
+                        <ChevronIcon expanded={!isCollapsed} />
+                      </button>
+                    ) : (
+                      <div className="sync-folder-toggle-placeholder" />
+                    )}
+                    <label className={`sync-folder-option${isRowDisabled ? ' disabled' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={!syncAll && selectedIds.has(folder._id)}
+                        disabled={isRowDisabled}
+                        onChange={() => toggleFolder(folder._id)}
+                      />
+                      <span className="sync-folder-option-label">
+                        <strong>
+                          {folder.name}
+                          {isAlreadySynced && (
+                            <span className="sync-folder-synced-indicator">(Synced)</span>
+                          )}
+                        </strong>
+                        {folder.path ? (
+                          <span className="sync-folder-option-path">{folder.path}</span>
+                        ) : null}
+                      </span>
+                    </label>
+                  </div>
+                );
+              });
+            })()
           )}
         </div>
 

@@ -41,7 +41,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.output:
         Path(args.output).write_text(rendered + "\n", encoding="utf-8")
     else:
-        print(rendered)
+        print(f"__JSON_OUTPUT__:{rendered}")
     return 0
 
 

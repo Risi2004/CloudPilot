@@ -18,6 +18,22 @@ logger = logging.getLogger(__name__)
 COLLECTION_NAME = "cloudpilot_docs"
 
 
+def _execute_with_retry(func, *args, max_retries=5, delay=0.5, **kwargs):
+    import time
+    last_exc = None
+    for attempt in range(max_retries):
+        try:
+            return func(*args, **kwargs)
+        except Exception as exc:
+            last_exc = exc
+            exc_msg = str(exc).lower()
+            if "lock" in exc_msg or "busy" in exc_msg:
+                time.sleep(delay * (attempt + 1))
+                continue
+            raise exc
+    raise last_exc
+
+
 class ChromaVectorStore:
     """Persistent ChromaDB-backed vector store."""
 
@@ -31,7 +47,8 @@ class ChromaVectorStore:
 
         persist_dir.mkdir(parents=True, exist_ok=True)
         self._client = chromadb_module.PersistentClient(path=str(persist_dir))
-        self._collection = self._client.get_or_create_collection(
+        self._collection = _execute_with_retry(
+            self._client.get_or_create_collection,
             name=COLLECTION_NAME,
             metadata={"hnsw:space": "cosine"},
         )
@@ -58,7 +75,8 @@ class ChromaVectorStore:
             }
             for chunk in chunks
         ]
-        self._collection.upsert(
+        _execute_with_retry(
+            self._collection.upsert,
             ids=ids,
             embeddings=embeddings,
             documents=documents,
@@ -73,10 +91,10 @@ class ChromaVectorStore:
             return 0
         deleted = 0
         for document_id in document_ids:
-            existing = self._collection.get(where={"document_id": document_id})
+            existing = _execute_with_retry(self._collection.get, where={"document_id": document_id})
             count = len(existing.get("ids") or [])
             if count:
-                self._collection.delete(where={"document_id": document_id})
+                _execute_with_retry(self._collection.delete, where={"document_id": document_id})
                 deleted += count
                 logger.info("Deleted %s vectors for document %s", count, document_id)
         return deleted
@@ -89,7 +107,8 @@ class ChromaVectorStore:
         platform: str | None = None,
     ) -> list[VectorSearchResult]:
         where = {"platform": platform} if platform else None
-        results = self._collection.query(
+        results = _execute_with_retry(
+            self._collection.query,
             query_embeddings=[query_embedding],
             n_results=top_k,
             where=where,
@@ -116,4 +135,4 @@ class ChromaVectorStore:
         return output
 
     def count(self) -> int:
-        return int(self._collection.count())
+        return int(_execute_with_retry(self._collection.count))
