@@ -1,40 +1,35 @@
 import React from 'react';
 import './PlatformCard.css';
 
-function PlatformCard({ platform, provider, details }) {
-  // Mock data details based on provider
-  const isAws = provider.toLowerCase().includes('aws');
+function PlatformCard({ blueprint, primaryPlatform }) {
+  const assignment = blueprint?.platform_assignment || [];
+  const inventory = blueprint?.service_inventory || [];
 
-  const pros = isAws 
-    ? ['High redundancy & SLA guarantees', 'Granular IAM security control', 'Serverless container scalability']
-    : ['Zero maintenance overhead', 'Automatic SSL/TLS provisioning', 'Highly competitive starting price'];
-
-  const cons = isAws
-    ? ['Requires NAT Gateway setup for private subnet database routing', 'Provisioning time of 2-3 minutes']
-    : ['Limited to developer regions', 'Slightly higher pricing at high traffic tiers'];
+  const pros = assignment.slice(0, 3).map((a) => `${a.service_id} → ${a.platform}: ${a.reason}`);
+  const cons = (blueprint?.architectural_risks || []).slice(0, 3).map((r) => r.risk);
 
   return (
     <div className="platform-card-wrapper">
       <div className="platform-header-row">
         <div>
-          <span className="platform-agent-label font-mono">PLATFORM SELECTION AGENT</span>
-          <h2 className="platform-title">{platform}</h2>
+          <span className="platform-agent-label font-mono">ARCHITECTURE AGENT</span>
+          <h2 className="platform-title">{primaryPlatform || 'Deployment Architecture'}</h2>
         </div>
         <div className="platform-score-badge">
-          <span className="score-num">98%</span>
-          <span className="score-label">MATCH SCORE</span>
+          <span className="score-num">{Math.round((blueprint?.confidence_score || 0) * 100)}%</span>
+          <span className="score-label">CONFIDENCE</span>
         </div>
       </div>
 
       <p className="platform-description">
-        Based on the code analysis, we selected <strong>{provider}</strong> as the optimal hosting solution.
+        {blueprint?.overall_summary || 'Architecture blueprint generated from repository analysis and platform selection.'}
       </p>
 
       <div className="platform-pros-cons-grid">
         <div className="pro-column">
-          <h4 className="column-header pro">PROS & ADVANTAGES</h4>
+          <h4 className="column-header pro">PLATFORM ASSIGNMENTS</h4>
           <ul className="column-list">
-            {pros.map((p, idx) => (
+            {(pros.length ? pros : ['No assignments generated']).map((p, idx) => (
               <li key={idx} className="list-item pro">
                 <span className="bullet-icon pro">✓</span>
                 {p}
@@ -43,9 +38,9 @@ function PlatformCard({ platform, provider, details }) {
           </ul>
         </div>
         <div className="con-column">
-          <h4 className="column-header con">CONS & TRADEOFFS</h4>
+          <h4 className="column-header con">ARCHITECTURAL RISKS</h4>
           <ul className="column-list">
-            {cons.map((c, idx) => (
+            {(cons.length ? cons : ['No major risks identified']).map((c, idx) => (
               <li key={idx} className="list-item con">
                 <span className="bullet-icon con">⚠</span>
                 {c}
@@ -57,16 +52,16 @@ function PlatformCard({ platform, provider, details }) {
 
       <div className="platform-parameters">
         <div className="param-item">
-          <span className="param-label">Runtime Provider</span>
-          <span className="param-val">{provider}</span>
+          <span className="param-label">Services</span>
+          <span className="param-val">{inventory.length} component(s)</span>
         </div>
         <div className="param-item">
-          <span className="param-label">Execution Environment</span>
-          <span className="param-val">{isAws ? 'Serverless Container (Fargate)' : 'PaaS Instance'}</span>
+          <span className="param-label">Application Type</span>
+          <span className="param-val">{(blueprint?.application_type || 'unknown').replace(/_/g, ' ')}</span>
         </div>
         <div className="param-item">
-          <span className="param-label">Isolation Level</span>
-          <span className="param-val">Virtual Private Cloud (VPC)</span>
+          <span className="param-label">Infrastructure</span>
+          <span className="param-val">{(blueprint?.infrastructure_requirements || []).slice(0, 2).join(', ') || '—'}</span>
         </div>
       </div>
     </div>

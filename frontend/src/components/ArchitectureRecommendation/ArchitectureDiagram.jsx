@@ -1,94 +1,106 @@
 import React from 'react';
 import './ArchitectureDiagram.css';
 
-function ArchitectureDiagram({ data }) {
+const TYPE_COLORS = {
+  frontend: '#00d4ff',
+  backend: '#a855f7',
+  database: '#10b981',
+  worker: '#fbbf24',
+  default: '#64748b',
+};
+
+function ArchitectureDiagram({ blueprint }) {
+  const inventory = blueprint?.service_inventory || [];
+  const dependencies = blueprint?.service_dependencies || [];
+
+  if (!inventory.length) {
+    return (
+      <div className="diag-wrapper">
+        <p className="diag-empty">No service topology available.</p>
+      </div>
+    );
+  }
+
+  const nodeWidth = 140;
+  const nodeHeight = 56;
+  const cols = Math.min(3, inventory.length);
+  const rows = Math.ceil(inventory.length / cols);
+  const svgWidth = cols * (nodeWidth + 40) + 40;
+  const svgHeight = rows * (nodeHeight + 60) + 60;
+
+  const positions = {};
+  inventory.forEach((svc, idx) => {
+    const col = idx % cols;
+    const row = Math.floor(idx / cols);
+    positions[svc.id] = {
+      x: 40 + col * (nodeWidth + 40),
+      y: 40 + row * (nodeHeight + 60),
+    };
+  });
+
   return (
     <div className="diag-wrapper">
       <div className="diag-title-row">
-        <h3 className="diag-title">Virtual Network & Service Diagram</h3>
-        <span className="diag-badge font-mono">AWS VPC TOPOLOGY (US-EAST-1)</span>
+        <h3 className="diag-title">Service Topology</h3>
+        <span className="diag-badge font-mono">DEPLOYMENT ARCHITECTURE</span>
       </div>
 
       <div className="diag-canvas">
-        <svg viewBox="0 0 820 480" width="100%" height="100%" className="diag-svg">
-          {/* Definitions for gradients and shadows */}
+        <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} width="100%" className="diag-svg">
+          {dependencies.map((dep, idx) => {
+            const fromId = dep.from || dep.from_service;
+            const toId = dep.to || dep.to_service;
+            const from = positions[fromId];
+            const to = positions[toId];
+            if (!from || !to) return null;
+            const x1 = from.x + nodeWidth / 2;
+            const y1 = from.y + nodeHeight;
+            const x2 = to.x + nodeWidth / 2;
+            const y2 = to.y;
+            return (
+              <line
+                key={idx}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke="rgba(0, 212, 255, 0.4)"
+                strokeWidth="1.5"
+                markerEnd="url(#arrowhead)"
+              />
+            );
+          })}
+
           <defs>
-            <filter id="glow-cyan" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="6" result="blur" />
-              <feComposite in="SourceGraphic" in2="blur" operator="over" />
-            </filter>
-            <linearGradient id="grad-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#00d4ff" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="#0082ff" stopOpacity="0.03" />
-            </linearGradient>
-            <linearGradient id="grad-purple" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#a855f7" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="#a855f7" stopOpacity="0.03" />
-            </linearGradient>
-            <linearGradient id="grad-green" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#10b981" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="#10b981" stopOpacity="0.03" />
-            </linearGradient>
+            <marker id="arrowhead" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
+              <polygon points="0 0, 6 2, 0 4" fill="rgba(0, 212, 255, 0.6)" />
+            </marker>
           </defs>
 
-          {/* VPC Boundary Group */}
-          <rect x="20" y="20" width="780" height="440" rx="16" fill="rgba(8, 17, 32, 0.4)" stroke="rgba(0, 212, 255, 0.2)" strokeWidth="1.5" />
-          <text x="35" y="44" fill="#64748b" fontSize="11" fontWeight="700" letterSpacing="0.05em">AWS VIRTUAL PRIVATE CLOUD (VPC) - 10.0.0.0/16</text>
-
-          {/* INGRESS GROUP (Internet gateway / ALB) */}
-          {/* Internet node */}
-          <circle cx="80" cy="240" r="24" fill="rgba(255, 255, 255, 0.03)" stroke="rgba(255, 255, 255, 0.15)" strokeWidth="1.5" />
-          <text x="80" y="243" fill="#cbd5e1" fontSize="10" fontWeight="700" textAnchor="middle">INTERNET</text>
-
-          {/* Connect: Internet -> ALB */}
-          <path d="M104 240 L190 240" stroke="#00d4ff" strokeWidth="1.5" strokeDasharray="4 4" />
-          <circle cx="147" cy="240" r="4" fill="#00d4ff" filter="url(#glow-cyan)" />
-
-          {/* Ingress Subnet Boundary */}
-          <rect x="190" y="80" width="140" height="320" rx="10" fill="url(#grad-cyan)" stroke="rgba(0, 212, 255, 0.15)" strokeWidth="1" />
-          <text x="200" y="102" fill="#00d4ff" fontSize="9" fontWeight="700" letterSpacing="0.05em">PUBLIC SUBNETS</text>
-
-          {/* ALB instance */}
-          <rect x="210" y="200" width="100" height="80" rx="8" fill="rgba(5, 20, 36, 0.85)" stroke="#00d4ff" strokeWidth="1.5" />
-          <text x="260" y="235" fill="#ffffff" fontSize="12" fontWeight="700" textAnchor="middle">ALB</text>
-          <text x="260" y="252" fill="#64748b" fontSize="9" textAnchor="middle">Load Balancer</text>
-
-          {/* Connects: ALB -> App servers */}
-          <path d="M310 240 L380 180" stroke="rgba(0, 212, 255, 0.4)" strokeWidth="1.5" />
-          <path d="M310 240 L380 300" stroke="rgba(0, 212, 255, 0.4)" strokeWidth="1.5" />
-
-          {/* APP SERVER GROUP (ECS / Fargate containers) */}
-          <rect x="380" y="80" width="220" height="320" rx="10" fill="url(#grad-purple)" stroke="rgba(168, 85, 247, 0.15)" strokeWidth="1" />
-          <text x="390" y="102" fill="#a855f7" fontSize="9" fontWeight="700" letterSpacing="0.05em">PRIVATE APP SUBNETS</text>
-
-          {/* App server 1 */}
-          <rect x="400" y="130" width="180" height="90" rx="8" fill="rgba(5, 20, 36, 0.85)" stroke="#a855f7" strokeWidth="1.5" />
-          <text x="490" y="165" fill="#ffffff" fontSize="12" fontWeight="700" textAnchor="middle">CONTAINER TASK (AZ1)</text>
-          <text x="490" y="182" fill="#94a3b8" fontSize="10" textAnchor="middle">App Execution Node</text>
-          <text x="490" y="198" fill="#a855f7" fontSize="9" fontWeight="700" textAnchor="middle">ACTIVE</text>
-
-          {/* App server 2 */}
-          <rect x="400" y="250" width="180" height="90" rx="8" fill="rgba(5, 20, 36, 0.85)" stroke="#a855f7" strokeWidth="1.5" />
-          <text x="490" y="285" fill="#ffffff" fontSize="12" fontWeight="700" textAnchor="middle">CONTAINER TASK (AZ2)</text>
-          <text x="490" y="302" fill="#94a3b8" fontSize="10" textAnchor="middle">App Execution Node</text>
-          <text x="490" y="318" fill="#a855f7" fontSize="9" fontWeight="700" textAnchor="middle">STANDBY</text>
-
-          {/* Connects: Containers -> Database */}
-          <path d="M580 175 L670 240" stroke="rgba(16, 185, 129, 0.4)" strokeWidth="1.5" />
-          <path d="M580 295 L670 240" stroke="rgba(16, 185, 129, 0.4)" strokeWidth="1.5" />
-
-          {/* DATA GROUP (RDS SQL / Redis cache) */}
-          <rect x="650" y="80" width="130" height="320" rx="10" fill="url(#grad-green)" stroke="rgba(16, 185, 129, 0.15)" strokeWidth="1" />
-          <text x="660" y="102" fill="#10b981" fontSize="9" fontWeight="700" letterSpacing="0.05em">ISOLATED DB</text>
-
-          {/* SQL instance */}
-          <rect x="665" y="190" width="100" height="100" rx="8" fill="rgba(5, 20, 36, 0.85)" stroke="#10b981" strokeWidth="1.5" />
-          <text x="715" y="235" fill="#ffffff" fontSize="12" fontWeight="700" textAnchor="middle">DATABASE</text>
-          <text x="715" y="252" fill="#64748b" fontSize="9" textAnchor="middle">RDS PostgreSQL</text>
-          <text x="715" y="268" fill="#10b981" fontSize="9" fontWeight="700" textAnchor="middle">PRIMARY</text>
-
-          {/* Subnet Labels / Legends */}
-          <text x="35" y="440" fill="#475569" fontSize="9" fontWeight="600">CLOUD PILOT TOPOLOGY SCANNER V1.2.0 • REGION: US-EAST-1</text>
+          {inventory.map((svc) => {
+            const pos = positions[svc.id];
+            const color = TYPE_COLORS[svc.type] || TYPE_COLORS.default;
+            return (
+              <g key={svc.id}>
+                <rect
+                  x={pos.x}
+                  y={pos.y}
+                  width={nodeWidth}
+                  height={nodeHeight}
+                  rx="8"
+                  fill="rgba(5, 20, 36, 0.85)"
+                  stroke={color}
+                  strokeWidth="1.5"
+                />
+                <text x={pos.x + nodeWidth / 2} y={pos.y + 22} fill="#ffffff" fontSize="11" fontWeight="700" textAnchor="middle">
+                  {svc.name?.slice(0, 18)}
+                </text>
+                <text x={pos.x + nodeWidth / 2} y={pos.y + 38} fill={color} fontSize="9" textAnchor="middle">
+                  {svc.type} · {svc.platform}
+                </text>
+              </g>
+            );
+          })}
         </svg>
       </div>
     </div>

@@ -1,11 +1,24 @@
 const { runRepositoryAnalysis } = require('../services/agentRuntimeClient');
+const {
+  saveRepositoryAnalysisSession,
+  getRepositoryAnalysisSessionById,
+  getRepositoryAnalysisSessionByUrl,
+} = require('../services/analysisSessionService');
 
 const GITHUB_URL_PATTERN =
   /^https?:\/\/(www\.)?github\.com\/[\w.\-]+\/[\w.\-]+(?:\.git)?(?:\/.*)?$/i;
 
+function formatAnalysisResponse(session, result) {
+  return {
+    sessionId: session._id.toString(),
+    sourceUrl: session.sourceUrl,
+    ...result,
+  };
+}
+
 const analyzeRepository = async (req, res, next) => {
   try {
-    const { source } = req.body;
+    const { source, forceRefresh } = req.body;
 
     if (!source || typeof source !== 'string' || !source.trim()) {
       return res.status(400).json({ message: 'Repository source URL is required.' });
@@ -19,8 +32,17 @@ const analyzeRepository = async (req, res, next) => {
       });
     }
 
+    if (!forceRefresh) {
+      const existing = await getRepositoryAnalysisSessionByUrl(req.user._id, normalized);
+      if (existing?.result) {
+        return res.status(200).json(formatAnalysisResponse(existing, existing.result));
+      }
+    }
+
     const result = await runRepositoryAnalysis(normalized);
-    res.status(200).json(result);
+    const session = await saveRepositoryAnalysisSession(req.user._id, normalized, result);
+
+    res.status(200).json(formatAnalysisResponse(session, result));
   } catch (err) {
     const message = err.message || 'Repository analysis failed.';
     if (
@@ -45,4 +67,29 @@ const analyzeRepository = async (req, res, next) => {
   }
 };
 
-module.exports = { analyzeRepository };
+const getAnalysisSession = async (req, res, next) => {
+  try {
+    const { sessionId } = req.params;
+    const { url } = req.query;
+
+    let session = null;
+
+    if (sessionId) {
+      session = await getRepositoryAnalysisSessionById(req.user._id, sessionId);
+    } else if (url) {
+      session = await getRepositoryAnalysisSessionByUrl(req.user._id, url);
+    } else {
+      return res.status(400).json({ message: 'Provide sessionId or url query parameter.' });
+    }
+
+    if (!session) {
+      return res.status(404).json({ message: 'Analysis session not found or expired.' });
+    }
+
+    return res.status(200).json(formatAnalysisResponse(session, session.result));
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { analyzeRepository, getAnalysisSession };

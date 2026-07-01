@@ -1,0 +1,196 @@
+.ps-interview-panel {
+  background: rgba(5, 20, 36, 0.5);
+  border: 1px solid rgba(60, 73, 78, 0.3);
+  border-radius: 16px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ps-interview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.ps-agent-badge {
+  display: inline-block;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: #00d4ff;
+  margin-bottom: 8px;
+}
+
+.ps-interview-title {
+  color: #f1f5f9;
+  font-size: 22px;
+  margin: 0 0 6px;
+}
+
+.ps-interview-subtitle {
+  color: #64748b;
+  font-size: 14px;
+  margin: 0;
+  max-width: 520px;
+}
+
+.ps-confidence-badge,
+.ps-rec-score-badge {
+  text-align: center;
+  background: rgba(0, 212, 255, 0.08);
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  border-radius: 12px;
+  padding: 12px 20px;
+  min-width: 90px;
+}
+
+.ps-confidence-value,
+.ps-rec-score-num {
+  display: block;
+  font-size: 24px;
+  font-weight: 800;
+  color: #00d4ff;
+}
+
+.ps-confidence-label,
+.ps-rec-score-label {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: #64748b;
+}
+
+.ps-known-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ps-known-label {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.ps-known-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ps-known-tag {
+  font-size: 11px;
+  background: rgba(100, 116, 139, 0.15);
+  color: #94a3b8;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.ps-chat-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.ps-chat-bubble {
+  max-width: 85%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.ps-chat-bubble p {
+  margin: 0;
+  color: #e2e8f0;
+}
+
+.ps-chat-agent {
+  align-self: flex-start;
+  background: rgba(0, 212, 255, 0.08);
+  border: 1px solid rgba(0, 212, 255, 0.15);
+}
+
+.ps-chat-user {
+  align-self: flex-end;
+  background: rgba(100, 116, 139, 0.2);
+  border: 1px solid rgba(100, 116, 139, 0.3);
+}
+
+.ps-chat-role {
+  display: block;
+  font-size: 10px;
+  color: #00d4ff;
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+
+.ps-chat-loading p {
+  color: #64748b;
+  font-style: italic;
+}
+
+.ps-answer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 1px solid rgba(60, 73, 78, 0.25);
+  padding-top: 20px;
+}
+
+.ps-question-context {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+  font-style: italic;
+}
+
+.ps-current-question {
+  font-size: 16px;
+  color: #f1f5f9;
+  font-weight: 600;
+  margin: 0;
+}
+
+.ps-answer-input {
+  background: rgba(3, 7, 18, 0.6);
+  border: 1px solid rgba(60, 73, 78, 0.4);
+  border-radius: 8px;
+  color: #f1f5f9;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.ps-answer-input:focus {
+  outline: none;
+  border-color: #00d4ff;
+}
+
+.ps-choice-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ps-choice-btn {
+  background: rgba(3, 7, 18, 0.6);
+  border: 1px solid rgba(60, 73, 78, 0.4);
+  border-radius: 8px;
+  color: #94a3b8;
+  padding: 10px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ps-choice-btn:hover,
+.ps-choice-btn.selected {
+  border-color: #00d4ff;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, 0.08);
+}

@@ -75,3 +75,8 @@ Desktop.ini
 *.njsproj
 *.sln
 *.sw?
+
+# Knowledge Base
+knowledgebase/
+knowledge base/
+knowledge\ base/

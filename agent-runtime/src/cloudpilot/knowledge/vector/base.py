@@ -65,3 +65,6 @@ class VectorStore(Protocol):
 
     def count(self) -> int:
         """Total vectors in the collection."""
+
+    def list_platforms(self) -> list[str]:
+        """Return distinct platform identifiers indexed in the knowledge base."""

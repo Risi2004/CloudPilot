@@ -1,0 +1,93 @@
+.deploy-services-panel {
+  margin-top: 24px;
+}
+
+.deploy-services-title {
+  color: #94a3b8;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 12px;
+}
+
+.deploy-services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.deploy-service-card {
+  background: rgba(3, 7, 18, 0.5);
+  border: 1px solid rgba(60, 73, 78, 0.3);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.deploy-service-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.deploy-service-name {
+  color: #f1f5f9;
+  font-weight: 700;
+}
+
+.deploy-service-platform {
+  color: #00d4ff;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.deploy-service-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.deploy-label {
+  font-size: 10px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.deploy-value {
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+.deploy-code {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #00d4ff;
+  word-break: break-all;
+}
+
+.deploy-service-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.deploy-env-tag {
+  font-size: 10px;
+  background: rgba(0, 212, 255, 0.1);
+  color: #00d4ff;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.deploy-secret-tag {
+  font-size: 10px;
+  background: rgba(251, 191, 36, 0.1);
+  color: #fbbf24;
+  padding: 2px 8px;
+  border-radius: 999px;
+}

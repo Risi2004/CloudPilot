@@ -27,6 +27,8 @@ app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/revenue', require('./routes/revenueRoutes'));
 app.use('/api/repositories', require('./routes/repositoryRoutes'));
 app.use('/api/github', require('./routes/githubRoutes'));
+app.use('/api/platform-selection', require('./routes/platformSelectionRoutes'));
+app.use('/api/architecture', require('./routes/architectureRoutes'));
 
 
 // Base Route

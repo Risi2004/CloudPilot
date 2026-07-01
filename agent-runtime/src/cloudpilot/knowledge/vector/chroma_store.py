@@ -136,3 +136,12 @@ class ChromaVectorStore:
 
     def count(self) -> int:
         return int(_execute_with_retry(self._collection.count))
+
+    def list_platforms(self) -> list[str]:
+        """Return sorted unique platform names from indexed documentation."""
+        results = _execute_with_retry(self._collection.get, include=["metadatas"])
+        platforms: set[str] = set()
+        for metadata in results.get("metadatas") or []:
+            if metadata and metadata.get("platform"):
+                platforms.add(str(metadata["platform"]).strip().lower())
+        return sorted(platforms)

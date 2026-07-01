@@ -65,6 +65,10 @@ class KnowledgeQueryService:
     def count_vectors(self) -> int:
         return self._vector_store.count()
 
+    def list_platforms(self) -> list[str]:
+        """Return deployment platforms available in the knowledge base."""
+        return self._vector_store.list_platforms()
+
     @staticmethod
     def _infer_platform(repository_analysis: dict[str, Any] | None) -> str | None:
         if not repository_analysis:

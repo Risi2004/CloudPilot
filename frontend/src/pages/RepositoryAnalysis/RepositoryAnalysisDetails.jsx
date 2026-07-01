@@ -21,6 +21,7 @@ function RepositoryAnalysisDetails() {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [analysisResult, setAnalysisResult] = useState(null);
+  const [analysisSessionId, setAnalysisSessionId] = useState(null);
 
   useEffect(() => {
     if (!repoUrl) {
@@ -34,11 +35,15 @@ function RepositoryAnalysisDetails() {
     setIsLoading(true);
     setError(null);
     setAnalysisResult(null);
+    setAnalysisSessionId(null);
     setActiveTab('overview');
 
     analyzeRepository(repoUrl)
       .then((data) => {
-        if (!cancelled) setAnalysisResult(data);
+        if (!cancelled) {
+          setAnalysisResult(data.result);
+          setAnalysisSessionId(data.sessionId);
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(err.message || 'Repository analysis failed.');
@@ -97,6 +102,29 @@ function RepositoryAnalysisDetails() {
           <div className="analysis-content-container">
             <AnalysisHeader currentUrl={repoUrl} onAnalyzeNew={handleAnalyzeNew} />
             <AnalysisSummary result={analysisResult} />
+
+            <div className="analysis-platform-cta">
+              <div className="analysis-platform-cta-text">
+                <span className="analysis-platform-cta-badge font-mono">PLATFORM SELECTION AGENT</span>
+                <h3>Ready to choose a deployment platform?</h3>
+                <p>
+                  Get a grounded recommendation for Vercel, Render, or hybrid deployment based on your
+                  repository analysis and deployment goals.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="empty-submit-btn"
+                onClick={() => {
+                  const params = new URLSearchParams();
+                  params.set('url', repoUrl);
+                  if (analysisSessionId) params.set('analysisSessionId', analysisSessionId);
+                  navigate(`/platform-selection?${params.toString()}`);
+                }}
+              >
+                Start Platform Selection →
+              </button>
+            </div>
 
             <div className="analysis-details-tabs-bar">
               <button

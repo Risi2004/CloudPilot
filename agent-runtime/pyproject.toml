@@ -26,6 +26,8 @@ cloudpilot-scan = "cloudpilot.scripts.scan_repository:main"
 cloudpilot-analyze-repo = "cloudpilot.scripts.run_repository_analysis:main"
 cloudpilot-sync-knowledge = "cloudpilot.scripts.sync_knowledge_base:main"
 cloudpilot-query-docs = "cloudpilot.scripts.run_documentation_query:main"
+cloudpilot-platform-select = "cloudpilot.scripts.run_platform_selection:main"
+cloudpilot-architecture = "cloudpilot.scripts.run_architecture:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

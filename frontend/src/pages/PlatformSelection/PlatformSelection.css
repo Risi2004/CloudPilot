@@ -1,0 +1,126 @@
+.ps-page-wrapper {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px 24px 60px;
+  background-color: #030712;
+  box-sizing: border-box;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.ps-back-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  align-self: flex-start;
+  transition: color 0.2s;
+}
+
+.ps-back-btn:hover {
+  color: #00d4ff;
+}
+
+.ps-top-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.ps-reanalyze-btn {
+  background: transparent;
+  border: 1px solid rgba(100, 116, 139, 0.4);
+  border-radius: 8px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.ps-reanalyze-btn:hover {
+  border-color: #00d4ff;
+  color: #00d4ff;
+}
+
+.ps-error-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.ps-empty-card,
+.ps-error-card {
+  text-align: center;
+  background: rgba(5, 20, 36, 0.4);
+  border: 1px solid rgba(60, 73, 78, 0.25);
+  border-radius: 16px;
+  padding: 48px;
+  color: #94a3b8;
+}
+
+.ps-empty-card h2,
+.ps-error-card h2 {
+  color: #f1f5f9;
+  margin-bottom: 12px;
+}
+
+.ps-complete-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ps-complete-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ps-submit-btn {
+  background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+  color: #030712;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.ps-submit-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.ps-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ps-secondary-btn {
+  background: transparent;
+  color: #94a3b8;
+  border: 1px solid rgba(100, 116, 139, 0.4);
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.ps-secondary-btn:hover {
+  border-color: #00d4ff;
+  color: #00d4ff;
+}

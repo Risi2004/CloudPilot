@@ -16,6 +16,39 @@
   gap: 32px;
 }
 
+.analysis-platform-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  background: rgba(0, 212, 255, 0.06);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 12px;
+  padding: 20px 24px;
+}
+
+.analysis-platform-cta-badge {
+  display: inline-block;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: #00d4ff;
+  margin-bottom: 6px;
+}
+
+.analysis-platform-cta-text h3 {
+  color: #f1f5f9;
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.analysis-platform-cta-text p {
+  color: #64748b;
+  margin: 0;
+  font-size: 14px;
+  max-width: 560px;
+}
+
 /* Summary Grid layout */
 .analysis-summary-grid {
   display: grid;

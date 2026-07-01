@@ -10,6 +10,12 @@
   gap: 20px;
 }
 
+.diag-empty {
+  color: #64748b;
+  text-align: center;
+  padding: 24px;
+}
+
 .diag-title-row {
   display: flex;
   justify-content: space-between;

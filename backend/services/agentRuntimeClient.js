@@ -215,10 +215,30 @@ function runDocumentationQuery(payload) {
   );
 }
 
+function runPlatformSelection(payload) {
+  return runPythonModule(
+    'cloudpilot.scripts.run_platform_selection',
+    payload,
+    Number(process.env.PLATFORM_SELECTION_TIMEOUT_MS || DEFAULT_TIMEOUT_MS),
+    'Failed to start platform selection runtime',
+  );
+}
+
+function runArchitectureBlueprint(payload) {
+  return runPythonModule(
+    'cloudpilot.scripts.run_architecture',
+    payload,
+    Number(process.env.ARCHITECTURE_TIMEOUT_MS || DEFAULT_TIMEOUT_MS),
+    'Failed to start architecture agent runtime',
+  );
+}
+
 module.exports = {
   runRepositoryAnalysis,
   runKnowledgeSync,
   runDocumentationQuery,
+  runPlatformSelection,
+  runArchitectureBlueprint,
   extractJsonPayload,
   stripAnsi,
 };

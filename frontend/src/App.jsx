@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard/Dashboard';
 import RepositoryAnalysis from './pages/RepositoryAnalysis/RepositoryAnalysis';
 import RepositoryAnalysisDetails from './pages/RepositoryAnalysis/RepositoryAnalysisDetails';
 import ArchitectureRecommendation from './pages/ArchitectureRecommendation/ArchitectureRecommendation';
+import PlatformSelection from './pages/PlatformSelection/PlatformSelection';
 import CostEstimation from './pages/CostEstimation/CostEstimation';
 import WorkspaceEditor from './pages/WorkspaceEditor/WorkspaceEditor';
 
@@ -84,6 +85,7 @@ function App() {
         <Route path="/repository-analysis" element={<ProtectedRoute><RepositoryAnalysisDetails /></ProtectedRoute>} />
         <Route path="/repositoy-analysis" element={<ProtectedRoute><RepositoryAnalysisDetails /></ProtectedRoute>} />
         <Route path="/architecture-recommendation" element={<ProtectedRoute><ArchitectureRecommendation /></ProtectedRoute>} />
+        <Route path="/platform-selection" element={<ProtectedRoute><PlatformSelection /></ProtectedRoute>} />
         <Route path="/cost-estimation" element={<ProtectedRoute><CostEstimation /></ProtectedRoute>} />
         <Route path="/workspace-editor" element={<ProtectedRoute><WorkspaceEditor /></ProtectedRoute>} />
 
