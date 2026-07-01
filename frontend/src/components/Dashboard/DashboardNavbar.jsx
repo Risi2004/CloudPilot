@@ -249,6 +249,12 @@ function DashboardNavbar() {
             Architecture
           </button>
           <button
+            onClick={() => handleLinkClick('/deployment')}
+            className={`db-nav-link ${isActive('/deployment')}`}
+          >
+            Deployment
+          </button>
+          <button
             onClick={() => handleLinkClick('/workspace-editor')}
             className={`db-nav-link ${isActive('/workspace-editor')}`}
           >
@@ -388,6 +394,12 @@ function DashboardNavbar() {
             className={`db-overlay-link ${isActive('/architecture-recommendation')}`}
           >
             Architecture
+          </button>
+          <button
+            onClick={() => handleLinkClick('/deployment')}
+            className={`db-overlay-link ${isActive('/deployment')}`}
+          >
+            Deployment
           </button>
           <button
             onClick={() => handleLinkClick('/workspace-editor')}

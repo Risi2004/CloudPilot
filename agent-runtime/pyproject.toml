@@ -28,6 +28,7 @@ cloudpilot-sync-knowledge = "cloudpilot.scripts.sync_knowledge_base:main"
 cloudpilot-query-docs = "cloudpilot.scripts.run_documentation_query:main"
 cloudpilot-platform-select = "cloudpilot.scripts.run_platform_selection:main"
 cloudpilot-architecture = "cloudpilot.scripts.run_architecture:main"
+cloudpilot-deploy = "cloudpilot.scripts.run_deployment:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

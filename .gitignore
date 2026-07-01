@@ -58,6 +58,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # Credentials & keys (never commit)
+api.txt
 *-firebase-adminsdk-*.json
 *credentials*.json
 *.pem

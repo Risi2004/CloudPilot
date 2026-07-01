@@ -233,12 +233,26 @@ function runArchitectureBlueprint(payload) {
   );
 }
 
+function runDeployment(payload, action = 'default') {
+  const pollTimeout = Number(process.env.DEPLOYMENT_POLL_TIMEOUT_MS || 30 * 1000);
+  const defaultTimeout = Number(process.env.DEPLOYMENT_TIMEOUT_MS || 2 * 60 * 1000);
+  const timeoutMs = action === 'poll' ? pollTimeout : defaultTimeout;
+
+  return runPythonModule(
+    'cloudpilot.scripts.run_deployment',
+    payload,
+    timeoutMs,
+    'Failed to start deployment agent runtime',
+  );
+}
+
 module.exports = {
   runRepositoryAnalysis,
   runKnowledgeSync,
   runDocumentationQuery,
   runPlatformSelection,
   runArchitectureBlueprint,
+  runDeployment,
   extractJsonPayload,
   stripAnsi,
 };

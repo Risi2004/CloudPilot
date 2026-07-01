@@ -29,6 +29,7 @@ app.use('/api/repositories', require('./routes/repositoryRoutes'));
 app.use('/api/github', require('./routes/githubRoutes'));
 app.use('/api/platform-selection', require('./routes/platformSelectionRoutes'));
 app.use('/api/architecture', require('./routes/architectureRoutes'));
+app.use('/api/deployment', require('./routes/deploymentRoutes'));
 
 
 // Base Route

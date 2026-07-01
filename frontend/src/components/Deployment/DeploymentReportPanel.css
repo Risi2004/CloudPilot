@@ -1,0 +1,64 @@
+.deploy-report-panel {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.deploy-report-status {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  text-transform: capitalize;
+}
+
+.deploy-report-success { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+.deploy-report-failed { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+.deploy-report-section {
+  margin-bottom: 1rem;
+}
+
+.deploy-report-section h3 {
+  font-size: 0.95rem;
+  color: #cbd5e1;
+  margin-bottom: 0.5rem;
+}
+
+.deploy-report-urls {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.deploy-report-urls a {
+  color: #7dd3fc;
+  word-break: break-all;
+}
+
+.deploy-report-meta {
+  display: flex;
+  gap: 1.5rem;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.deploy-report-summary {
+  color: #e2e8f0;
+  margin-bottom: 1rem;
+}
+
+.deploy-report-warnings {
+  color: #fbbf24;
+}
+
+.deploy-report-section ul,
+.deploy-report-section ol {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: #cbd5e1;
+}

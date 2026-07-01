@@ -160,6 +160,20 @@ function ArchitectureRecommendation() {
               <button type="button" className="rec-regenerate-btn" onClick={handleRegenerate}>
                 Regenerate Blueprint
               </button>
+              <button
+                type="button"
+                className="rec-deploy-btn"
+                onClick={() => {
+                  const params = new URLSearchParams();
+                  if (repoUrl) params.set('url', repoUrl);
+                  if (analysisSessionId) params.set('analysisSessionId', analysisSessionId);
+                  if (platformSelectionSessionId) params.set('platformSelectionSessionId', platformSelectionSessionId);
+                  if (architectureSessionId) params.set('architectureSessionId', architectureSessionId);
+                  navigate(`/deployment?${params.toString()}`);
+                }}
+              >
+                Deploy →
+              </button>
               {architectureSessionId && (
                 <span className="rec-session-id">Session: {architectureSessionId.slice(0, 8)}…</span>
               )}

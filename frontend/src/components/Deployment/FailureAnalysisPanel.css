@@ -1,0 +1,59 @@
+.deploy-failure-panel {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.deploy-failure-desc {
+  color: #94a3b8;
+  margin-bottom: 1rem;
+}
+
+.deploy-failure-block {
+  margin-bottom: 1rem;
+}
+
+.deploy-failure-block h3 {
+  font-size: 0.95rem;
+  color: #fca5a5;
+  margin-bottom: 0.35rem;
+}
+
+.deploy-failure-block p,
+.deploy-failure-block ol {
+  color: #cbd5e1;
+  margin: 0;
+}
+
+.deploy-failure-explanation {
+  white-space: pre-wrap;
+  font-size: 0.9rem;
+}
+
+.deploy-analyze-btn,
+.deploy-retry-btn {
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.deploy-analyze-btn {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+.deploy-retry-btn {
+  background: rgba(0, 212, 255, 0.15);
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  color: #00d4ff;
+}
+
+.deploy-analyze-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

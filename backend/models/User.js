@@ -60,6 +60,14 @@ const userSchema = new mongoose.Schema({
     scope: { type: String, default: null },
     connectedAt: { type: Date, default: null },
   },
+  vercel: {
+    accessToken: { type: String, default: null, select: false },
+    connectedAt: { type: Date, default: null },
+  },
+  render: {
+    apiKey: { type: String, default: null, select: false },
+    connectedAt: { type: Date, default: null },
+  },
   createdAt: {
     type: Date,
     default: Date.now
