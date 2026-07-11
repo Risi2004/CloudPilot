@@ -22,7 +22,7 @@ function AnalysisSummary({ result }) {
         <div className="summary-card-header">
           <span className="summary-card-icon language">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M16.5 9.4 7.55 4.24a1.79 1.79 0 0 0-2.5 1.55v12.42a1.79 1.79 0 0 0 2.5 1.55l8.95-5.16a1.79 1.79 0 0 0 0-3.1automator"></path>
+              <path d="M16.5 9.4 7.55 4.24a1.79 1.79 0 0 0-2.5 1.55v12.42a1.79 1.79 0 0 0 2.5 1.55l8.95-5.16a1.79 1.79 0 0 0 0-3.1Z"></path>
             </svg>
           </span>
           <span className="summary-card-label">PRIMARY LANGUAGE</span>

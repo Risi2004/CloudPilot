@@ -8,6 +8,8 @@ from typing import Any
 import httpx
 
 from cloudpilot.agents.architecture.models import DeployableService
+from cloudpilot.agents.deployment.errors import PlatformApiError
+from cloudpilot.agents.deployment.phases import DeploymentPhase
 from cloudpilot.agents.deployment.providers.base import (
     CredentialCheck,
     DeployContext,
@@ -16,11 +18,12 @@ from cloudpilot.agents.deployment.providers.base import (
     ProviderResource,
     RepoCheck,
 )
+from cloudpilot.agents.deployment.providers.http_client import platform_request
 
 logger = logging.getLogger(__name__)
 
 _VERCEL_API = "https://api.vercel.com"
-_TERMINAL_READY = {"READY", "CANCELED"}
+_TERMINAL_READY = {"READY"}
 _TERMINAL_FAILED = {"ERROR", "CANCELED"}
 
 
@@ -30,8 +33,19 @@ class VercelProvider:
     def _token(self, credentials: dict[str, str]) -> str:
         token = credentials.get("vercel_token", "").strip()
         if not token:
-            raise ValueError("Vercel API token is required.")
+            raise PlatformApiError(
+                message="Vercel API token is required.",
+                code="invalid_credentials",
+                phase=DeploymentPhase.AUTHENTICATION,
+                platform=self.platform,
+            )
         return token
+
+    def _headers(self, credentials: dict[str, str]) -> dict[str, str]:
+        return {
+            "Authorization": f"Bearer {self._token(credentials)}",
+            "Content-Type": "application/json",
+        }
 
     async def _request(
         self,
@@ -39,39 +53,38 @@ class VercelProvider:
         path: str,
         credentials: dict[str, str],
         *,
+        phase: DeploymentPhase = DeploymentPhase.DEPLOYMENT_EXECUTION,
+        service_id: str | None = None,
         json_body: dict[str, Any] | None = None,
         params: dict[str, str] | None = None,
+        error_code: str = "platform_api_error",
     ) -> Any:
-        token = self._token(credentials)
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.request(
-                method,
-                f"{_VERCEL_API}{path}",
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "Content-Type": "application/json",
-                },
-                json=json_body,
-                params=params,
-            )
-        if response.status_code >= 400:
-            detail = response.text[:500]
-            try:
-                payload = response.json()
-                detail = payload.get("error", {}).get("message") or payload.get("message") or detail
-            except Exception:  # noqa: BLE001
-                pass
-            raise RuntimeError(f"Vercel API error ({response.status_code}): {detail}")
-        if response.status_code == 204:
-            return {}
-        return response.json()
+        return await platform_request(
+            platform=self.platform,
+            phase=phase,
+            method=method,
+            base_url=_VERCEL_API,
+            path=path,
+            headers=self._headers(credentials),
+            service_id=service_id,
+            json_body=json_body,
+            params=params,
+            error_code=error_code,
+        )
 
     async def validate_credentials(self, credentials: dict[str, str]) -> CredentialCheck:
         try:
-            payload = await self._request("GET", "/v2/user", credentials)
+            payload = await self._request(
+                "GET",
+                "/v2/user",
+                credentials,
+                phase=DeploymentPhase.AUTHENTICATION,
+            )
             user = payload.get("user") or payload
             username = user.get("username") or user.get("email") or "vercel-user"
             return CredentialCheck(valid=True, message="Vercel credentials verified.", account_name=username)
+        except PlatformApiError as exc:
+            return CredentialCheck(valid=False, message=str(exc))
         except Exception as exc:  # noqa: BLE001
             return CredentialCheck(valid=False, message=str(exc))
 
@@ -118,7 +131,13 @@ class VercelProvider:
         return RepoCheck(accessible=True, message="Repository and branch accessible.", default_branch=default_branch)
 
     async def _find_project(self, name: str, credentials: dict[str, str]) -> dict[str, Any] | None:
-        payload = await self._request("GET", "/v9/projects", credentials, params={"search": name, "limit": "20"})
+        payload = await self._request(
+            "GET",
+            "/v9/projects",
+            credentials,
+            phase=DeploymentPhase.PROJECT_CREATION,
+            params={"search": name, "limit": "20"},
+        )
         for project in payload.get("projects", []):
             if project.get("name") == name:
                 return project
@@ -129,9 +148,8 @@ class VercelProvider:
         service: DeployableService,
         ctx: DeployContext,
     ) -> ProviderResource:
-        credentials = ctx.credentials
         project_name = f"cloudpilot-{ctx.repo}-{service.id}".lower().replace("_", "-")[:52]
-        existing = await self._find_project(project_name, credentials)
+        existing = await self._find_project(project_name, ctx.credentials)
         if existing:
             project_id = existing["id"]
         else:
@@ -145,7 +163,14 @@ class VercelProvider:
             }
             if service.root_directory and service.root_directory != ".":
                 create_body["rootDirectory"] = service.root_directory
-            created = await self._request("POST", "/v10/projects", credentials, json_body=create_body)
+            created = await self._request(
+                "POST",
+                "/v10/projects",
+                ctx.credentials,
+                phase=DeploymentPhase.PROJECT_CREATION,
+                service_id=service.id,
+                json_body=create_body,
+            )
             project_id = created["id"]
 
         if service.build_command or service.output_directory:
@@ -160,7 +185,9 @@ class VercelProvider:
                 await self._request(
                     "PATCH",
                     f"/v9/projects/{project_id}",
-                    credentials,
+                    ctx.credentials,
+                    phase=DeploymentPhase.CONFIGURATION,
+                    service_id=service.id,
                     json_body=update_body,
                 )
 
@@ -171,12 +198,17 @@ class VercelProvider:
         resource_id: str,
         env_vars: dict[str, str],
         credentials: dict[str, str],
+        *,
+        service_id: str | None = None,
     ) -> None:
         for key, value in env_vars.items():
             await self._request(
                 "POST",
                 f"/v10/projects/{resource_id}/env",
                 credentials,
+                phase=DeploymentPhase.CONFIGURATION,
+                service_id=service_id,
+                params={"upsert": "true"},
                 json_body={
                     "key": key,
                     "value": value,
@@ -185,18 +217,42 @@ class VercelProvider:
                 },
             )
 
+    async def get_project_repo_id(self, resource_id: str, credentials: dict[str, str]) -> str | None:
+        project = await self._request(
+            "GET",
+            f"/v9/projects/{resource_id}",
+            credentials,
+            phase=DeploymentPhase.DEPLOYMENT_EXECUTION,
+        )
+        return (project.get("link") or {}).get("repoId")
+
     async def trigger_deploy(
         self,
         resource_id: str,
         service: DeployableService,
         ctx: DeployContext,
     ) -> DeployJob:
+        repo_id = await self.get_project_repo_id(resource_id, ctx.credentials)
+        if not repo_id:
+            raise PlatformApiError(
+                message=(
+                    f"Vercel project '{resource_id}' is not linked to GitHub. "
+                    "Connect the GitHub integration in Vercel before deploying."
+                ),
+                code="vercel_missing_repo_link",
+                phase=DeploymentPhase.DEPLOYMENT_EXECUTION,
+                platform=self.platform,
+                service_id=service.id,
+                http_method="GET",
+                http_path=f"/v9/projects/{resource_id}",
+            )
+
         body: dict[str, Any] = {
             "name": service.name or resource_id,
             "project": resource_id,
             "gitSource": {
                 "type": "github",
-                "repoId": None,
+                "repoId": repo_id,
                 "ref": ctx.branch,
                 "org": ctx.owner,
                 "repo": ctx.repo,
@@ -205,8 +261,25 @@ class VercelProvider:
         }
         if service.build_command:
             body["buildCommand"] = service.build_command
-        payload = await self._request("POST", "/v13/deployments", ctx.credentials, json_body=body)
+        payload = await self._request(
+            "POST",
+            "/v13/deployments",
+            ctx.credentials,
+            phase=DeploymentPhase.DEPLOYMENT_EXECUTION,
+            service_id=service.id,
+            json_body=body,
+        )
         deployment_id = payload.get("id") or payload.get("uid") or ""
+        if not deployment_id:
+            raise PlatformApiError(
+                message="Vercel deployment API returned no deployment id.",
+                code="vercel_empty_deployment_id",
+                phase=DeploymentPhase.DEPLOYMENT_EXECUTION,
+                platform=self.platform,
+                service_id=service.id,
+                http_method="POST",
+                http_path="/v13/deployments",
+            )
         url = payload.get("url")
         if url and not url.startswith("http"):
             url = f"https://{url}"
@@ -223,25 +296,30 @@ class VercelProvider:
         resource_id: str,
         credentials: dict[str, str],
     ) -> DeployStatus:
-        payload = await self._request("GET", f"/v13/deployments/{job_id}", credentials)
+        payload = await self._request(
+            "GET",
+            f"/v13/deployments/{job_id}",
+            credentials,
+            phase=DeploymentPhase.MONITORING,
+        )
         state = (payload.get("readyState") or payload.get("state") or "BUILDING").upper()
         url = payload.get("url")
         if url and not url.startswith("http"):
             url = f"https://{url}"
 
         build_status = "complete" if state in _TERMINAL_READY else "building"
-        if state in _TERMINAL_FAILED and state != "CANCELED":
+        if state in _TERMINAL_FAILED:
             build_status = "failed"
 
         return DeployStatus(
             job_id=job_id,
             stage="deploy" if state == "READY" else "build",
             build_status=build_status,
-            deploy_status="live" if state == "READY" else ("failed" if state == "ERROR" else "deploying"),
+            deploy_status="live" if state == "READY" else ("failed" if state in _TERMINAL_FAILED else "deploying"),
             url=url,
             error=payload.get("errorMessage") or payload.get("error"),
             ready=state == "READY",
-            failed=state == "ERROR",
+            failed=state in _TERMINAL_FAILED,
         )
 
     async def fetch_logs(
@@ -257,6 +335,7 @@ class VercelProvider:
                 "GET",
                 f"/v2/deployments/{job_id}/events",
                 credentials,
+                phase=DeploymentPhase.MONITORING,
                 params={"limit": str(min(tail, 100))},
             )
             events = payload if isinstance(payload, list) else payload.get("events", [])

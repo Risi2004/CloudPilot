@@ -108,6 +108,10 @@ class EnvironmentInfo(BaseModel):
 
     template_files: list[str] = Field(default_factory=list)
     variables: list[str] = Field(default_factory=list)
+    user_required: list[str] = Field(default_factory=list)
+    auto_provided: list[str] = Field(default_factory=list)
+    optional: list[str] = Field(default_factory=list)
+    classifications: list[dict[str, str]] = Field(default_factory=list)
 
 
 class DeploymentFile(BaseModel):

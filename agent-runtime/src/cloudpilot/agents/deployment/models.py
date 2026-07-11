@@ -54,6 +54,21 @@ class ValidationIssue(BaseModel):
     service_id: str | None = None
 
 
+class DeploymentDiagnostic(BaseModel):
+    """Actionable diagnostic for a deployment failure."""
+
+    phase: str
+    code: str
+    message: str
+    platform: str | None = None
+    service_id: str | None = None
+    http_method: str | None = None
+    http_path: str | None = None
+    http_status: int | None = None
+    api_error: str | None = None
+    remediation: list[str] = Field(default_factory=list)
+
+
 class ServiceSummaryItem(BaseModel):
     """One service in the pre-deployment summary."""
 
@@ -145,6 +160,7 @@ class DeploymentState(BaseModel):
     completed_at: str | None = None
     failing_service_id: str | None = None
     failing_stage: str | None = None
+    current_service_index: int = 0
 
 
 class DeploymentRequest(BaseModel):
@@ -185,6 +201,7 @@ class DeploymentResult(BaseModel):
     progress: DeploymentProgress | None = None
     report: DeploymentReport | None = None
     failure_analysis: FailureAnalysisResult | None = None
+    diagnostics: list[DeploymentDiagnostic] = Field(default_factory=list)
     message: str = ""
 
     def to_json(self, *, indent: int = 2) -> str:

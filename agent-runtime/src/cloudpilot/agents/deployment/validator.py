@@ -6,7 +6,11 @@ import asyncio
 import logging
 from typing import Any
 
-from cloudpilot.agents.architecture.models import DeployableService, DeploymentBlueprint
+from cloudpilot.agents.architecture.models import (
+    DeployableService,
+    DeploymentBlueprint,
+    DeploymentSequenceStep,
+)
 from cloudpilot.agents.deployment.models import MissingInput, ValidationIssue
 from cloudpilot.agents.deployment.providers.factory import (
     credential_key_for_platform,
@@ -14,6 +18,7 @@ from cloudpilot.agents.deployment.providers.factory import (
     list_supported_platforms,
 )
 from cloudpilot.agents.repository_analysis.utils.source_resolver import parse_github_url
+from cloudpilot.scanner.utils.env_classifier import is_user_required, resolve_auto_value
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +29,61 @@ _RENDER_RUNTIMES = {"node", "nodejs", "python", "docker", "ruby", "go"}
 
 class BlueprintValidator:
     """Deterministic validation before deployment."""
+
+    @staticmethod
+    def normalize_blueprint(blueprint: DeploymentBlueprint) -> DeploymentBlueprint:
+        """
+        Repair common LLM blueprint inconsistencies so deploy can proceed.
+
+        - Drop sequence steps that reference non-deployable services (e.g. database)
+        - Rebuild sequence from deployable_services when empty after filtering
+        """
+        service_ids = {service.id for service in blueprint.deployable_services}
+        filtered_sequence = [
+            step
+            for step in blueprint.deployment_sequence
+            if step.service_id and step.service_id in service_ids
+        ]
+        if not filtered_sequence and blueprint.deployable_services:
+            ordered = sorted(
+                blueprint.deployable_services,
+                key=lambda service: BlueprintValidator._deploy_priority(service),
+            )
+            filtered_sequence = [
+                DeploymentSequenceStep(order=index + 1, service_id=service.id, action="deploy")
+                for index, service in enumerate(ordered)
+            ]
+        else:
+            reordered: list[DeploymentSequenceStep] = []
+            for index, step in enumerate(sorted(filtered_sequence, key=lambda item: item.order)):
+                reordered.append(
+                    DeploymentSequenceStep(
+                        order=index + 1,
+                        service_id=step.service_id,
+                        action=step.action or "deploy",
+                        notes=step.notes,
+                    ),
+                )
+            filtered_sequence = reordered
+
+        blueprint.deployment_sequence = filtered_sequence
+        blueprint.service_dependencies = [
+            dep
+            for dep in blueprint.service_dependencies
+            if dep.from_service in service_ids and dep.to_service in service_ids
+        ]
+        return blueprint
+
+    @staticmethod
+    def _deploy_priority(service: DeployableService) -> tuple[int, str]:
+        name = f"{service.id} {service.name}".lower()
+        if any(token in name for token in ("db", "database", "redis", "postgres", "mongo")):
+            return (0, service.id)
+        if any(token in name for token in ("api", "backend", "server", "worker")):
+            return (1, service.id)
+        if any(token in name for token in ("front", "web", "ui", "spa")):
+            return (3, service.id)
+        return (2, service.id)
 
     def validate(
         self,
@@ -38,6 +98,8 @@ class BlueprintValidator:
     ) -> tuple[list[ValidationIssue], list[MissingInput], str]:
         issues: list[ValidationIssue] = []
         missing: list[MissingInput] = []
+
+        self.normalize_blueprint(blueprint)
 
         if not blueprint.deployable_services:
             issues.append(
@@ -98,6 +160,8 @@ class BlueprintValidator:
 
         required_env = self._collect_required_env(blueprint)
         for var in sorted(required_env):
+            if not is_user_required(var):
+                continue
             if not env_vars.get(var, "").strip():
                 missing.append(
                     MissingInput(
@@ -152,7 +216,7 @@ class BlueprintValidator:
                 )
 
         blocking = [issue for issue in issues if issue.severity == "error"]
-        return blocking, missing, resolved_branch
+        return issues, missing, resolved_branch
 
     def _validate_service_config(
         self,
@@ -246,21 +310,45 @@ class BlueprintValidator:
         service: DeployableService,
         repository_analysis: dict[str, Any],
     ) -> bool:
-        deployment_files = repository_analysis.get("facts", {}).get("deployment", {}).get("files", [])
-        known_paths = {item.get("path", "") for item in deployment_files if isinstance(item, dict)}
-        root = service.root_directory or "."
+        facts = repository_analysis.get("facts", {})
+        deployment_files = (facts.get("deployment") or {}).get("files", [])
+        known_paths = {
+            str(item.get("path", "")).lstrip("./")
+            for item in deployment_files
+            if isinstance(item, dict)
+        }
+        root = (service.root_directory or ".").strip() or "."
+        root_prefix = "" if root in {".", "./", "/"} else f"{root.rstrip('/')}/"
         candidates = [
-            f"{root}/package.json".replace("./", ""),
+            f"{root_prefix}package.json",
             "package.json",
-            f"{root}/requirements.txt".replace("./", ""),
+            f"{root_prefix}requirements.txt",
             "requirements.txt",
-            f"{root}/Dockerfile".replace("./", ""),
+            f"{root_prefix}pyproject.toml",
+            "pyproject.toml",
+            f"{root_prefix}Dockerfile",
             "Dockerfile",
+            f"{root_prefix}go.mod",
+            "go.mod",
         ]
-        if known_paths:
-            return any(path in known_paths or path.lstrip("./") in known_paths for path in candidates)
-        health = repository_analysis.get("facts", {}).get("health", {})
-        return bool(health.get("has_build_command") or health.get("has_deployment_files"))
+        if known_paths and any(path in known_paths for path in candidates):
+            return True
+
+        # Deployment detector often only lists Docker/CI files — also trust scan signals.
+        package_manager = facts.get("package_manager") or {}
+        if package_manager.get("primary") or package_manager.get("detected"):
+            return True
+        commands = facts.get("commands") or {}
+        if commands.get("build") or commands.get("start") or service.build_command or service.start_command:
+            return True
+        health = facts.get("health") or {}
+        if health.get("has_build_command") or health.get("has_deployment_files"):
+            return True
+        frameworks = facts.get("frameworks") or {}
+        if frameworks.get("frontend") or frameworks.get("backend"):
+            return True
+        # No strong signal either way — do not block deploy with a false positive.
+        return True
 
     def _collect_required_env(self, blueprint: DeploymentBlueprint) -> set[str]:
         required: set[str] = set()

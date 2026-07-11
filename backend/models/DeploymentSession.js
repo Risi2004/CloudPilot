@@ -39,6 +39,10 @@ const deploymentSessionSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.Mixed,
     required: true,
   },
+  repositoryAnalysis: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null,
+  },
   branch: {
     type: String,
     default: 'main',

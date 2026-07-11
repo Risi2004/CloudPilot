@@ -134,14 +134,18 @@ function resolveAnalyzeCommand(source) {
   };
 }
 
-function runRepositoryAnalysis(source) {
+function runRepositoryAnalysis(source, githubToken = null) {
   return new Promise((resolve, reject) => {
     const { command, args } = resolveAnalyzeCommand(source);
     const cwd = agentRuntimeCwd();
+    const env = buildChildEnv();
+    if (githubToken) {
+      env.GITHUB_TOKEN = githubToken;
+    }
 
     const child = spawn(command, args, {
       cwd,
-      env: buildChildEnv(),
+      env,
       windowsHide: true,
     });
 
@@ -234,9 +238,16 @@ function runArchitectureBlueprint(payload) {
 }
 
 function runDeployment(payload, action = 'default') {
-  const pollTimeout = Number(process.env.DEPLOYMENT_POLL_TIMEOUT_MS || 30 * 1000);
-  const defaultTimeout = Number(process.env.DEPLOYMENT_TIMEOUT_MS || 2 * 60 * 1000);
-  const timeoutMs = action === 'poll' ? pollTimeout : defaultTimeout;
+  // Poll may also provision/trigger the next sequential service; keep headroom above platform API latency.
+  const pollTimeout = Number(process.env.DEPLOYMENT_POLL_TIMEOUT_MS || 120 * 1000);
+  const executeTimeout = Number(process.env.DEPLOYMENT_TIMEOUT_MS || DEFAULT_TIMEOUT_MS);
+  const defaultTimeout = Number(process.env.DEPLOYMENT_STEP_TIMEOUT_MS || 2 * 60 * 1000);
+  let timeoutMs = defaultTimeout;
+  if (action === 'poll') {
+    timeoutMs = pollTimeout;
+  } else if (action === 'execute') {
+    timeoutMs = executeTimeout;
+  }
 
   return runPythonModule(
     'cloudpilot.scripts.run_deployment',

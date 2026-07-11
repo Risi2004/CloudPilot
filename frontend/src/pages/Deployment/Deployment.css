@@ -131,3 +131,39 @@
   cursor: pointer;
   font-weight: 600;
 }
+
+.deploy-diagnostics-panel {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 8px;
+}
+
+.deploy-diagnostics-panel h3 {
+  margin: 0 0 0.75rem;
+  color: #fca5a5;
+  font-size: 1rem;
+}
+
+.deploy-diagnostic-item {
+  margin-bottom: 0.75rem;
+}
+
+.deploy-diagnostic-message {
+  color: #f1f5f9;
+  margin: 0 0 0.25rem;
+}
+
+.deploy-diagnostic-meta {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin: 0 0 0.5rem;
+}
+
+.deploy-diagnostics-panel ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: #cbd5e1;
+  font-size: 0.9rem;
+}

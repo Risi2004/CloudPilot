@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from cloudpilot.agents.deployment.executor import DeploymentExecutor
+from cloudpilot.agents.deployment.errors import PlatformApiError
 from cloudpilot.agents.deployment.failure_analysis import FailureAnalysisService
 from cloudpilot.agents.deployment.models import (
     DeploymentRequest,
@@ -13,6 +13,8 @@ from cloudpilot.agents.deployment.models import (
     DeploymentState,
     MissingInput,
 )
+from cloudpilot.agents.deployment.phases import PhaseContext
+from cloudpilot.agents.deployment.pipeline import DeploymentPipeline
 from cloudpilot.agents.deployment.security import mask_env_vars
 from cloudpilot.agents.deployment.summary import SummaryGenerator
 from cloudpilot.agents.deployment.validator import BlueprintValidator
@@ -28,7 +30,7 @@ class DeploymentService:
         configure_runtime()
         self._validator = BlueprintValidator()
         self._summary = SummaryGenerator()
-        self._executor = DeploymentExecutor()
+        self._pipeline = DeploymentPipeline()
         self._failure = FailureAnalysisService()
 
     def run(self, request: DeploymentRequest) -> DeploymentResult:
@@ -112,6 +114,10 @@ class DeploymentService:
         )
         issues.extend(cred_issues)
 
+        auth_diagnostics = self._pipeline.run_authentication_sync(platforms, credentials)
+
+        blocking = [issue for issue in issues if issue.severity == "error"]
+
         filtered_missing = [
             item
             for item in missing
@@ -120,13 +126,23 @@ class DeploymentService:
         if request.branch:
             filtered_missing = [item for item in filtered_missing if item.kind != "branch"]
 
-        if issues:
+        if blocking:
             return DeploymentResult(
                 status="needs_input" if filtered_missing else "preparing",
                 validation_issues=issues,
                 missing_inputs=filtered_missing,
                 deployment_state=state,
+                diagnostics=auth_diagnostics,
                 message="Resolve validation issues before deployment.",
+            )
+
+        if auth_diagnostics:
+            return DeploymentResult(
+                status="needs_input",
+                missing_inputs=filtered_missing,
+                deployment_state=state,
+                diagnostics=auth_diagnostics,
+                message=auth_diagnostics[0].message,
             )
 
         if filtered_missing:
@@ -146,11 +162,13 @@ class DeploymentService:
             branch=state.branch,
             env_vars=mask_env_vars(state.env_vars),
             services=state.services,
+            current_service_index=state.current_service_index,
         )
         return DeploymentResult(
             status="awaiting_confirmation",
             deployment_summary=summary,
             deployment_state=masked_state,
+            validation_issues=[issue for issue in issues if issue.severity == "warning"],
             message="Review the deployment summary and confirm to proceed.",
         )
 
@@ -169,29 +187,31 @@ class DeploymentService:
                 message="Deployment requires explicit user confirmation.",
             )
 
-        missing_creds = [
-            MissingInput(
-                kind="credential",
-                name=key,
-                description=f"Missing credential: {key}",
-            )
-            for key, value in credentials.items()
-            if not value
-        ]
+        BlueprintValidator.normalize_blueprint(blueprint)
+
         platforms = {(service.platform or "").lower() for service in blueprint.deployable_services}
+        auth_diagnostics = self._pipeline.run_authentication_sync(platforms, credentials)
+        if auth_diagnostics:
+            return DeploymentResult(
+                status="needs_input",
+                diagnostics=auth_diagnostics,
+                deployment_state=state,
+                message=auth_diagnostics[0].message,
+            )
+
+        missing_creds: list[MissingInput] = []
         required_keys = {"vercel": "vercel_token", "render": "render_api_key"}
         for platform in platforms:
             cred_key = required_keys.get(platform)
             if cred_key and not credentials.get(cred_key):
-                if not any(item.name == cred_key for item in missing_creds):
-                    missing_creds.append(
-                        MissingInput(
-                            kind="credential",
-                            name=cred_key,
-                            description=f"API credentials required for {platform}.",
-                            platform=platform,
-                        ),
-                    )
+                missing_creds.append(
+                    MissingInput(
+                        kind="credential",
+                        name=cred_key,
+                        description=f"API credentials required for {platform}.",
+                        platform=platform,
+                    ),
+                )
 
         if missing_creds:
             return DeploymentResult(
@@ -201,29 +221,49 @@ class DeploymentService:
                 message="Provide platform credentials before executing deployment.",
             )
 
+        ctx = PhaseContext(
+            blueprint=blueprint,
+            source_url=request.source_url,
+            branch=state.branch,
+            credentials=credentials,
+            github_token=request.github_token,
+            env_vars=env_vars,
+            state=state,
+            ordered_service_ids=self._pipeline.ordered_service_ids(blueprint),
+        )
+
         try:
-            state, progress = self._executor.run_execute(
-                blueprint=blueprint,
-                source_url=request.source_url,
-                branch=state.branch,
-                credentials=credentials,
-                github_token=request.github_token,
-                env_vars=env_vars,
-                state=state,
+            state, progress, diagnostics = self._pipeline.run_execute_sync(ctx)
+        except PlatformApiError as exc:
+            logger.exception("Deployment execution failed")
+            return DeploymentResult(
+                status="failed",
+                deployment_state=state,
+                diagnostics=[exc.to_diagnostic()],
+                message=str(exc),
             )
         except Exception as exc:  # noqa: BLE001
             logger.exception("Deployment execution failed")
             return DeploymentResult(
                 status="failed",
                 deployment_state=state,
-                progress=progress if "progress" in locals() else None,
                 message=str(exc),
+            )
+
+        if diagnostics and progress.overall_status == "failed":
+            return DeploymentResult(
+                status="failed",
+                deployment_state=state,
+                progress=progress,
+                diagnostics=diagnostics,
+                message=diagnostics[0].message,
             )
 
         return DeploymentResult(
             status="deploying",
             deployment_state=state,
             progress=progress,
+            diagnostics=diagnostics,
             message="Deployment started. Poll for progress updates.",
         )
 
@@ -236,15 +276,23 @@ class DeploymentService:
         credentials: dict[str, str],
         env_vars: dict[str, str],
     ) -> DeploymentResult:
+        BlueprintValidator.normalize_blueprint(blueprint)
         secrets = [value for value in env_vars.values() if value]
         secrets.extend(value for value in credentials.values() if value)
 
-        state, progress, report = self._executor.run_poll(
+        ctx = PhaseContext(
             blueprint=blueprint,
+            source_url=request.source_url,
+            branch=state.branch,
             credentials=credentials,
+            github_token=request.github_token,
+            env_vars=env_vars,
             state=state,
+            ordered_service_ids=self._pipeline.ordered_service_ids(blueprint),
             secrets_for_redaction=secrets,
         )
+
+        state, progress, report, diagnostics = self._pipeline.run_monitoring_sync(ctx)
 
         if report:
             return DeploymentResult(
@@ -260,17 +308,22 @@ class DeploymentService:
                 (service for service in state.services if service.error),
                 None,
             )
+            message = failing.error if failing and failing.error else "Deployment failed."
+            if diagnostics:
+                message = diagnostics[0].message
             return DeploymentResult(
                 status="failed",
                 deployment_state=state,
                 progress=progress,
-                message=failing.error if failing else "Deployment failed.",
+                diagnostics=diagnostics,
+                message=message,
             )
 
         return DeploymentResult(
             status="deploying",
             deployment_state=state,
             progress=progress,
+            diagnostics=diagnostics,
             message="Deployment in progress.",
         )
 

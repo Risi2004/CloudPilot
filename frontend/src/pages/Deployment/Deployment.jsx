@@ -6,7 +6,7 @@ import DeploymentInputsForm from '../../components/Deployment/DeploymentInputsFo
 import DeploymentProgress from '../../components/Deployment/DeploymentProgress';
 import DeploymentReportPanel from '../../components/Deployment/DeploymentReportPanel';
 import FailureAnalysisPanel from '../../components/Deployment/FailureAnalysisPanel';
-import { deploymentStep } from '../../services/deployment';
+import { deploymentStep, getDeploymentSession } from '../../services/deployment';
 import { connectGitHub, getGitHubStatus } from '../../services/github';
 import './Deployment.css';
 
@@ -19,7 +19,7 @@ function Deployment() {
 
   const [phase, setPhase] = useState('loading');
   const [error, setError] = useState(null);
-  const [deploymentSessionId, setDeploymentSessionId] = useState(null);
+  const [deploymentSessionId, setDeploymentSessionId] = useState(searchParams.get('deploymentSessionId') || null);
   const [status, setStatus] = useState('preparing');
   const [missingInputs, setMissingInputs] = useState([]);
   const [deploymentSummary, setDeploymentSummary] = useState(null);
@@ -27,6 +27,7 @@ function Deployment() {
   const [report, setReport] = useState(null);
   const [failureAnalysis, setFailureAnalysis] = useState(null);
   const [validationIssues, setValidationIssues] = useState([]);
+  const [diagnostics, setDiagnostics] = useState([]);
 
   const [branch, setBranch] = useState('main');
   const [credentials, setCredentials] = useState({});
@@ -40,6 +41,11 @@ function Deployment() {
   const applyResult = useCallback((result) => {
     if (result.deployment_session_id) {
       setDeploymentSessionId(result.deployment_session_id);
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('deploymentSessionId') !== result.deployment_session_id) {
+        params.set('deploymentSessionId', result.deployment_session_id);
+        navigate(`${window.location.pathname}?${params.toString()}`, { replace: true });
+      }
     }
     setStatus(result.status);
     setMissingInputs(result.missing_inputs || []);
@@ -48,7 +54,17 @@ function Deployment() {
     setReport(result.report || null);
     setFailureAnalysis(result.failure_analysis || null);
     setValidationIssues(result.validation_issues || []);
+    setDiagnostics(result.diagnostics || []);
     if (result.branch) setBranch(result.branch);
+    
+    if (result.deployment_state?.env_vars) {
+      const unmasked = Object.fromEntries(
+        Object.entries(result.deployment_state.env_vars).filter(([, value]) => value !== '****'),
+      );
+      if (Object.keys(unmasked).length > 0) {
+        setEnvVars((prev) => ({ ...prev, ...unmasked }));
+      }
+    }
 
     if (result.status === 'needs_input') {
       setPhase('needs-input');
@@ -60,8 +76,23 @@ function Deployment() {
       setPhase('complete');
     } else if (result.status === 'failed') {
       setPhase('failed');
+    } else if (result.status === 'preparing') {
+      if (result.missing_inputs?.length) {
+        setPhase('needs-input');
+      } else if (result.deployment_summary) {
+        setPhase('summary');
+      } else if (result.validation_issues?.length) {
+        const hasBlocking = result.validation_issues.some((issue) => issue.severity === 'error');
+        setPhase(hasBlocking ? 'error' : 'needs-input');
+        if (hasBlocking) {
+          setError(result.message || result.validation_issues[0]?.message || 'Resolve validation issues before deployment.');
+        }
+      } else if (result.message) {
+        setPhase('error');
+        setError(result.message);
+      }
     }
-  }, []);
+  }, [navigate]);
 
   const runStep = useCallback(async ({
     action,
@@ -72,13 +103,17 @@ function Deployment() {
     if (credentials.vercel_token) credPayload.vercel_token = credentials.vercel_token;
     if (credentials.render_api_key) credPayload.render_api_key = credentials.render_api_key;
 
+    const cleanEnvVars = Object.fromEntries(
+      Object.entries(envVars).filter(([, value]) => value && value !== '****'),
+    );
+
     return deploymentStep({
       architectureSessionId,
       deploymentSessionId: sessionId,
       action,
       branch,
       credentials: credPayload,
-      envVars,
+      envVars: cleanEnvVars,
       saveCredentials,
       confirmed,
     });
@@ -103,7 +138,24 @@ function Deployment() {
           return;
         }
 
-        const result = await runStep({ action: 'prepare' });
+        const existingDeploymentId = searchParams.get('deploymentSessionId');
+
+        if (existingDeploymentId) {
+          try {
+            const session = await getDeploymentSession(existingDeploymentId);
+            if (!cancelled) {
+              applyResult(session);
+              return;
+            }
+          } catch {
+            // Session expired or invalid — fall through to prepare.
+          }
+        }
+
+        const result = await runStep({
+          action: 'prepare',
+          sessionId: existingDeploymentId || null,
+        });
         if (!cancelled) applyResult(result);
       } catch (err) {
         if (!cancelled) {
@@ -264,6 +316,11 @@ function Deployment() {
                 </li>
               ))}
             </ul>
+            {phase === 'error' && (
+              <button type="button" className="deploy-submit-btn" onClick={() => navigate(buildArchitectureUrl())}>
+                Back to Architecture
+              </button>
+            )}
           </div>
         )}
 
@@ -297,6 +354,25 @@ function Deployment() {
 
         {(phase === 'deploying' || phase === 'failed') && (
           <DeploymentProgress progress={progress} />
+        )}
+
+        {diagnostics.length > 0 && (phase === 'failed' || phase === 'error' || phase === 'needs-input') && (
+          <div className="deploy-diagnostics-panel">
+            <h3>Diagnostics</h3>
+            {diagnostics.map((item) => (
+              <div key={`${item.code}-${item.service_id || item.phase}`} className="deploy-diagnostic-item">
+                <p className="deploy-diagnostic-message">{item.message}</p>
+                {item.phase && <p className="deploy-diagnostic-meta">Phase: {item.phase}{item.platform ? ` · ${item.platform}` : ''}</p>}
+                {item.remediation?.length > 0 && (
+                  <ul>
+                    {item.remediation.map((step) => (
+                      <li key={step}>{step}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
         )}
 
         {phase === 'failed' && (

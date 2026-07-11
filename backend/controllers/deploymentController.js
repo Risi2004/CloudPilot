@@ -27,6 +27,18 @@ function maskEnvVars(envVars = {}) {
   return Object.fromEntries(Object.keys(envVars).map((key) => [key, '****']));
 }
 
+function mergeEnvVars(...sources) {
+  const merged = {};
+  for (const source of sources) {
+    if (!source || typeof source !== 'object') continue;
+    for (const [key, value] of Object.entries(source)) {
+      if (value === '****') continue;
+      merged[key] = value;
+    }
+  }
+  return merged;
+}
+
 function formatDeploymentResponse(session, agentResult) {
   return {
     deployment_session_id: session._id.toString(),
@@ -43,6 +55,7 @@ function formatDeploymentResponse(session, agentResult) {
     progress: agentResult?.progress || session.progress,
     report: agentResult?.report || session.report,
     failure_analysis: agentResult?.failure_analysis || session.failureAnalysis,
+    diagnostics: agentResult?.diagnostics || [],
     message: agentResult?.message || '',
   };
 }
@@ -87,18 +100,37 @@ const deploymentStep = async (req, res, next) => {
       return res.status(400).json({ message: `Invalid action. Must be one of: ${[...VALID_ACTIONS].join(', ')}` });
     }
 
+    let existingSession = null;
+    if (deploymentSessionId) {
+      existingSession = await getDeploymentSessionById(req.user._id, deploymentSessionId);
+    }
+
     const architectureSession = await getArchitectureSessionById(req.user._id, architectureSessionId);
-    if (!architectureSession?.blueprint) {
+    let blueprint = existingSession?.blueprint || null;
+    let sourceUrl = existingSession?.sourceUrl || null;
+    let analysisSessionId = existingSession?.analysisSessionId || null;
+    let platformSelectionSessionId = existingSession?.platformSelectionSessionId || null;
+    let architectureSessionRef = existingSession?.architectureSessionId || null;
+
+    if (architectureSession?.blueprint) {
+      blueprint = architectureSession.blueprint;
+      sourceUrl = architectureSession.sourceUrl;
+      analysisSessionId = architectureSession.analysisSessionId;
+      platformSelectionSessionId = architectureSession.platformSelectionSessionId;
+      architectureSessionRef = architectureSession._id;
+    } else if (!blueprint) {
       return res.status(404).json({
         message: 'Architecture session not found or expired. Generate a blueprint first.',
       });
     }
 
-    const analysisSession = await getRepositoryAnalysisSessionById(
-      req.user._id,
-      architectureSession.analysisSessionId,
-    );
-    if (!analysisSession?.result) {
+    let repositoryAnalysis = existingSession?.repositoryAnalysis || null;
+    const analysisSession = analysisSessionId
+      ? await getRepositoryAnalysisSessionById(req.user._id, analysisSessionId)
+      : null;
+    if (analysisSession?.result) {
+      repositoryAnalysis = analysisSession.result;
+    } else if (!repositoryAnalysis) {
       return res.status(404).json({
         message: 'Repository analysis session not found or expired. Run analysis again.',
       });
@@ -113,11 +145,6 @@ const deploymentStep = async (req, res, next) => {
       });
     }
 
-    let existingSession = null;
-    if (deploymentSessionId) {
-      existingSession = await getDeploymentSessionById(req.user._id, deploymentSessionId);
-    }
-
     const credentials = await resolveCredentials(user, bodyCredentials || {});
 
     if (saveCredentials) {
@@ -130,34 +157,27 @@ const deploymentStep = async (req, res, next) => {
       await user.save();
     }
 
+    const mergedEnvVars = mergeEnvVars(
+      analysisSession?.envVars,
+      existingSession?.deploymentState?.env_vars,
+      envVars,
+    );
+
     const agentPayload = {
       action,
-      blueprint: existingSession?.blueprint || architectureSession.blueprint,
-      repository_analysis: analysisSession.result,
-      source_url: architectureSession.sourceUrl,
+      blueprint,
+      repository_analysis: repositoryAnalysis,
+      source_url: sourceUrl,
       branch: branch || existingSession?.branch,
       credentials,
       github_token: githubToken,
-      env_vars: {
-        ...(existingSession?.deploymentState?.env_vars || {}),
-        ...(envVars || {}),
-      },
+      env_vars: mergedEnvVars,
       confirmed: Boolean(confirmed),
       deployment_state: existingSession?.deploymentState || null,
     };
 
-    const timeoutAction = action === 'poll' ? 'poll' : 'default';
+    const timeoutAction = action === 'poll' ? 'poll' : action === 'execute' ? 'execute' : 'default';
     const agentResult = await runDeployment(agentPayload, timeoutAction);
-
-    const mergedEnvVars = {
-      ...(existingSession?.deploymentState?.env_vars || {}),
-      ...(envVars || {}),
-    };
-    Object.keys(mergedEnvVars).forEach((key) => {
-      if (mergedEnvVars[key] === '****') {
-        delete mergedEnvVars[key];
-      }
-    });
 
     const deploymentState = {
       ...(agentResult.deployment_state || existingSession?.deploymentState || {}),
@@ -167,11 +187,12 @@ const deploymentStep = async (req, res, next) => {
     const now = new Date();
     const session = await saveDeploymentSession({
       userId: req.user._id,
-      sourceUrl: architectureSession.sourceUrl,
-      analysisSessionId: architectureSession.analysisSessionId,
-      platformSelectionSessionId: architectureSession.platformSelectionSessionId,
-      architectureSessionId: architectureSession._id,
-      blueprint: existingSession?.blueprint || architectureSession.blueprint,
+      sourceUrl,
+      analysisSessionId,
+      platformSelectionSessionId,
+      architectureSessionId: architectureSessionRef,
+      repositoryAnalysis,
+      blueprint,
       branch: branch || agentResult.deployment_state?.branch || existingSession?.branch || 'main',
       status: agentResult.status,
       missingInputs: agentResult.missing_inputs || [],
@@ -198,7 +219,7 @@ const deploymentStep = async (req, res, next) => {
     if (/timed out/i.test(message)) {
       return res.status(504).json({ message });
     }
-    if (/ollama|connection|litellm|json|vercel|render|github/i.test(message)) {
+    if (/ollama|connection|litellm|json/i.test(message)) {
       return res.status(502).json({ message });
     }
 

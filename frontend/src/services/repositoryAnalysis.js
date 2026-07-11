@@ -11,10 +11,11 @@ function authHeaders() {
 }
 
 function parseAnalysisPayload(payload) {
-  const { sessionId, sourceUrl, ...result } = payload;
+  const { sessionId, sourceUrl, envVars, ...result } = payload;
   return {
     sessionId,
     sourceUrl,
+    envVars: envVars || null,
     result: normalizeAnalysisResult(result),
   };
 }
@@ -107,6 +108,26 @@ export function formatScannedAt(source) {
   } catch {
     return source.scanned_at;
   }
+}
+
+export async function saveAnalysisSessionEnv(sessionId, envVars) {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    throw new Error('You must be signed in to configure environment variables.');
+  }
+
+  const response = await fetch(`${API_URL}/api/repositories/session/${encodeURIComponent(sessionId)}/env`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ envVars }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.message || 'Failed to save environment variables.');
+  }
+
+  return payload;
 }
 
 export { displayNarrativeText } from '../utils/analysisDisplay';

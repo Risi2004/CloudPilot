@@ -23,4 +23,6 @@ def test_extracts_variable_names_only(tmp_path: Path) -> None:
     EnvironmentDetector().detect(context, result)
 
     assert result.environment.variables == ["DATABASE_URL", "SECRET_KEY"]
+    assert result.environment.user_required == ["DATABASE_URL", "SECRET_KEY"]
+    assert result.environment.auto_provided == []
     assert ".env" not in result.environment.template_files

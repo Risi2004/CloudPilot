@@ -94,7 +94,7 @@ Return JSON with this exact shape:
     }}
   ],
   "deployment_sequence": [
-    {{"order": 1, "service_id": "database", "action": "provision", "notes": "..."}}
+    {{"order": 1, "service_id": "api", "action": "deploy", "notes": "Deploy API before frontend"}}
   ],
   "service_dependencies": [
     {{"from": "frontend", "to": "api", "type": "http", "description": "..."}}
@@ -126,6 +126,11 @@ Return JSON with this exact shape:
 
 Assign each service to a platform from the platform selection recommendation.
 Use build/start commands from repository analysis when available.
+CRITICAL:
+- Every deployment_sequence.service_id MUST exactly match an id in deployable_services.
+- Do NOT put managed databases, Redis, or other non-platform app services in deployment_sequence
+  unless they also appear in deployable_services with a supported deploy platform (vercel/render).
+- Include frontend and backend/api in deployable_services when the repository has those components.
 """.strip()
 
 

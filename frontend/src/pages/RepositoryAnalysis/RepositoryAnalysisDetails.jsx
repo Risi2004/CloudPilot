@@ -10,7 +10,24 @@ import TabAnalysisOverview from '../../components/RepositoryAnalysis/TabAnalysis
 import TabScanFacts from '../../components/RepositoryAnalysis/TabScanFacts';
 import TabDeploymentHealth from '../../components/RepositoryAnalysis/TabDeploymentHealth';
 import TabRawJson from '../../components/RepositoryAnalysis/TabRawJson';
-import { analyzeRepository } from '../../services/repositoryAnalysis';
+import EnvUploadPrompt from '../../components/RepositoryAnalysis/EnvUploadPrompt';
+import { analyzeRepository, saveAnalysisSessionEnv } from '../../services/repositoryAnalysis';
+
+function isEnvSetupComplete(envVars, userRequired = []) {
+  if (!userRequired.length) return true;
+  if (!envVars || typeof envVars !== 'object') return false;
+  return userRequired.every((key) => typeof envVars[key] === 'string' && envVars[key].trim());
+}
+
+function getUserRequiredVars(environment = {}) {
+  if (environment.user_required?.length) return environment.user_required;
+  if (environment.classifications?.length) {
+    return environment.classifications
+      .filter((item) => item.source === 'user')
+      .map((item) => item.name);
+  }
+  return environment.variables || [];
+}
 
 function RepositoryAnalysisDetails() {
   const [searchParams] = useSearchParams();
@@ -22,6 +39,7 @@ function RepositoryAnalysisDetails() {
   const [activeTab, setActiveTab] = useState('overview');
   const [analysisResult, setAnalysisResult] = useState(null);
   const [analysisSessionId, setAnalysisSessionId] = useState(null);
+  const [envSetupComplete, setEnvSetupComplete] = useState(false);
 
   useEffect(() => {
     if (!repoUrl) {
@@ -36,6 +54,7 @@ function RepositoryAnalysisDetails() {
     setError(null);
     setAnalysisResult(null);
     setAnalysisSessionId(null);
+    setEnvSetupComplete(false);
     setActiveTab('overview');
 
     analyzeRepository(repoUrl)
@@ -43,6 +62,8 @@ function RepositoryAnalysisDetails() {
         if (!cancelled) {
           setAnalysisResult(data.result);
           setAnalysisSessionId(data.sessionId);
+          const userRequired = getUserRequiredVars(data.result?.facts?.environment);
+          setEnvSetupComplete(isEnvSetupComplete(data.envVars, userRequired));
         }
       })
       .catch((err) => {
@@ -59,6 +80,23 @@ function RepositoryAnalysisDetails() {
 
   const handleAnalyzeNew = (newUrl) => {
     navigate(`/repository-analysis?url=${encodeURIComponent(newUrl)}`);
+  };
+
+  const handleEnvComplete = async (envObj) => {
+    if (!analysisSessionId) return;
+    const userRequired = getUserRequiredVars(analysisResult?.facts?.environment);
+    const missing = userRequired.filter((key) => !envObj[key]?.trim());
+    if (missing.length > 0) {
+      setError(`Please provide values for: ${missing.join(', ')}`);
+      return;
+    }
+    try {
+      await saveAnalysisSessionEnv(analysisSessionId, envObj);
+      setEnvSetupComplete(true);
+      setError(null);
+    } catch (err) {
+      setError(err.message || 'Failed to save environment variables.');
+    }
   };
 
   const renderActiveTab = () => {
@@ -101,63 +139,74 @@ function RepositoryAnalysisDetails() {
         ) : repoUrl && analysisResult ? (
           <div className="analysis-content-container">
             <AnalysisHeader currentUrl={repoUrl} onAnalyzeNew={handleAnalyzeNew} />
-            <AnalysisSummary result={analysisResult} />
+            
+            {!envSetupComplete && analysisResult.facts?.environment?.variables?.length > 0 ? (
+              <EnvUploadPrompt
+                repoUrl={repoUrl}
+                environment={analysisResult.facts.environment}
+                onComplete={handleEnvComplete}
+              />
+            ) : (
+              <>
+                <AnalysisSummary result={analysisResult} />
 
-            <div className="analysis-platform-cta">
-              <div className="analysis-platform-cta-text">
-                <span className="analysis-platform-cta-badge font-mono">PLATFORM SELECTION AGENT</span>
-                <h3>Ready to choose a deployment platform?</h3>
-                <p>
-                  Get a grounded recommendation for Vercel, Render, or hybrid deployment based on your
-                  repository analysis and deployment goals.
-                </p>
-              </div>
-              <button
-                type="button"
-                className="empty-submit-btn"
-                onClick={() => {
-                  const params = new URLSearchParams();
-                  params.set('url', repoUrl);
-                  if (analysisSessionId) params.set('analysisSessionId', analysisSessionId);
-                  navigate(`/platform-selection?${params.toString()}`);
-                }}
-              >
-                Start Platform Selection →
-              </button>
-            </div>
+                <div className="analysis-platform-cta">
+                  <div className="analysis-platform-cta-text">
+                    <span className="analysis-platform-cta-badge font-mono">PLATFORM SELECTION AGENT</span>
+                    <h3>Ready to choose a deployment platform?</h3>
+                    <p>
+                      Get a grounded recommendation for Vercel, Render, or hybrid deployment based on your
+                      repository analysis and deployment goals.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="empty-submit-btn"
+                    onClick={() => {
+                      const params = new URLSearchParams();
+                      params.set('url', repoUrl);
+                      if (analysisSessionId) params.set('analysisSessionId', analysisSessionId);
+                      navigate(`/platform-selection?${params.toString()}`);
+                    }}
+                  >
+                    Start Platform Selection →
+                  </button>
+                </div>
 
-            <div className="analysis-details-tabs-bar">
-              <button
-                type="button"
-                className={`tab-toggle-btn ${activeTab === 'overview' ? 'active' : ''}`}
-                onClick={() => setActiveTab('overview')}
-              >
-                <span>AI Overview</span>
-              </button>
-              <button
-                type="button"
-                className={`tab-toggle-btn ${activeTab === 'facts' ? 'active' : ''}`}
-                onClick={() => setActiveTab('facts')}
-              >
-                <span>Scan Facts</span>
-              </button>
-              <button
-                type="button"
-                className={`tab-toggle-btn ${activeTab === 'deployment' ? 'active' : ''}`}
-                onClick={() => setActiveTab('deployment')}
-              >
-                <span>Deployment & Health</span>
-              </button>
-              <button
-                type="button"
-                className={`tab-toggle-btn ${activeTab === 'json' ? 'active' : ''}`}
-                onClick={() => setActiveTab('json')}
-              >
-                <span>Raw JSON</span>
-              </button>
-            </div>
+                <div className="analysis-details-tabs-bar">
+                  <button
+                    type="button"
+                    className={`tab-toggle-btn ${activeTab === 'overview' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('overview')}
+                  >
+                    <span>AI Overview</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`tab-toggle-btn ${activeTab === 'facts' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('facts')}
+                  >
+                    <span>Scan Facts</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`tab-toggle-btn ${activeTab === 'deployment' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('deployment')}
+                  >
+                    <span>Deployment & Health</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`tab-toggle-btn ${activeTab === 'json' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('json')}
+                  >
+                    <span>Raw JSON</span>
+                  </button>
+                </div>
 
-            <div className="analysis-tab-content-panel">{renderActiveTab()}</div>
+                <div className="analysis-tab-content-panel">{renderActiveTab()}</div>
+              </>
+            )}
           </div>
         ) : (
           <div className="empty-analysis-container">

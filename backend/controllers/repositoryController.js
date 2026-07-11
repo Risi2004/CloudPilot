@@ -4,6 +4,8 @@ const {
   getRepositoryAnalysisSessionById,
   getRepositoryAnalysisSessionByUrl,
 } = require('../services/analysisSessionService');
+const User = require('../models/User');
+const { getDecryptedAccessToken } = require('../services/githubService');
 
 const GITHUB_URL_PATTERN =
   /^https?:\/\/(www\.)?github\.com\/[\w.\-]+\/[\w.\-]+(?:\.git)?(?:\/.*)?$/i;
@@ -12,6 +14,7 @@ function formatAnalysisResponse(session, result) {
   return {
     sessionId: session._id.toString(),
     sourceUrl: session.sourceUrl,
+    envVars: session.envVars || null,
     ...result,
   };
 }
@@ -39,7 +42,10 @@ const analyzeRepository = async (req, res, next) => {
       }
     }
 
-    const result = await runRepositoryAnalysis(normalized);
+    const user = await User.findById(req.user._id).select('+github.accessToken');
+    const githubToken = getDecryptedAccessToken(user);
+
+    const result = await runRepositoryAnalysis(normalized, githubToken);
     const session = await saveRepositoryAnalysisSession(req.user._id, normalized, result);
 
     res.status(200).json(formatAnalysisResponse(session, result));
@@ -92,4 +98,29 @@ const getAnalysisSession = async (req, res, next) => {
   }
 };
 
-module.exports = { analyzeRepository, getAnalysisSession };
+const saveAnalysisSessionEnv = async (req, res, next) => {
+  try {
+    const { sessionId } = req.params;
+    const { envVars } = req.body;
+
+    const RepositoryAnalysisSession = require('../models/RepositoryAnalysisSession');
+    const session = await RepositoryAnalysisSession.findOneAndUpdate(
+      { _id: sessionId, userId: req.user._id },
+      { envVars },
+      { new: true }
+    );
+
+    if (!session) {
+      return res.status(404).json({ message: 'Analysis session not found.' });
+    }
+
+    return res.status(200).json({
+      message: 'Environment variables saved temporarily.',
+      envVars: session.envVars,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { analyzeRepository, getAnalysisSession, saveAnalysisSessionEnv };

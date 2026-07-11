@@ -206,7 +206,7 @@ class BlueprintSynthesisService:
         confidence = float(payload.get("confidence_score", 0.5))
         confidence = min(1.0, max(0.0, confidence))
 
-        return DeploymentBlueprint(
+        blueprint = DeploymentBlueprint(
             overall_summary=str(payload.get("overall_summary", "")),
             application_type=str(payload.get("application_type", "unknown")),
             confidence_score=confidence,
@@ -223,6 +223,9 @@ class BlueprintSynthesisService:
             citations=citations,
             documentation_gaps=coerce_string_list(payload.get("documentation_gaps")),
         )
+        from cloudpilot.agents.deployment.validator import BlueprintValidator
+
+        return BlueprintValidator.normalize_blueprint(blueprint)
 
     @staticmethod
     def _fallback_blueprint(

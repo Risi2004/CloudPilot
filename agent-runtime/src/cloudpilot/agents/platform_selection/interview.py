@@ -11,6 +11,7 @@ import litellm
 from cloudpilot.agents.documentation.context_builder import build_repository_context
 from cloudpilot.agents.platform_selection.confidence import (
     MAX_INTERVIEW_QUESTIONS,
+    RECOMMENDATION_THRESHOLD,
     compute_interview_confidence,
     should_recommend,
 )
@@ -92,6 +93,32 @@ class InterviewService:
         question = llm_output.question or self._fallback_question(
             interview_answers, known_facts, information_gaps
         )
+        # LLM/fallback can repeat the same theme (e.g. Docker preference); force next gap.
+        if self._is_duplicate_question(question, interview_answers):
+            refreshed_gaps = [
+                gap
+                for gap in (llm_output.information_gaps or information_gaps)
+                if not self._gap_already_covered(
+                    gap,
+                    " ".join(
+                        f"{item.question_id} {item.question} {item.answer}"
+                        for item in interview_answers
+                    ).lower(),
+                )
+            ]
+            if not refreshed_gaps:
+                return (
+                    PlatformSelectionResult(
+                        status="interview",
+                        confidence=max(confidence, RECOMMENDATION_THRESHOLD),
+                        questions_asked=len(interview_answers),
+                        known_from_analysis=llm_output.known_from_analysis or known_facts,
+                        information_gaps=[],
+                        interview_summary=interview_answers,
+                    ),
+                    True,
+                )
+            question = self._fallback_question(interview_answers, known_facts, refreshed_gaps)
 
         return (
             PlatformSelectionResult(
@@ -178,10 +205,50 @@ class InterviewService:
         answered_blob = " ".join(
             f"{item.question_id} {item.question} {item.answer}" for item in answers
         ).lower()
-        remaining = [gap for gap in gaps if gap.split()[0] not in answered_blob]
+        remaining = [
+            gap
+            for gap in gaps
+            if not InterviewService._gap_already_covered(gap, answered_blob)
+        ]
         if not remaining:
             return ["deployment timeline and rollback requirements"]
         return remaining
+
+    @staticmethod
+    def _gap_already_covered(gap: str, answered_blob: str) -> bool:
+        """Return True when prior Q&A already addressed this information gap."""
+        gap_l = gap.lower()
+        if gap_l in answered_blob:
+            return True
+        # Distinctive tokens (skip short/stop words). Match case-insensitively.
+        stop = {"vs", "and", "or", "the", "your", "with", "for", "of", "a", "an"}
+        tokens = [
+            token.strip("(),")
+            for token in gap_l.split()
+            if len(token.strip("(),")) > 3 and token.strip("(),") not in stop
+        ]
+        if not tokens:
+            return False
+        hits = sum(1 for token in tokens if token in answered_blob)
+        return hits >= max(2, (len(tokens) + 1) // 2)
+
+    @staticmethod
+    def _is_duplicate_question(
+        question: InterviewQuestion,
+        answers: list[InterviewAnswer],
+    ) -> bool:
+        text = (question.text or "").strip().lower()
+        if not text:
+            return False
+        for item in answers:
+            prev = (item.question or "").strip().lower()
+            if not prev:
+                continue
+            if text == prev:
+                return True
+            if len(text) > 24 and (text in prev or prev in text):
+                return True
+        return False
 
     @staticmethod
     def _fallback_question(
@@ -189,7 +256,19 @@ class InterviewService:
         known_facts: list[str],
         information_gaps: list[str],
     ) -> InterviewQuestion:
-        gap = information_gaps[0] if information_gaps else "deployment goals"
+        answered_blob = " ".join(
+            f"{item.question_id} {item.question} {item.answer}" for item in answers
+        ).lower()
+        gap = next(
+            (
+                item
+                for item in information_gaps
+                if not InterviewService._gap_already_covered(item, answered_blob)
+            ),
+            None,
+        )
+        if gap is None:
+            gap = "deployment timeline and rollback requirements"
         return InterviewQuestion(
             id=f"q_{len(answers) + 1}",
             text=f"To recommend the right platform, could you tell me about your {gap}?",

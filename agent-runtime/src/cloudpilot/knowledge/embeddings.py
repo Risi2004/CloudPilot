@@ -76,7 +76,8 @@ class EmbeddingService:
                     "Embedding batch failed (attempt %s/%s): %s; retrying in %.1fs",
                     attempt,
                     self._max_retries,
-                    exc,
+                    str(exc).replace("%", "%%"),
+                    delay,
                 )
                 time.sleep(delay)
 
@@ -98,7 +99,21 @@ class EmbeddingService:
         raise last_error
 
     def _call_embedding_api(self, batch: list[str]) -> list[list[float]]:
-        response = litellm.embedding(model=self.model_id, input=batch)
+        try:
+            response = litellm.embedding(model=self.model_id, input=batch)
+        except Exception as exc:  # noqa: BLE001
+            message = str(exc)
+            if "404" in message or "Not Found" in message:
+                raise RuntimeError(
+                    "Embedding API returned 404 for "
+                    f"{self._settings.ollama_base_url}/api/embed "
+                    f"(model={self._settings.embedding_model}). "
+                    "Check that OLLAMA_BASE_URL points at a live Ollama server and that "
+                    f"'{self._settings.embedding_model}' is pulled "
+                    "(e.g. `ollama pull nomic-embed-text`). "
+                    "Platform selection RAG cannot run without embeddings."
+                ) from exc
+            raise
         data = response.data if hasattr(response, "data") else response["data"]
         sorted_data = sorted(
             data,
