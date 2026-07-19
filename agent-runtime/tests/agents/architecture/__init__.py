@@ -1,0 +1,1 @@
+"""Architecture agent tests package."""

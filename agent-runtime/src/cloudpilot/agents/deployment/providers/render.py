@@ -217,15 +217,23 @@ class RenderProvider:
                 service_id=service.id,
             )
 
+        runtime_env = self._runtime_env(service.runtime_version)
+        start_cmd = service.start_command
+        if not start_cmd:
+            if runtime_env == "node":
+                start_cmd = "npm start"
+            elif runtime_env == "python":
+                start_cmd = "python main.py"
+
         service_details: dict[str, Any] = {
-            "env": self._runtime_env(service.runtime_version),
+            "env": runtime_env,
             "plan": "free",
             "region": "oregon",
         }
         if service.build_command:
             service_details["buildCommand"] = service.build_command
-        if service.start_command:
-            service_details["startCommand"] = service.start_command
+        if start_cmd:
+            service_details["startCommand"] = start_cmd
 
         create_body: dict[str, Any] = {
             "type": "web_service",
@@ -238,8 +246,8 @@ class RenderProvider:
         }
         if service.build_command:
             create_body["buildCommand"] = service.build_command
-        if service.start_command:
-            create_body["startCommand"] = service.start_command
+        if start_cmd:
+            create_body["startCommand"] = start_cmd
         if service.root_directory and service.root_directory != ".":
             create_body["rootDir"] = service.root_directory
 
