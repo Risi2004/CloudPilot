@@ -59,7 +59,7 @@ function RecommendationDetails() {
               </div>
               <div className="spec-detail-row">
                 <span className="spec-row-key">Ingress Routing</span>
-                <span className="spec-row-val">Internet Gateway -> ALB (Port 80/443) -> Target Tasks</span>
+                <span className="spec-row-val">Internet Gateway -&gt; ALB (Port 80/443) -&gt; Target Tasks</span>
               </div>
               <div className="spec-detail-row">
                 <span className="spec-row-key">Egress Routing</span>

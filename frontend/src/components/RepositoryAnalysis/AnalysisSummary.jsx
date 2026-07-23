@@ -1,8 +1,11 @@
 import React from 'react';
 
 function AnalysisSummary({ data }) {
-  const totalCost = data.iac?.monthlyCost?.find(c => c.total)?.total || 'Estimated: $36.30 / mo';
-  const displayCost = totalCost.replace('Total Estimate: ', '').replace('Estimated: ', '');
+  const totalCost = data.iac?.monthlyCost?.find(c => c.total)?.total;
+  const displayCost = totalCost
+    ? totalCost.replace('Total Estimate: ', '').replace('Estimated: ', '')
+    : 'Pending analysis';
+  const containerImage = data.containerization?.baseImage || 'Pending analysis';
 
   return (
     <div className="analysis-summary-grid">
@@ -64,7 +67,7 @@ function AnalysisSummary({ data }) {
           <span className="summary-card-label">ESTIMATED RUNTIME COST</span>
         </div>
         <div className="summary-card-value">{displayCost}</div>
-        <div className="summary-card-badge warning">Optimized AWS</div>
+        <div className={`summary-card-badge ${totalCost ? 'warning' : 'info'}`}>{totalCost ? 'Optimized AWS' : 'Pending Agent'}</div>
       </div>
 
       {/* Target Containerization */}
@@ -79,8 +82,10 @@ function AnalysisSummary({ data }) {
           </span>
           <span className="summary-card-label">CONTAINER RECIPE</span>
         </div>
-        <div className="summary-card-value">{data.containerization?.baseImage}</div>
-        <div className="summary-card-badge positive">Dockerfile Ready</div>
+        <div className="summary-card-value">{containerImage}</div>
+        <div className={`summary-card-badge ${data.containerization?.baseImage ? 'positive' : 'info'}`}>
+          {data.containerization?.baseImage ? 'Dockerfile Ready' : 'Pending Agent'}
+        </div>
       </div>
 
       {/* Vulnerabilities scan */}
