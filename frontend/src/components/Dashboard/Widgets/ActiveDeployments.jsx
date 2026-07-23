@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import awsIcon from '../../../assets/aws.svg';
 import k8sIcon from '../../../assets/kubernetes.svg';
 import vercelIcon from '../../../assets/vercel.svg';
@@ -35,6 +36,8 @@ const MOCK_DEPLOYMENTS = [
 ];
 
 function ActiveDeployments() {
+  const navigate = useNavigate();
+
   const getStatusClass = (status) => {
     return status.toLowerCase();
   };
@@ -50,10 +53,10 @@ function ActiveDeployments() {
           </svg>
           <h3>Active Deployments</h3>
         </div>
-        <button 
+        <button
           id="btn-deploy-new-stack"
           className="widget-action-btn"
-          onClick={() => console.log('Deploy new infrastructure')}
+          onClick={() => navigate('/repositories')}
         >
           + Deploy Stack
         </button>

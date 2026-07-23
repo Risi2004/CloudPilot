@@ -55,7 +55,21 @@ def test_ensure_service_uses_nested_owner_id(monkeypatch) -> None:
 
     resource = asyncio.run(provider.ensure_service(service, ctx))
     assert resource.resource_id == "srv_new"
-    assert captured["body"]["ownerId"] == "usr-test-owner"
+    body = captured["body"]
+    assert body["ownerId"] == "usr-test-owner"
+    # Matches Render's webServiceDetailsPOST schema: `runtime` is required,
+    # `env` is deprecated, and build/start commands live under envSpecificDetails
+    # (nativeEnvironmentDetailsPOST), not at the top level or loose in serviceDetails.
+    assert body["serviceDetails"]["runtime"] == "node"
+    assert "env" not in body["serviceDetails"]
+    assert body["serviceDetails"]["envSpecificDetails"] == {
+        "buildCommand": "npm run build",
+        "startCommand": "npm start",
+    }
+    assert "buildCommand" not in body
+    assert "startCommand" not in body
+    assert "buildCommand" not in body["serviceDetails"]
+    assert "startCommand" not in body["serviceDetails"]
 
 
 def test_trigger_deploy_rejects_empty_deploy_id(monkeypatch) -> None:

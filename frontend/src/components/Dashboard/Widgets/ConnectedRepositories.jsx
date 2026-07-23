@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import githubIcon from '../../../assets/github.svg';
 import './ConnectedRepositories.css';
 
@@ -27,9 +28,10 @@ const MOCK_REPOSITORIES = [
 ];
 
 function ConnectedRepositories() {
+  const navigate = useNavigate();
+
   const handleConnectNew = () => {
-    console.log('Connecting new repository...');
-    alert('Connect repository feature coming soon!');
+    navigate('/repositories');
   };
 
   return (

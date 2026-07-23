@@ -37,8 +37,10 @@ function Deployment() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const pollRef = useRef(null);
+  const bootstrappedIdRef = useRef(undefined);
 
   const applyResult = useCallback((result) => {
+    setError(null);
     if (result.deployment_session_id) {
       setDeploymentSessionId(result.deployment_session_id);
       const params = new URLSearchParams(window.location.search);
@@ -119,11 +121,23 @@ function Deployment() {
     });
   }, [architectureSessionId, deploymentSessionId, branch, credentials, envVars, saveCredentials]);
 
+  const deploymentSessionIdParam = searchParams.get('deploymentSessionId');
+
   useEffect(() => {
     if (!architectureSessionId) {
       setPhase('missing-sessions');
       return;
     }
+
+    // Only re-bootstrap when the URL's deploymentSessionId actually changes
+    // to a value we haven't loaded yet (e.g. back/forward nav). Without this
+    // guard, applyResult()'s own navigate() call — which syncs a newly
+    // created session id into the URL — would immediately re-trigger this
+    // effect and re-fetch, discarding in-memory progress.
+    if (bootstrappedIdRef.current === (deploymentSessionIdParam || null)) {
+      return;
+    }
+    bootstrappedIdRef.current = deploymentSessionIdParam || null;
 
     let cancelled = false;
 
@@ -138,7 +152,7 @@ function Deployment() {
           return;
         }
 
-        const existingDeploymentId = searchParams.get('deploymentSessionId');
+        const existingDeploymentId = deploymentSessionIdParam;
 
         if (existingDeploymentId) {
           try {
@@ -161,6 +175,9 @@ function Deployment() {
         if (!cancelled) {
           if (err.code === 'github_required') {
             setPhase('github-required');
+          } else if (err.code === 'session_expired') {
+            setError('Your deployment session has expired. Please start a new deployment.');
+            setPhase('error');
           } else {
             setError(err.message || 'Deployment preparation failed.');
             setPhase('error');
@@ -171,7 +188,7 @@ function Deployment() {
 
     bootstrap();
     return () => { cancelled = true; };
-  }, [architectureSessionId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [architectureSessionId, deploymentSessionIdParam]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (phase !== 'deploying') {

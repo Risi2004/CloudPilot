@@ -225,15 +225,22 @@ class RenderProvider:
             elif runtime_env == "python":
                 start_cmd = "python main.py"
 
+        if runtime_env == "docker":
+            # dockerDetailsPOST has no required fields; Render infers ./Dockerfile by default.
+            env_specific_details: dict[str, Any] = {}
+        else:
+            # nativeEnvironmentDetailsPOST requires both keys to be present.
+            env_specific_details = {
+                "buildCommand": service.build_command or "",
+                "startCommand": start_cmd or "",
+            }
+
         service_details: dict[str, Any] = {
-            "env": runtime_env,
+            "runtime": runtime_env,
+            "envSpecificDetails": env_specific_details,
             "plan": "free",
             "region": "oregon",
         }
-        if service.build_command:
-            service_details["buildCommand"] = service.build_command
-        if start_cmd:
-            service_details["startCommand"] = start_cmd
 
         create_body: dict[str, Any] = {
             "type": "web_service",
@@ -244,10 +251,6 @@ class RenderProvider:
             "autoDeploy": "no",
             "serviceDetails": service_details,
         }
-        if service.build_command:
-            create_body["buildCommand"] = service.build_command
-        if start_cmd:
-            create_body["startCommand"] = start_cmd
         if service.root_directory and service.root_directory != ".":
             create_body["rootDir"] = service.root_directory
 

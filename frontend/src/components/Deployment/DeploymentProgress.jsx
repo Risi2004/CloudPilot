@@ -47,9 +47,10 @@ function DeploymentProgress({ progress }) {
     const overall = (prog.overall_status || '').toLowerCase();
 
     if (overall === 'complete') return 7;
-    if (overall === 'failed') return 7;
 
-    // Prefer concrete service state over vague overall "deploying".
+    // Prefer concrete service state over vague overall "deploying"/"failed"
+    // status so a failure mid-build is shown at the step it actually failed
+    // on, rather than being reported as having reached the final step.
     if (prog.services && prog.services.length > 0) {
       const first = prog.services[0];
       const serviceStage = (first.stage || '').toLowerCase();
@@ -63,8 +64,10 @@ function DeploymentProgress({ progress }) {
       }
       if (deployStatus === 'live') return 7;
       if (serviceStage.includes('provision')) return 3;
+      if (overall === 'failed') return 6;
     }
 
+    if (overall === 'failed') return 6;
     if (stage.includes('poll') || stage.includes('build') || stage.includes('monitor')) {
       return 6;
     }
@@ -92,6 +95,8 @@ function DeploymentProgress({ progress }) {
 
     return 0;
   };
+
+  const isFailed = (progress?.overall_status || '').toLowerCase() === 'failed';
 
   useEffect(() => {
     const updatePosition = () => {
@@ -203,7 +208,8 @@ function DeploymentProgress({ progress }) {
         <div className="agent-steps-list">
           {steps.map((step, idx) => {
             const activeIdx = getActiveStepIndex(progress);
-            const isActive = idx === activeIdx;
+            const isErrored = idx === activeIdx && isFailed;
+            const isActive = idx === activeIdx && !isFailed;
             const isCompleted = idx < activeIdx;
             const isPending = idx > activeIdx;
 
@@ -211,7 +217,7 @@ function DeploymentProgress({ progress }) {
               <div
                 key={step.id}
                 ref={(el) => { stepRefs.current[idx] = el; }}
-                className={`agent-step-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''} ${isPending ? 'pending' : ''}`}
+                className={`agent-step-item ${isActive ? 'active' : ''} ${isErrored ? 'errored' : ''} ${isCompleted ? 'completed' : ''} ${isPending ? 'pending' : ''}`}
               >
                 <div className="agent-step-status-icon">
                   {isCompleted && (
@@ -220,6 +226,12 @@ function DeploymentProgress({ progress }) {
                     </svg>
                   )}
                   {isActive && <div className="agent-step-spinner" />}
+                  {isErrored && (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ color: '#ef4444' }}>
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  )}
                   {isPending && <span style={{ color: '#475569' }}>•</span>}
                 </div>
                 <span>{step.label}</span>

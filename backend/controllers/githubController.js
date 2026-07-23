@@ -84,13 +84,36 @@ const listRepositories = async (req, res, next) => {
     const repos = await fetchAllUserRepos(accessToken);
     res.status(200).json({ repos, total: repos.length });
   } catch (err) {
-    if (err.status === 401 || err.status === 403) {
+    if (err.status === 401) {
       if (user) {
         clearGitHubConnection(user);
         await user.save();
       }
       return res.status(401).json({
         message: 'GitHub authorization expired. Please connect GitHub again.',
+        code: 'github_token_invalid',
+      });
+    }
+    if (err.status === 403) {
+      // GitHub also returns 403 for primary/secondary rate limiting, SSO
+      // enforcement, and abuse detection — none of which mean the token is
+      // dead. Only treat it as a revoked token when GitHub says so
+      // explicitly; otherwise this is transient and reconnecting won't help.
+      const detail = (err.message || '').toLowerCase();
+      const isRevoked = detail.includes('bad credentials') || detail.includes('revoked') || detail.includes('suspended');
+      if (isRevoked) {
+        if (user) {
+          clearGitHubConnection(user);
+          await user.save();
+        }
+        return res.status(401).json({
+          message: 'GitHub authorization expired. Please connect GitHub again.',
+          code: 'github_token_invalid',
+        });
+      }
+      return res.status(429).json({
+        message: 'GitHub API rate limit or access restriction reached. Please try again shortly.',
+        code: 'github_rate_limited',
       });
     }
     next(err);

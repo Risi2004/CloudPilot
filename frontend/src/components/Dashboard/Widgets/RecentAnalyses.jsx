@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import './RecentAnalyses.css';
 
 const MOCK_ANALYSES = [
@@ -29,6 +30,8 @@ const MOCK_ANALYSES = [
 ];
 
 function RecentAnalyses() {
+  const navigate = useNavigate();
+
   const getScoreColorClass = (score) => {
     if (score >= 90) return 'score-green';
     if (score >= 70) return 'score-yellow';
@@ -50,10 +53,10 @@ function RecentAnalyses() {
           </svg>
           <h3>Recent AI Analyses</h3>
         </div>
-        <button 
+        <button
           id="btn-view-all-analyses"
           className="widget-action-btn"
-          onClick={() => console.log('View all analyses')}
+          onClick={() => navigate('/repositories')}
         >
           View All
         </button>
@@ -93,10 +96,10 @@ function RecentAnalyses() {
                   )}
                 </div>
                 <div className="analysis-actions">
-                  <button 
+                  <button
                     id={`btn-view-report-${analysis.id}`}
                     className="report-btn"
-                    onClick={() => console.log('Viewing report', analysis.id)}
+                    onClick={() => navigate('/repositories')}
                   >
                     View Report
                   </button>
