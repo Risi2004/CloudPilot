@@ -1,0 +1,326 @@
+.mfa-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: center;
+}
+
+.mfa-panel-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #00d4ff;
+  margin: 0;
+  letter-spacing: 0.05em;
+}
+
+.mfa-panel-subtitle {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.mfa-qr-image {
+  width: 180px;
+  height: 180px;
+  margin: 0 auto;
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px;
+}
+
+.mfa-secret-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.mfa-secret-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #64748b;
+}
+
+.mfa-secret-value {
+  font-size: 12px;
+  color: #e2e8f0;
+  word-break: break-all;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.mfa-otpauth-hint {
+  font-size: 11px;
+  color: #64748b;
+  margin: 0;
+}
+
+.mfa-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mfa-code-input {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  height: 48px;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.2em;
+  outline: none;
+}
+
+.mfa-code-input:focus {
+  border-color: #00d4ff;
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.15);
+}
+
+.mfa-primary-btn,
+.mfa-secondary-btn {
+  border-radius: 8px;
+  height: 42px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mfa-primary-btn {
+  background: #00d4ff;
+  border: none;
+  color: #030712;
+}
+
+.mfa-primary-btn:hover:not(:disabled) {
+  background: #3ee2ff;
+}
+
+.mfa-primary-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mfa-secondary-btn {
+  background: transparent;
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  color: #00d4ff;
+  padding: 0 14px;
+}
+
+.mfa-secondary-btn:hover {
+  background: rgba(0, 212, 255, 0.08);
+}
+
+.mfa-skip-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.mfa-skip-btn:hover {
+  color: #ffffff;
+}
+
+.mfa-error-message {
+  font-size: 12px;
+  color: #ef4444;
+  margin: 0;
+}
+
+.mfa-status-message {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.mfa-actions-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.recovery-codes-list {
+  list-style: none;
+  margin: 0;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+
+.recovery-code-item {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  color: #e2e8f0;
+  letter-spacing: 0.04em;
+}
+
+.mfa-remember-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #94a3b8;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mfa-remember-row input {
+  accent-color: #00d4ff;
+}
+
+.mfa-setup-overlay-card {
+  max-width: 480px;
+  width: 100%;
+}
+
+/* Shared modal shell (used by MFA challenge on Login as well as Signup) */
+.otp-modal-overlay,
+.mfa-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(3, 7, 18, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.otp-modal-card,
+.mfa-modal-card {
+  background: rgba(5, 20, 36, 0.95);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 16px;
+  padding: 40px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 0 30px rgba(0, 212, 255, 0.15);
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+
+.otp-modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #00d4ff;
+  margin: 0 0 8px 0;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+}
+
+.otp-modal-subtitle {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0 0 24px 0;
+}
+
+.otp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.otp-input-element {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  height: 48px;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.3em;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.otp-input-element:focus {
+  border-color: #00d4ff;
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.15);
+}
+
+.otp-error-message {
+  font-size: 12px;
+  color: #ef4444;
+  margin: 0;
+}
+
+.otp-submit-btn {
+  background: #00d4ff;
+  border: none;
+  border-radius: 8px;
+  height: 44px;
+  color: #030712;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2);
+}
+
+.otp-submit-btn:hover:not(:disabled) {
+  background: #3ee2ff;
+  box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4);
+}
+
+.otp-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.otp-cancel-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  padding: 0;
+}
+
+.otp-cancel-btn:hover {
+  color: #ffffff;
+}
+
+/* Fix large/clipped placeholder text inside OTP and MFA inputs */
+.otp-input-element::placeholder {
+  font-size: 14px;
+  letter-spacing: normal;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.mfa-code-input::placeholder {
+  font-size: 14px;
+  letter-spacing: normal;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.35);
+}

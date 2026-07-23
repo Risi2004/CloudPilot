@@ -182,6 +182,11 @@ function Deployment() {
       return undefined;
     }
 
+    // BUG-012 fix: Increased from 4 000 ms to 15 000 ms.
+    // Each poll spawns a new Python subprocess (loads the full interpreter +
+    // deps) and makes external HTTP calls to Vercel / Render APIs.
+    // A 4-second interval creates excessive process churn and risks hitting
+    // Render's rate limits (600 req/min) under concurrent users.
     pollRef.current = setInterval(async () => {
       try {
         const result = await runStep({ action: 'poll' });
@@ -189,7 +194,7 @@ function Deployment() {
       } catch (err) {
         setError(err.message || 'Failed to poll deployment status.');
       }
-    }, 4000);
+    }, 15000);
 
     return () => {
       if (pollRef.current) {

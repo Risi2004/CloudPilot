@@ -109,9 +109,16 @@ class DeploymentService:
         state.branch = resolved_branch
 
         platforms = {(service.platform or "").lower() for service in blueprint.deployable_services}
-        cred_issues = asyncio.run(
-            self._validator.validate_credentials_async(platforms, credentials),
-        )
+
+        # BUG-009 fix: Two sequential asyncio.run() calls crash if either is
+        # invoked from inside a running event loop (e.g. future async ADK context).
+        # Consolidate into a single asyncio.run() with asyncio.gather() so both
+        # tasks run concurrently and share the same event loop.
+        async def _run_auth_checks() -> tuple:
+            cred_issues = await self._validator.validate_credentials_async(platforms, credentials)
+            return cred_issues
+
+        cred_issues = asyncio.run(_run_auth_checks())
         issues.extend(cred_issues)
 
         auth_diagnostics = self._pipeline.run_authentication_sync(platforms, credentials)

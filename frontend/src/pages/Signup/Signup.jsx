@@ -6,6 +6,9 @@ import './Signup.css';
 import AuthLayout from '../../components/Auth/AuthLayout';
 import OAuthSection from '../../components/Auth/OAuthSection';
 import AuthInput from '../../components/Auth/AuthInput';
+import MfaSetupPanel from '../../components/Auth/MfaSetupPanel';
+import MfaChallengeModal from '../../components/Auth/MfaChallengeModal';
+import { persistAuthSession } from '../../services/mfa';
 
 // SVG Assets
 import emailIcon from '../../assets/email.svg';
@@ -30,6 +33,17 @@ function Signup() {
   const [otpError, setOtpError] = useState('');
   const [resendStatus, setResendStatus] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mfaSetupOpen, setMfaSetupOpen] = useState(false);
+  const [pendingRole, setPendingRole] = useState('user');
+  const [mfaToken, setMfaToken] = useState(null);
+
+  const finishSignup = (role) => {
+    if (role === 'admin') {
+      navigate('/admin/dashboard');
+    } else {
+      navigate('/dashboard');
+    }
+  };
 
   // Countdown timer for OTP resend throttle (5 mins = 300s)
   useEffect(() => {
@@ -46,59 +60,58 @@ function Signup() {
     const token = localStorage.getItem('token');
     if (token) {
       fetch(`${API_URL}/api/auth/verify`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       })
-      .then(res => {
-        if (res.ok) {
-          return res.json();
-        } else {
+        .then((res) => {
+          if (res.ok) {
+            return res.json();
+          }
           throw new Error('Token verification failed');
-        }
-      })
-      .then(data => {
-        localStorage.setItem('email', data.user.email);
-        if (data.user.fullName) {
-          localStorage.setItem('fullName', data.user.fullName);
-        } else {
-          localStorage.removeItem('fullName');
-        }
-        if (data.user.profileImageKey) {
-          localStorage.setItem('profileImageKey', data.user.profileImageKey);
-        } else {
-          localStorage.removeItem('profileImageKey');
-        }
-        if (data.user.role) {
-          localStorage.setItem('role', data.user.role);
-        } else {
-          localStorage.removeItem('role');
-        }
-        if (data.user.plan) {
-          localStorage.setItem('plan', data.user.plan);
-        } else {
-          localStorage.removeItem('plan');
-        }
+        })
+        .then((data) => {
+          localStorage.setItem('email', data.user.email);
+          if (data.user.fullName) {
+            localStorage.setItem('fullName', data.user.fullName);
+          } else {
+            localStorage.removeItem('fullName');
+          }
+          if (data.user.profileImageKey) {
+            localStorage.setItem('profileImageKey', data.user.profileImageKey);
+          } else {
+            localStorage.removeItem('profileImageKey');
+          }
+          if (data.user.role) {
+            localStorage.setItem('role', data.user.role);
+          } else {
+            localStorage.removeItem('role');
+          }
+          if (data.user.plan) {
+            localStorage.setItem('plan', data.user.plan);
+          } else {
+            localStorage.removeItem('plan');
+          }
 
-        if (data.user.role === 'admin') {
-          navigate('/admin/dashboard');
-        } else {
-          navigate('/dashboard');
-        }
-      })
-      .catch(() => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('email');
-        localStorage.removeItem('fullName');
-        localStorage.removeItem('profileImageKey');
-        localStorage.removeItem('profileImage');
-        localStorage.removeItem('role');
-      });
+          if (data.user.role === 'admin') {
+            navigate('/admin/dashboard');
+          } else {
+            navigate('/dashboard');
+          }
+        })
+        .catch(() => {
+          localStorage.removeItem('token');
+          localStorage.removeItem('email');
+          localStorage.removeItem('fullName');
+          localStorage.removeItem('profileImageKey');
+          localStorage.removeItem('profileImage');
+          localStorage.removeItem('role');
+        });
     }
   }, [navigate]);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // 1. Size check: 5MB limit
       const maxSizeBytes = 5 * 1024 * 1024;
       if (file.size > maxSizeBytes) {
         alert('Profile image size must be less than 5MB.');
@@ -106,7 +119,6 @@ function Signup() {
         return;
       }
 
-      // 2. Format check: accept only jpg, jpeg, png (using regex)
       const allowedExtensions = /(\.jpg|\.jpeg|\.png)$/i;
       const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png'];
       if (!allowedExtensions.test(file.name) || !allowedMimeTypes.includes(file.type)) {
@@ -132,7 +144,6 @@ function Signup() {
       return;
     }
 
-    // Regex check on input fields
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d).{8,}$/;
 
@@ -155,17 +166,20 @@ function Signup() {
       setIsSubmitting(true);
       setOtpError('');
       setResendStatus('');
-      
+
       const res = await fetch(`${API_URL}/api/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, profileImage, fullName })
+        credentials: 'include',
+        body: JSON.stringify({ email, password, profileImage, fullName }),
       });
       const data = await res.json();
 
       if (!res.ok) {
         if (res.status === 429) {
-          alert(`An active authorization session is already in progress.\nPlease enter the OTP code sent to your email.\n\n${data.message}`);
+          alert(
+            `An active authorization session is already in progress.\nPlease enter the OTP code sent to your email.\n\n${data.message}`
+          );
           setOtpModalOpen(true);
           setCountdown(data.countdown || 300);
           return;
@@ -174,7 +188,7 @@ function Signup() {
       }
 
       setOtpModalOpen(true);
-      setCountdown(300); // 5 minutes resend block
+      setCountdown(300);
     } catch (err) {
       alert(err.message);
     } finally {
@@ -189,11 +203,12 @@ function Signup() {
     try {
       setIsVerifying(true);
       setOtpError('');
-      
+
       const res = await fetch(`${API_URL}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp })
+        credentials: 'include',
+        body: JSON.stringify({ email, otp }),
       });
       const data = await res.json();
 
@@ -201,37 +216,14 @@ function Signup() {
         throw new Error(data.message || 'Verification failed.');
       }
 
-      // Store tokens and user details
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('email', data.user.email);
-      if (data.user.fullName) {
-        localStorage.setItem('fullName', data.user.fullName);
-      }
-      if (data.user.profileImageKey) {
-        localStorage.setItem('profileImageKey', data.user.profileImageKey);
-      }
-      if (data.user.role) {
-        localStorage.setItem('role', data.user.role);
-      } else {
-        localStorage.removeItem('role');
-      }
-      if (data.user.plan) {
-        localStorage.setItem('plan', data.user.plan);
-      } else {
-        localStorage.removeItem('plan');
-      }
+      persistAuthSession(data);
       if (profileImage) {
-        localStorage.setItem('profileImage', profileImage); // base64 fallback
-      } else {
-        localStorage.removeItem('profileImage');
+        localStorage.setItem('profileImage', profileImage);
       }
 
       setOtpModalOpen(false);
-      if (data.user.role === 'admin') {
-        navigate('/admin/dashboard');
-      } else {
-        navigate('/dashboard');
-      }
+      setPendingRole(data.user.role || 'user');
+      setMfaSetupOpen(true);
     } catch (err) {
       setOtpError(err.message);
     } finally {
@@ -245,11 +237,12 @@ function Signup() {
     try {
       setOtpError('');
       setResendStatus('Dispatching code...');
-      
+
       const res = await fetch(`${API_URL}/api/auth/resend-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+        credentials: 'include',
+        body: JSON.stringify({ email }),
       });
       const data = await res.json();
 
@@ -258,7 +251,7 @@ function Signup() {
       }
 
       setResendStatus('A new authorization code has been dispatched.');
-      setCountdown(300); // Reset timer to 5 minutes
+      setCountdown(300);
     } catch (err) {
       setOtpError(err.message);
       setResendStatus('');
@@ -271,12 +264,9 @@ function Signup() {
         <h2 className="auth-card-title">Your Autonomous Cloud Engineer</h2>
         <p className="auth-card-subtitle">Deploy. Monitor. Scale.</p>
 
-        {/* OAuth Buttons & Divider */}
-        <OAuthSection />
+        <OAuthSection onMfaRequired={(token) => setMfaToken(token)} />
 
-        {/* Credentials Form */}
         <form onSubmit={handleSubmit} className="auth-form">
-          {/* Profile Image Field (Optional) */}
           <div className="profile-image-upload-section">
             <div className="profile-image-preview-container">
               <img
@@ -298,11 +288,7 @@ function Signup() {
                   Choose Photo
                 </label>
                 {profileImage && (
-                  <button
-                    type="button"
-                    className="profile-remove-btn"
-                    onClick={() => setProfileImage(null)}
-                  >
+                  <button type="button" className="profile-remove-btn" onClick={() => setProfileImage(null)}>
                     Remove
                   </button>
                 )}
@@ -382,7 +368,6 @@ function Signup() {
         </div>
       </div>
 
-      {/* OTP Verification Modal Overlay */}
       {otpModalOpen && (
         <div className="otp-modal-overlay">
           <div className="otp-modal-card">
@@ -390,7 +375,7 @@ function Signup() {
             <p className="otp-modal-subtitle">
               Enter the 6-digit authorization code dispatched to <strong>{email}</strong>
             </p>
-            
+
             <form onSubmit={handleVerifyOtp} className="otp-form">
               <input
                 type="text"
@@ -402,14 +387,14 @@ function Signup() {
                 required
                 autoFocus
               />
-              
+
               {otpError && <p className="otp-error-message">{otpError}</p>}
               {resendStatus && <p className="otp-status-message">{resendStatus}</p>}
-              
+
               <button type="submit" className="otp-submit-btn" disabled={isVerifying}>
                 {isVerifying ? 'VERIFYING SECURITY CODE...' : 'VERIFY AUTHORIZATION'}
               </button>
-              
+
               <div className="otp-actions-row">
                 <button
                   type="button"
@@ -417,22 +402,46 @@ function Signup() {
                   onClick={handleResendOtp}
                   disabled={countdown > 0}
                 >
-                  {countdown > 0 
+                  {countdown > 0
                     ? `Resend Code (${Math.floor(countdown / 60)}:${(countdown % 60).toString().padStart(2, '0')})`
-                    : 'Resend Code'
-                  }
+                    : 'Resend Code'}
                 </button>
-                <button
-                  type="button"
-                  className="otp-cancel-btn"
-                  onClick={() => setOtpModalOpen(false)}
-                >
+                <button type="button" className="otp-cancel-btn" onClick={() => setOtpModalOpen(false)}>
                   Cancel
                 </button>
               </div>
             </form>
           </div>
         </div>
+      )}
+
+      {mfaSetupOpen && (
+        <div className="otp-modal-overlay">
+          <div className="otp-modal-card mfa-setup-overlay-card">
+            <MfaSetupPanel
+              onSkip={() => {
+                setMfaSetupOpen(false);
+                finishSignup(pendingRole);
+              }}
+              onComplete={() => {
+                setMfaSetupOpen(false);
+                finishSignup(pendingRole);
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {mfaToken && (
+        <MfaChallengeModal
+          mfaToken={mfaToken}
+          onCancel={() => setMfaToken(null)}
+          onSuccess={(data) => {
+            persistAuthSession(data);
+            setMfaToken(null);
+            finishSignup(data.user?.role || 'user');
+          }}
+        />
       )}
     </AuthLayout>
   );

@@ -63,9 +63,25 @@ def load_settings() -> AISettings:
     model = _require("OLLAMA_MODEL")
     provider = os.getenv("OLLAMA_PROVIDER", "ollama_chat").strip() or "ollama_chat"
 
+    # BUG-016 fix: The strict check blocked all non-Ollama LiteLLM providers
+    # (OpenAI, Anthropic, etc.) without any way to opt out.  The validation is
+    # now opt-in via CLOUDPILOT_STRICT_PROVIDER=true so teams can use cloud
+    # LLMs without code changes.  The warning is still emitted to guide users.
+    strict = _optional_bool("CLOUDPILOT_STRICT_PROVIDER", default=False)
     if provider != "ollama_chat":
-        raise ValueError(
-            "OLLAMA_PROVIDER must be 'ollama_chat' for reliable ADK tool calling with Ollama."
+        if strict:
+            raise ValueError(
+                f"OLLAMA_PROVIDER is set to '{provider}'. "
+                "With CLOUDPILOT_STRICT_PROVIDER=true only 'ollama_chat' is allowed "
+                "for reliable ADK tool calling with Ollama. "
+                "Set CLOUDPILOT_STRICT_PROVIDER=false to allow other LiteLLM providers."
+            )
+        import logging as _logging
+        _logging.getLogger(__name__).warning(
+            "OLLAMA_PROVIDER='%s' — tool-calling reliability with Ollama is best with "
+            "'ollama_chat'. Non-Ollama providers (OpenAI, Anthropic, etc.) are allowed "
+            "but unsupported. Set CLOUDPILOT_STRICT_PROVIDER=true to enforce the check.",
+            provider,
         )
 
     return AISettings(

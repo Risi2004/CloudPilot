@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LandingPage from './pages/LandingPage/LandingPage';
 import Login from './pages/Login/Login';
 import Signup from './pages/Signup/Signup';
@@ -39,7 +39,8 @@ function App() {
     // Listen for any interactions indicating that the user is actively using the website
     window.addEventListener('mousemove', handleActivity);
     window.addEventListener('click', handleActivity);
-    window.addEventListener('keypress', handleActivity);
+    // BUG-018 fix: 'keypress' is deprecated — use 'keydown' instead.
+    window.addEventListener('keydown', handleActivity);
     window.addEventListener('scroll', handleActivity);
 
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -66,7 +67,7 @@ function App() {
     return () => {
       window.removeEventListener('mousemove', handleActivity);
       window.removeEventListener('click', handleActivity);
-      window.removeEventListener('keypress', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
       window.removeEventListener('scroll', handleActivity);
       clearInterval(interval);
     };
@@ -84,7 +85,8 @@ function App() {
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/repositories" element={<ProtectedRoute><RepositoryAnalysis /></ProtectedRoute>} />
         <Route path="/repository-analysis" element={<ProtectedRoute><RepositoryAnalysisDetails /></ProtectedRoute>} />
-        <Route path="/repositoy-analysis" element={<ProtectedRoute><RepositoryAnalysisDetails /></ProtectedRoute>} />
+        {/* BUG-005 fix: Redirect old typo URLs to the correct routes */}
+        <Route path="/repositoy-analysis" element={<Navigate to="/repository-analysis" replace />} />
         <Route path="/architecture-recommendation" element={<ProtectedRoute><ArchitectureRecommendation /></ProtectedRoute>} />
         <Route path="/deployment" element={<ProtectedRoute><Deployment /></ProtectedRoute>} />
         <Route path="/platform-selection" element={<ProtectedRoute><PlatformSelection /></ProtectedRoute>} />
@@ -95,7 +97,8 @@ function App() {
         <Route path="/support" element={<ProtectedRoute><SupportUser /></ProtectedRoute>} />
         <Route path="/upgrade" element={<ProtectedRoute><Upgrade /></ProtectedRoute>} />
         <Route path="/admin/dashboard" element={<ProtectedRoute requireAdmin={true}><AdminDashboard /></ProtectedRoute>} />
-        <Route path="/admin/dashbaord" element={<ProtectedRoute requireAdmin={true}><AdminDashboard /></ProtectedRoute>} />
+        {/* BUG-005 fix: Redirect typo admin dashboard URL to correct route */}
+        <Route path="/admin/dashbaord" element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="/admin/users" element={<ProtectedRoute requireAdmin={true}><UserManagement /></ProtectedRoute>} />
         <Route path="/admin/subscriptions" element={<ProtectedRoute requireAdmin={true}><SubscriptionManagement /></ProtectedRoute>} />
         <Route path="/admin/revenue" element={<ProtectedRoute requireAdmin={true}><Revenue /></ProtectedRoute>} />
@@ -105,18 +108,12 @@ function App() {
         <Route path="/admin/notifications" element={<ProtectedRoute requireAdmin={true}><Notification /></ProtectedRoute>} />
         <Route path="/admin/audit-logs" element={<ProtectedRoute requireAdmin={true}><AuditLogs /></ProtectedRoute>} />
         <Route path="/admin/settings" element={<ProtectedRoute requireAdmin={true}><Settings /></ProtectedRoute>} />
-        <Route path="*" element={<UnmatchedRouteFallback />} />
+        {/* BUG-006 fix: Redirect unmatched routes to home instead of navigate(-1)
+             which leaves users on a blank page when history is empty (e.g. direct link). */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
-}
-
-function UnmatchedRouteFallback() {
-  const navigate = useNavigate();
-  useEffect(() => {
-    navigate(-1);
-  }, [navigate]);
-  return null;
 }
 
 export default App;

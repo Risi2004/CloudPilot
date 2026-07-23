@@ -70,7 +70,10 @@ const generateArchitecture = async (req, res, next) => {
       repository_analysis: analysisSession.result,
       platform_recommendation: platformSession.recommendation,
       user_preferences: platformSession.interviewAnswers || [],
-      platform_filter: platformSession.recommendation?.primary_platform || null,
+      // Fix: Set platform_filter to null so the architecture agent evaluates all
+      // eligible platforms (e.g. Vercel for frontend, Render for backend) and can
+      // synthesize a proper hybrid blueprint, instead of forcing everything onto one.
+      platform_filter: null,
     });
 
     const session = await saveArchitectureSession({

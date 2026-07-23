@@ -68,6 +68,49 @@ const userSchema = new mongoose.Schema({
     apiKey: { type: String, default: null, select: false },
     connectedAt: { type: Date, default: null },
   },
+  mfaEnabled: {
+    type: Boolean,
+    default: false
+  },
+  totpSecret: {
+    type: String,
+    default: null,
+    select: false
+  },
+  pendingTotpSecret: {
+    type: String,
+    default: null,
+    select: false
+  },
+  pendingTotpSecretCreatedAt: {
+    type: Date,
+    default: null,
+    select: false
+  },
+  backupCodes: {
+    type: [
+      {
+        hash: { type: String, required: true },
+        usedAt: { type: Date, default: null }
+      }
+    ],
+    default: [],
+    select: false
+  },
+  trustedDevices: {
+    type: [
+      {
+        deviceId: { type: String, required: true },
+        tokenHash: { type: String, required: true },
+        label: { type: String, default: null },
+        createdAt: { type: Date, default: Date.now },
+        expiresAt: { type: Date, required: true },
+        lastUsedAt: { type: Date, default: Date.now }
+      }
+    ],
+    default: [],
+    select: false
+  },
   createdAt: {
     type: Date,
     default: Date.now

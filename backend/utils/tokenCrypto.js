@@ -1,7 +1,17 @@
 const crypto = require('crypto');
 
 function getEncryptionKey() {
-  const secret = process.env.TOKEN_ENCRYPTION_KEY || process.env.JWT_SECRET || 'jwt_secret_fallback';
+  // BUG-002 fix: Never fall back to a hardcoded string.
+  // TOKEN_ENCRYPTION_KEY is the preferred key; JWT_SECRET is accepted as a
+  // secondary fallback so existing encrypted values remain readable after an
+  // upgrade.  Both missing at startup is caught by index.js.
+  const secret = process.env.TOKEN_ENCRYPTION_KEY || process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error(
+      '[CloudPilot] TOKEN_ENCRYPTION_KEY (or JWT_SECRET) is not set. ' +
+      'Cannot encrypt/decrypt platform credentials.',
+    );
+  }
   return crypto.createHash('sha256').update(secret).digest();
 }
 

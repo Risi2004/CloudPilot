@@ -6,6 +6,8 @@ import './Login.css';
 import AuthLayout from '../../components/Auth/AuthLayout';
 import OAuthSection from '../../components/Auth/OAuthSection';
 import AuthInput from '../../components/Auth/AuthInput';
+import MfaChallengeModal from '../../components/Auth/MfaChallengeModal';
+import { persistAuthSession } from '../../services/mfa';
 
 // SVG Assets
 import emailIcon from '../../assets/email.svg';
@@ -18,57 +20,62 @@ function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mfaToken, setMfaToken] = useState(null);
+
+  const navigateAfterAuth = (user) => {
+    if (user?.role === 'admin') {
+      navigate('/admin/dashboard');
+    } else {
+      navigate('/dashboard');
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
       fetch(`${API_URL}/api/auth/verify`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       })
-      .then(res => {
-        if (res.ok) {
-          return res.json();
-        } else {
+        .then((res) => {
+          if (res.ok) {
+            return res.json();
+          }
           throw new Error('Token verification failed');
-        }
-      })
-      .then(data => {
-        localStorage.setItem('email', data.user.email);
-        if (data.user.fullName) {
-          localStorage.setItem('fullName', data.user.fullName);
-        } else {
-          localStorage.removeItem('fullName');
-        }
-        if (data.user.profileImageKey) {
-          localStorage.setItem('profileImageKey', data.user.profileImageKey);
-        } else {
-          localStorage.removeItem('profileImageKey');
-        }
-        if (data.user.role) {
-          localStorage.setItem('role', data.user.role);
-        } else {
-          localStorage.removeItem('role');
-        }
-        if (data.user.plan) {
-          localStorage.setItem('plan', data.user.plan);
-        } else {
-          localStorage.removeItem('plan');
-        }
+        })
+        .then((data) => {
+          localStorage.setItem('email', data.user.email);
+          if (data.user.fullName) {
+            localStorage.setItem('fullName', data.user.fullName);
+          } else {
+            localStorage.removeItem('fullName');
+          }
+          if (data.user.profileImageKey) {
+            localStorage.setItem('profileImageKey', data.user.profileImageKey);
+          } else {
+            localStorage.removeItem('profileImageKey');
+          }
+          if (data.user.role) {
+            localStorage.setItem('role', data.user.role);
+          } else {
+            localStorage.removeItem('role');
+          }
+          if (data.user.plan) {
+            localStorage.setItem('plan', data.user.plan);
+          } else {
+            localStorage.removeItem('plan');
+          }
 
-        if (data.user.role === 'admin') {
-          navigate('/admin/dashboard');
-        } else {
-          navigate('/dashboard');
-        }
-      })
-      .catch(() => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('email');
-        localStorage.removeItem('fullName');
-        localStorage.removeItem('profileImageKey');
-        localStorage.removeItem('profileImage');
-        localStorage.removeItem('role');
-      });
+          navigateAfterAuth(data.user);
+        })
+        .catch(() => {
+          localStorage.removeItem('token');
+          localStorage.removeItem('email');
+          localStorage.removeItem('fullName');
+          localStorage.removeItem('profileImageKey');
+          localStorage.removeItem('profileImage');
+          localStorage.removeItem('role');
+        });
     }
   }, [navigate]);
 
@@ -76,7 +83,6 @@ function Login() {
     e.preventDefault();
     if (isSubmitting) return;
 
-    // Regex check on email
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email)) {
       alert('Please enter a valid email address.');
@@ -88,7 +94,8 @@ function Login() {
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        credentials: 'include',
+        body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
 
@@ -96,37 +103,13 @@ function Login() {
         throw new Error(data.message || 'Login failed.');
       }
 
-      // Store token and user details
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('email', data.user.email);
-      if (data.user.fullName) {
-        localStorage.setItem('fullName', data.user.fullName);
-      } else {
-        localStorage.removeItem('fullName');
+      if (data.mfaRequired && data.mfaToken) {
+        setMfaToken(data.mfaToken);
+        return;
       }
-      if (data.user.profileImageKey) {
-        localStorage.setItem('profileImageKey', data.user.profileImageKey);
-      } else {
-        localStorage.removeItem('profileImageKey');
-      }
-      if (data.user.role) {
-        localStorage.setItem('role', data.user.role);
-      } else {
-        localStorage.removeItem('role');
-      }
-      if (data.user.plan) {
-        localStorage.setItem('plan', data.user.plan);
-      } else {
-        localStorage.removeItem('plan');
-      }
-      // Clear any temporary base64 image on new login to avoid stale local images
-      localStorage.removeItem('profileImage');
 
-      if (data.user.role === 'admin') {
-        navigate('/admin/dashboard');
-      } else {
-        navigate('/dashboard');
-      }
+      persistAuthSession(data);
+      navigateAfterAuth(data.user);
     } catch (err) {
       alert(err.message);
     } finally {
@@ -146,10 +129,10 @@ function Login() {
         <h2 className="auth-card-title">Initialize Session</h2>
         <p className="auth-card-subtitle">Authorize access to the CloudPilot Mission Control.</p>
 
-        {/* OAuth Buttons & Divider */}
-        <OAuthSection />
+        <OAuthSection
+          onMfaRequired={(token) => setMfaToken(token)}
+        />
 
-        {/* Credentials Form */}
         <form onSubmit={handleSubmit} className="auth-form">
           <AuthInput
             label="ACCESS IDENTIFIER"
@@ -198,6 +181,18 @@ function Login() {
           </div>
         </div>
       </div>
+
+      {mfaToken && (
+        <MfaChallengeModal
+          mfaToken={mfaToken}
+          onCancel={() => setMfaToken(null)}
+          onSuccess={(data) => {
+            persistAuthSession(data);
+            setMfaToken(null);
+            navigateAfterAuth(data.user);
+          }}
+        />
+      )}
     </AuthLayout>
   );
 }

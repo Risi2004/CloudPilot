@@ -25,6 +25,7 @@ function ViewProfile() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
   const [uploadLoading, setUploadLoading] = useState(false);
@@ -39,6 +40,7 @@ function ViewProfile() {
 
     fetch(`${API_URL}/api/auth/verify`, {
       headers: { Authorization: `Bearer ${token}` },
+      credentials: 'include',
     })
       .then((res) => {
         if (!res.ok) throw new Error('Session verification failed.');
@@ -203,7 +205,8 @@ function ViewProfile() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ currentPassword, newPassword }),
+        credentials: 'include',
+        body: JSON.stringify({ currentPassword, newPassword, mfaCode: mfaCode || undefined }),
       });
       const data = await res.json();
 
@@ -213,6 +216,7 @@ function ViewProfile() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      setMfaCode('');
       setTimeout(() => setPassSuccessMsg(''), 4000);
     } catch (err) {
       setPassErrorMsg(err.message);
@@ -257,9 +261,11 @@ function ViewProfile() {
               currentPassword={currentPassword}
               newPassword={newPassword}
               confirmPassword={confirmPassword}
+              mfaCode={mfaCode}
               onCurrentPasswordChange={setCurrentPassword}
               onNewPasswordChange={setNewPassword}
               onConfirmPasswordChange={setConfirmPassword}
+              onMfaCodeChange={setMfaCode}
               onPasswordSubmit={handlePasswordUpdate}
               isLoading={isLoading}
               passErrorMsg={passErrorMsg}

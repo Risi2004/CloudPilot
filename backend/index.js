@@ -1,16 +1,42 @@
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 require('dotenv').config();
 const connectDB = require('./config/db');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// --- Startup environment validation ---
+// BUG-001 / BUG-002: Fail fast if critical secrets are missing so that the
+// fallback strings in tokenCrypto / auth middleware are never silently used.
+const REQUIRED_SECRETS = ['JWT_SECRET', 'TOKEN_ENCRYPTION_KEY'];
+for (const key of REQUIRED_SECRETS) {
+  if (!process.env[key]) {
+    const msg = `[CloudPilot] FATAL: Missing required environment variable: ${key}. Set it in backend/.env before starting the server.`;
+    if (process.env.NODE_ENV === 'production') {
+      console.error(msg);
+      process.exit(1);
+    } else {
+      console.warn(`[CloudPilot] WARNING: ${msg}`);
+    }
+  }
+}
+
 // Connect to Database
 connectDB();
 
+const frontendOrigin =
+  process.env.FRONTEND_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:5173';
+
 // Middlewares
-app.use(cors());
+app.use(
+  cors({
+    origin: frontendOrigin,
+    credentials: true,
+  })
+);
+app.use(cookieParser());
 app.use(express.json({ limit: '10mb' })); // Support larger base64 avatar uploads
 
 // Routes

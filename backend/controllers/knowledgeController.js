@@ -7,27 +7,38 @@ const generateKey = (name) => {
   return name.trim().toLowerCase().replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-');
 };
 
-// Helper to recursively compute folder sync status based on underlying files
+// Helper to recursively compute folder sync status based on underlying files.
+// BUG-020 fix: Replaced manual BFS (one DataSource.find() per level) with a
+// single $graphLookup aggregation so the entire descendant tree is fetched in
+// one query instead of N queries (one per folder level).
 const getFolderSyncStatus = async (folderId) => {
-  const childIds = [folderId];
-  const queue = [folderId];
-  while (queue.length > 0) {
-    const currentId = queue.shift();
-    const children = await DataSource.find({ parentId: currentId }).select('_id');
-    for (const child of children) {
-      childIds.push(child._id);
-      queue.push(child._id);
-    }
-  }
+  // Use $graphLookup to collect all descendant IDs in one round-trip.
+  const result = await DataSource.aggregate([
+    { $match: { _id: folderId } },
+    {
+      $graphLookup: {
+        from: 'datasources',
+        startWith: '$_id',
+        connectFromField: '_id',
+        connectToField: 'parentId',
+        as: 'descendants',
+        maxDepth: 50,
+      },
+    },
+    { $project: { descendants: { _id: 1 } } },
+  ]);
 
-  const filesCount = await KnowledgeFile.countDocuments({ dataSourceId: { $in: childIds } });
+  const descendantIds = result[0]?.descendants?.map((d) => d._id) ?? [];
+  const allIds = [folderId, ...descendantIds];
+
+  const filesCount = await KnowledgeFile.countDocuments({ dataSourceId: { $in: allIds } });
   if (filesCount === 0) {
     return 'Synced';
   }
 
   const unindexedCount = await KnowledgeFile.countDocuments({
-    dataSourceId: { $in: childIds },
-    embeddingStatus: { $ne: 'Indexed' }
+    dataSourceId: { $in: allIds },
+    embeddingStatus: { $ne: 'Indexed' },
   });
 
   return unindexedCount > 0 ? 'Needs Update' : 'Synced';

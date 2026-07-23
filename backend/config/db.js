@@ -3,7 +3,17 @@ const mongoose = require('mongoose');
 const connectDB = async () => {
   const mongoURI = process.env.MONGO_URI;
   if (!mongoURI) {
-    console.log('MONGO_URI is not defined in environment variables. Running without a database connection.');
+    // BUG-010 fix: A missing MONGO_URI causes MongoNotConnectedError on every
+    // request.  Hard-exit in production; warn loudly in development so the
+    // developer knows immediately rather than seeing confusing 500 errors.
+    const msg =
+      '[CloudPilot] MONGO_URI is not set. The server cannot operate without a database. ' +
+      'Please add MONGO_URI to your backend/.env file.';
+    if (process.env.NODE_ENV === 'production') {
+      console.error(msg);
+      process.exit(1);
+    }
+    console.warn(msg);
     return;
   }
 

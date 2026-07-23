@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
-const DEPLOYMENT_TTL_SECONDS = Number(process.env.DEPLOYMENT_SESSION_TTL_SECONDS || 7200);
+// BUG-008 fix: Default TTL raised from 7200 (2h) to 86400 (24h).
+// Render deployments can take 20-40 min + multiple poll cycles.  A 2-hour
+// window is too short and causes session deletion mid-deployment.  Override
+// with DEPLOYMENT_SESSION_TTL_SECONDS in .env for custom tuning.
+const DEPLOYMENT_TTL_SECONDS = Number(process.env.DEPLOYMENT_SESSION_TTL_SECONDS || 86400);
 
 const deploymentSessionSchema = new mongoose.Schema({
   userId: {

@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
@@ -5,10 +6,22 @@ const PendingUser = require('../models/PendingUser');
 const { uploadBase64Image, getPrivateImageStream, deleteImage } = require('../config/s3');
 const { sendOtpEmail, sendOnboardEmail } = require('../utils/mailer');
 const { verifyIdToken } = require('../config/firebase');
+const { resolveLoginAfterCredentials } = require('./mfaController');
+const {
+  createSessionToken,
+  userPublicPayload,
+  verifyTotpOrBackup,
+} = require('../utils/mfa');
 
 // Regular Expressions for field validation
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d).{8,}$/;
+
+// BUG-003 fix: Use ADMIN_EMAIL env var so it can be changed without code edits.
+// Falls back to the legacy value only in non-production to preserve dev setups.
+const ADMIN_EMAIL =
+  process.env.ADMIN_EMAIL ||
+  (process.env.NODE_ENV !== 'production' ? 'admin@gmail.com' : null);
 
 // Helper to generate 6-digit verification code
 const generateOTP = () => {
@@ -210,8 +223,11 @@ const verifyOtp = async (req, res, next) => {
       return res.status(400).json({ message: 'Invalid or expired authorization session. Please sign up again.' });
     }
 
-    // Verify OTP matching
-    if (pendingUser.otp !== otp.trim()) {
+    // BUG-014 fix: Use timing-safe comparison to prevent timing-based OTP oracle.
+    const expected = Buffer.from(pendingUser.otp);
+    const provided = Buffer.from(otp.trim().padEnd(pendingUser.otp.length, '\0').slice(0, pendingUser.otp.length));
+    const otpMatch = expected.length === provided.length && crypto.timingSafeEqual(expected, provided);
+    if (!otpMatch) {
       return res.status(400).json({ message: 'Invalid security code.' });
     }
 
@@ -221,7 +237,7 @@ const verifyOtp = async (req, res, next) => {
       fullName: pendingUser.fullName,
       password: pendingUser.password,
       profileImageKey: pendingUser.profileImageKey,
-      role: pendingUser.email === 'admin@gmail.com' ? 'admin' : 'user',
+      role: ADMIN_EMAIL && pendingUser.email === ADMIN_EMAIL ? 'admin' : 'user',
       plan: 'Free'
     });
 
@@ -231,11 +247,7 @@ const verifyOtp = async (req, res, next) => {
     await PendingUser.deleteOne({ _id: pendingUser._id });
 
     // Generate JWT token
-    const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'jwt_secret_fallback',
-      { expiresIn: '7d' }
-    );
+    const token = createSessionToken(user);
 
     // Send welcome onboarding email asynchronously (do not block client response)
     sendOnboardEmail(user.email).catch(e => console.error('Error sending onboarding welcome email:', e));
@@ -243,13 +255,8 @@ const verifyOtp = async (req, res, next) => {
     res.status(200).json({
       message: 'Fleet registration verified successfully.',
       token,
-      user: {
-        email: user.email,
-        fullName: user.fullName,
-        profileImageKey: user.profileImageKey,
-        role: user.role,
-        plan: user.plan
-      }
+      user: userPublicPayload(user),
+      mfaSetupOptional: true,
     });
   } catch (err) {
     next(err);
@@ -257,7 +264,7 @@ const verifyOtp = async (req, res, next) => {
 };
 
 /**
- * Handle user session login and return signed JWT.
+ * Handle user session login and return signed JWT (or MFA challenge).
  */
 const login = async (req, res, next) => {
   try {
@@ -274,7 +281,7 @@ const login = async (req, res, next) => {
       return res.status(400).json({ message: 'Invalid Access Identifier format. Must be a valid email address.' });
     }
 
-    const user = await User.findOne({ email: normalizedEmail });
+    const user = await User.findOne({ email: normalizedEmail }).select('+trustedDevices');
 
     if (!user) {
       return res.status(401).json({ message: 'Unauthorized: Invalid credentials.' });
@@ -284,34 +291,24 @@ const login = async (req, res, next) => {
       return res.status(403).json({ message: 'Your account has been suspended by an administrator. For further information, please contact support.' });
     }
 
+    if (!user.password) {
+      return res.status(401).json({
+        message: 'This account uses social login. Please sign in with Google or GitHub.',
+      });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Unauthorized: Invalid credentials.' });
     }
 
-    // Auto-promote admin email if not already admin
-    if (user.email === 'admin@gmail.com' && user.role !== 'admin') {
+    // BUG-003 fix: Use ADMIN_EMAIL env var for admin promotion.
+    if (ADMIN_EMAIL && user.email === ADMIN_EMAIL && user.role !== 'admin') {
       user.role = 'admin';
       await user.save();
     }
 
-    const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'jwt_secret_fallback',
-      { expiresIn: '7d' }
-    );
-
-    res.status(200).json({
-      message: 'Login successful.',
-      token,
-      user: {
-        email: user.email,
-        fullName: user.fullName,
-        profileImageKey: user.profileImageKey,
-        role: user.role,
-        plan: user.plan
-      }
-    });
+    return resolveLoginAfterCredentials(user, req, res);
   } catch (err) {
     next(err);
   }
@@ -327,6 +324,8 @@ const getProfileImage = async (req, res, next) => {
     
     const { stream, contentType } = await getPrivateImageStream(key);
     
+    // Optimize: Cache profile images in browser for 24 hours to prevent repeated S3/R2 requests
+    res.setHeader('Cache-Control', 'public, max-age=86400');
     res.setHeader('Content-Type', contentType);
     
     // Pipe the response body stream to express response
@@ -378,7 +377,8 @@ const verifyToken = async (req, res, next) => {
         plan: user.plan,
         billingCycle: user.billingCycle,
         autoRenew: user.autoRenew,
-        subscriptionExpiresAt: user.subscriptionExpiresAt
+        subscriptionExpiresAt: user.subscriptionExpiresAt,
+        mfaEnabled: !!user.mfaEnabled,
       }
     });
   } catch (err) {
@@ -392,9 +392,9 @@ const verifyToken = async (req, res, next) => {
 const updateProfile = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { fullName, currentPassword, newPassword, profileImage } = req.body;
+    const { fullName, currentPassword, newPassword, profileImage, mfaCode } = req.body;
     
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).select('+totpSecret +backupCodes +mfaEnabled');
     if (!user) {
       return res.status(404).json({ message: 'User not found.' });
     }
@@ -404,6 +404,11 @@ const updateProfile = async (req, res, next) => {
       if (!currentPassword) {
         return res.status(400).json({ message: 'Current password is required to change password.' });
       }
+      if (!user.password) {
+        return res.status(400).json({
+          message: 'This account uses social login and has no password to change.',
+        });
+      }
       const isMatch = await bcrypt.compare(currentPassword, user.password);
       if (!isMatch) {
         return res.status(401).json({ message: 'Invalid current password.' });
@@ -411,6 +416,27 @@ const updateProfile = async (req, res, next) => {
       if (!passwordRegex.test(newPassword)) {
         return res.status(400).json({ message: 'New Encryption Key must be at least 8 characters long and contain both letters and numbers.' });
       }
+
+      // Sensitive action: require MFA even on a trusted device
+      if (user.mfaEnabled) {
+        if (!mfaCode) {
+          return res.status(403).json({
+            message: 'Multi-factor authentication code is required to change your password.',
+            mfaRequired: true,
+          });
+        }
+        const verified = await verifyTotpOrBackup(user, mfaCode);
+        if (!verified.ok) {
+          return res.status(403).json({
+            message: 'Invalid authenticator or recovery code.',
+            mfaRequired: true,
+          });
+        }
+        if (verified.usedBackup) {
+          user.markModified('backupCodes');
+        }
+      }
+
       user.password = await bcrypt.hash(newPassword, 10);
     }
 
@@ -457,7 +483,8 @@ const updateProfile = async (req, res, next) => {
         email: user.email,
         fullName: user.fullName,
         profileImageKey: user.profileImageKey,
-        plan: user.plan
+        plan: user.plan,
+        mfaEnabled: !!user.mfaEnabled,
       }
     });
   } catch (err) {
@@ -485,7 +512,7 @@ const firebaseLogin = async (req, res, next) => {
     }
 
     // Find or create user in MongoDB
-    let user = await User.findOne({ email });
+    let user = await User.findOne({ email }).select('+trustedDevices');
 
     if (user && user.status === 'Suspended') {
       return res.status(403).json({ message: 'Your account has been suspended by an administrator. For further information, please contact support.' });
@@ -496,31 +523,14 @@ const firebaseLogin = async (req, res, next) => {
       user = new User({
         email,
         fullName: name.trim(),
-        role: email === 'admin@gmail.com' ? 'admin' : 'user',
+        role: ADMIN_EMAIL && email === ADMIN_EMAIL ? 'admin' : 'user',
         password: undefined, // No password since they use OAuth
         plan: 'Free'
       });
       await user.save();
     }
 
-    // Generate JWT token for subsequent API requests (consistent with credentials login)
-    const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'jwt_secret_fallback',
-      { expiresIn: '7d' }
-    );
-
-    res.status(200).json({
-      message: 'Firebase login successful.',
-      token,
-      user: {
-        email: user.email,
-        fullName: user.fullName,
-        profileImageKey: user.profileImageKey,
-        role: user.role,
-        plan: user.plan
-      }
-    });
+    return resolveLoginAfterCredentials(user, req, res);
   } catch (err) {
     res.status(401).json({ message: 'Authentication failed: ' + err.message });
   }

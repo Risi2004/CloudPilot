@@ -52,6 +52,16 @@ async function saveDeploymentSession({
       { new: true },
     );
     if (updated) return updated;
+
+    // BUG-013 fix: Do NOT silently create a new session when the caller
+    // expected to update an existing one.  A silent fallback generates a new
+    // session ID mid-flow, breaking URL synchronisation in the frontend and
+    // orphaning any in-progress provider state attached to the old session.
+    // Callers should handle this error by starting a fresh deployment flow.
+    throw Object.assign(
+      new Error('Deployment session has expired or was not found. Please start a new deployment.'),
+      { code: 'session_expired', status: 404 },
+    );
   }
 
   return DeploymentSession.create({

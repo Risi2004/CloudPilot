@@ -60,7 +60,9 @@ function formatDeploymentResponse(session, agentResult) {
   };
 }
 
-async function resolveCredentials(user, bodyCredentials = {}) {
+// BUG-011 fix: resolveCredentials performs only synchronous work — remove the
+// misleading async keyword to avoid confusing future maintainers.
+function resolveCredentials(user, bodyCredentials = {}) {
   const vercelToken =
     bodyCredentials.vercel_token?.trim()
     || getDecryptedVercelToken(user)

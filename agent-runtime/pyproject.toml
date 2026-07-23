@@ -9,7 +9,9 @@ description = "CloudPilot Google ADK agent runtime"
 requires-python = ">=3.10"
 dependencies = [
   "google-adk>=2.3.0,<3",
-  "litellm>=1.83.7,<=1.83.14",
+  # BUG-019 fix: The <=1.83.14 upper bound was too tight — future pip installs
+  # fail when newer 1.x patches are published.  Use <2 to accept all 1.x releases.
+  "litellm>=1.83.7,<2",
   "python-dotenv>=1.0,<2",
   "httpx>=0.27,<1",
   "chromadb>=0.5,<1",

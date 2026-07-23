@@ -347,8 +347,15 @@ class BlueprintValidator:
         frameworks = facts.get("frameworks") or {}
         if frameworks.get("frontend") or frameworks.get("backend"):
             return True
-        # No strong signal either way — do not block deploy with a false positive.
-        return True
+        # BUG-015 note: The function intentionally returns True in the ambiguous
+        # case (no strong signal from either path inspection or scan facts).
+        # Rationale: a false-negative here blocks the entire deployment for an
+        # innocuous structural difference (e.g. a mono-repo root without
+        # top-level build files).  Blocking is higher-cost than allowing and
+        # letting the platform build step surface the real error.
+        # If you want to enforce stricter validation, replace this return with a
+        # ValidationIssue(severity="warning", ...) emission.
+        return True  # intentional: prefer false-positive over false-negative
 
     def _collect_required_env(self, blueprint: DeploymentBlueprint) -> set[str]:
         required: set[str] = set()

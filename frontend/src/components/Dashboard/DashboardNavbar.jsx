@@ -15,10 +15,21 @@ function DashboardNavbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
-  const [avatar, setAvatar] = useState(profileIcon);
-  const [userName, setUserName] = useState('');
-  const [userEmail, setUserEmail] = useState('');
-  const [userPlan, setUserPlan] = useState('Free');
+  
+  // Cache-first initialization to render profile photo and name instantly
+  const [avatar, setAvatar] = useState(() => {
+    const savedKey = localStorage.getItem('profileImageKey');
+    const savedImage = localStorage.getItem('profileImage');
+    if (savedKey) {
+      const filename = savedKey.split('/').pop();
+      return `${API_URL}/api/auth/profile-image/${filename}`;
+    }
+    if (savedImage) return savedImage;
+    return profileIcon;
+  });
+  const [userName, setUserName] = useState(() => localStorage.getItem('fullName') || 'Commander');
+  const [userEmail, setUserEmail] = useState(() => localStorage.getItem('email') || '');
+  const [userPlan, setUserPlan] = useState(() => localStorage.getItem('plan') || 'Free');
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
   // Notifications State

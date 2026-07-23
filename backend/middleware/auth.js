@@ -25,37 +25,17 @@ const protect = async (req, res, next) => {
     // Check for plan expiration dynamically
     if (user.plan !== 'Free' && user.subscriptionExpiresAt && new Date() > new Date(user.subscriptionExpiresAt)) {
       if (user.autoRenew) {
-        // Auto-renew subscription
+        // BUG-007 fix: Auto-renewal must NOT create a COMPLETED transaction without
+        // a real payment.  Extend the subscription date here (preserves access) but
+        // do NOT log a transaction — that must only be done after a successful charge
+        // via the payment processor.
+        // TODO: Wire up the payment provider here and only call user.save() +
+        //       create a Transaction after a successful charge response.
         const daysToAdd = user.billingCycle === 'annually' ? 365 : 30;
         const extensionDate = new Date(user.subscriptionExpiresAt);
         extensionDate.setDate(extensionDate.getDate() + daysToAdd);
         user.subscriptionExpiresAt = extensionDate;
         await user.save();
-
-        // Save a renewal transaction record
-        const Transaction = require('../models/Transaction');
-        try {
-          const SubscriptionPlan = require('../models/SubscriptionPlan');
-          const planRecord = await SubscriptionPlan.findOne({ name: user.plan });
-          const planPrice = planRecord ? planRecord.price : (user.plan === 'Enterprise' ? 299 : 49);
-          const finalPrice = user.billingCycle === 'annually' ? planPrice * 12 * 0.8 : planPrice;
-          
-          const transaction = new Transaction({
-            userId: user._id,
-            name: user.fullName,
-            email: user.email,
-            plan: `${user.plan} (${user.billingCycle === 'annually' ? 'Annually' : 'Monthly'}) [Renewal]`,
-            amount: finalPrice,
-            status: 'COMPLETED',
-            billingCycle: user.billingCycle,
-            autoRenew: user.autoRenew,
-            orderId: `RENEW_${user._id}_${Date.now()}`,
-            date: new Date()
-          });
-          await transaction.save();
-        } catch (txErr) {
-          console.error('[Auto-Renew telemetry] Failed to create renewal transaction log:', txErr);
-        }
       } else {
         // Subscription expired, downgrade to Free plan
         user.plan = 'Free';
