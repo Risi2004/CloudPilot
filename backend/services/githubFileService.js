@@ -31,6 +31,33 @@ const CANDIDATE_FILES = [
 const MAX_CHARS_PER_FILE = 4000;
 const MAX_TOTAL_CHARS = 20000;
 
+// Source file extensions worth scanning for environment-variable references.
+const SCANNABLE_EXTENSIONS = new Set([
+  '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs',
+  '.py', '.rb', '.go', '.java', '.php', '.rs',
+]);
+
+// Directories that never contain first-party source code worth scanning.
+const IGNORED_DIR_SEGMENTS = new Set([
+  'node_modules', '.git', 'dist', 'build', '.next', 'out', 'coverage',
+  'vendor', 'venv', '.venv', '__pycache__', 'target', '.idea', '.vscode', '.cache',
+]);
+
+const MAX_SCAN_FILES = 60;
+const MAX_SCAN_FILE_SIZE = 200 * 1024; // skip files bigger than this (likely bundled/minified)
+
+// Patterns covering common ways code reads environment variables across languages.
+const ENV_VAR_PATTERNS = [
+  /process\.env\.([A-Z_][A-Z0-9_]*)/g,
+  /process\.env\[\s*['"]([A-Z_][A-Z0-9_]*)['"]\s*\]/g,
+  /import\.meta\.env\.([A-Z_][A-Z0-9_]*)/g,
+  /os\.environ\.get\(\s*['"]([A-Z_][A-Z0-9_]*)['"]/g,
+  /os\.environ\[\s*['"]([A-Z_][A-Z0-9_]*)['"]\s*\]/g,
+  /os\.getenv\(\s*['"]([A-Z_][A-Z0-9_]*)['"]/g,
+  /ENV\[\s*['"]([A-Z_][A-Z0-9_]*)['"]\s*\]/g,
+  /System\.getenv\(\s*['"]([A-Z_][A-Z0-9_]*)['"]\s*\)/g,
+];
+
 class GithubFileError extends Error {
   constructor(message, statusCode) {
     super(message);
@@ -112,4 +139,76 @@ async function fetchProjectMetadataFiles(repoUrl, githubToken) {
   return { detectedFiles, repoFullName: `${owner}/${repo}` };
 }
 
-module.exports = { fetchProjectMetadataFiles, GithubFileError };
+function isIgnoredPath(path) {
+  return path.split('/').some((segment) => IGNORED_DIR_SEGMENTS.has(segment));
+}
+
+function getExtension(path) {
+  const dot = path.lastIndexOf('.');
+  return dot === -1 ? '' : path.slice(dot).toLowerCase();
+}
+
+/**
+ * Recursively walks the repo's default branch tree and regex-scans source files
+ * for environment-variable reads (process.env.X, import.meta.env.X, os.getenv, etc).
+ * Best-effort: caps the number/size of files fetched to keep this fast on large repos.
+ */
+async function scanRepoForEnvVars(repoUrl, githubToken) {
+  const { owner, repo } = parseRepoUrl(repoUrl);
+
+  const repoInfo = await githubFetch(`/repos/${owner}/${repo}`, githubToken);
+  const branch = repoInfo.default_branch || 'main';
+
+  const treeData = await githubFetch(
+    `/repos/${owner}/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`,
+    githubToken
+  );
+
+  const tree = Array.isArray(treeData.tree) ? treeData.tree : [];
+
+  const candidates = tree
+    .filter(
+      (entry) =>
+        entry.type === 'blob' &&
+        typeof entry.path === 'string' &&
+        SCANNABLE_EXTENSIONS.has(getExtension(entry.path)) &&
+        !isIgnoredPath(entry.path) &&
+        (typeof entry.size !== 'number' || entry.size <= MAX_SCAN_FILE_SIZE)
+    )
+    .slice(0, MAX_SCAN_FILES);
+
+  const keyToFiles = new Map();
+
+  for (const entry of candidates) {
+    let blob;
+    try {
+      blob = await githubFetch(`/repos/${owner}/${repo}/git/blobs/${entry.sha}`, githubToken);
+    } catch (err) {
+      continue; // best-effort: skip files that fail to fetch
+    }
+    if (blob.encoding !== 'base64' || typeof blob.content !== 'string') continue;
+
+    let content;
+    try {
+      content = Buffer.from(blob.content, 'base64').toString('utf-8');
+    } catch (err) {
+      continue;
+    }
+
+    for (const pattern of ENV_VAR_PATTERNS) {
+      pattern.lastIndex = 0;
+      let match;
+      while ((match = pattern.exec(content)) !== null) {
+        const key = match[1];
+        if (!keyToFiles.has(key)) keyToFiles.set(key, new Set());
+        keyToFiles.get(key).add(entry.path);
+      }
+    }
+  }
+
+  return Array.from(keyToFiles.entries())
+    .map(([key, files]) => ({ key, files: Array.from(files) }))
+    .sort((a, b) => a.key.localeCompare(b.key));
+}
+
+module.exports = { fetchProjectMetadataFiles, scanRepoForEnvVars, GithubFileError };

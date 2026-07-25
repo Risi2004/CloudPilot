@@ -31,6 +31,19 @@ const analysisSchema = new mongoose.Schema({
   errorMessage: {
     type: String,
     default: null
+  },
+  envVariables: {
+    type: [
+      {
+        key: { type: String, required: true, trim: true },
+        value: { type: String, default: '' }
+      }
+    ],
+    default: []
+  },
+  envConfigured: {
+    type: Boolean,
+    default: false
   }
 }, { timestamps: true });
 

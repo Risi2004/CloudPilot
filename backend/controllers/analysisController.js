@@ -1,6 +1,28 @@
 const Analysis = require('../models/Analysis');
-const { fetchProjectMetadataFiles, GithubFileError } = require('../services/githubFileService');
+const { fetchProjectMetadataFiles, scanRepoForEnvVars, GithubFileError } = require('../services/githubFileService');
 const { runCodeAnalysisAgent, AnalysisError } = require('../agents/codeAnalysisAgent');
+
+// Merge the LLM's guessed env vars (e.g. "DATABASE_URL (Postgres link)") with keys
+// actually found by scanning source code, de-duping case-insensitively on the key.
+function mergeEnvVariables(llmList, scannedList) {
+  const merged = new Map();
+
+  for (const entry of llmList || []) {
+    if (typeof entry !== 'string' || !entry.trim()) continue;
+    const key = entry.split(' ')[0].trim();
+    if (!key) continue;
+    merged.set(key.toUpperCase(), entry.trim());
+  }
+
+  for (const { key, files } of scannedList || []) {
+    const upperKey = key.toUpperCase();
+    if (merged.has(upperKey)) continue;
+    const sourceHint = files && files.length ? `(found in ${files[0]})` : '(found in source code)';
+    merged.set(upperKey, `${key} ${sourceHint}`);
+  }
+
+  return Array.from(merged.values());
+}
 
 const analyzeRepository = async (req, res) => {
   const { repoUrl, githubToken, force } = req.body;
@@ -23,6 +45,8 @@ const analyzeRepository = async (req, res) => {
           detectedFiles: cached.detectedFiles,
           result: cached.result,
           analyzedAt: cached.updatedAt,
+          envConfigured: cached.envConfigured,
+          envVariables: cached.envVariables,
         });
       }
     }
@@ -40,6 +64,19 @@ const analyzeRepository = async (req, res) => {
       files: detectedFiles,
       userId: String(req.user._id),
     });
+
+    let scannedEnvVars = [];
+    try {
+      scannedEnvVars = await scanRepoForEnvVars(repoUrl, githubToken);
+    } catch (scanErr) {
+      console.error('Env variable source scan failed (non-fatal):', scanErr.message);
+    }
+
+    result.buildRequirements = result.buildRequirements || {};
+    result.buildRequirements.envVariables = mergeEnvVariables(
+      result.buildRequirements.envVariables,
+      scannedEnvVars
+    );
 
     const detectedFilePaths = detectedFiles.map((f) => f.path);
 
@@ -64,6 +101,8 @@ const analyzeRepository = async (req, res) => {
       detectedFiles: saved.detectedFiles,
       result: saved.result,
       analyzedAt: saved.updatedAt,
+      envConfigured: saved.envConfigured,
+      envVariables: saved.envVariables,
     });
   } catch (err) {
     if (err instanceof GithubFileError) {
@@ -77,4 +116,44 @@ const analyzeRepository = async (req, res) => {
   }
 };
 
-module.exports = { analyzeRepository };
+const saveEnvVariables = async (req, res) => {
+  const { repoUrl, variables } = req.body;
+
+  if (!repoUrl) {
+    return res.status(400).json({ message: 'repoUrl is required.' });
+  }
+  if (!Array.isArray(variables)) {
+    return res.status(400).json({ message: 'variables must be an array of { key, value }.' });
+  }
+
+  const cleaned = variables
+    .map((v) => ({ key: String(v?.key || '').trim(), value: String(v?.value ?? '') }))
+    .filter((v) => v.key.length > 0);
+
+  if (cleaned.length === 0) {
+    return res.status(400).json({ message: 'At least one environment variable key is required.' });
+  }
+
+  try {
+    const updated = await Analysis.findOneAndUpdate(
+      { userId: req.user._id, repoUrl },
+      { envVariables: cleaned, envConfigured: true },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ message: 'No analysis found for this repository. Run analysis first.' });
+    }
+
+    return res.status(200).json({
+      status: 'ok',
+      envVariables: updated.envVariables,
+      envConfigured: updated.envConfigured,
+    });
+  } catch (err) {
+    console.error('Failed to save environment variables:', err);
+    return res.status(500).json({ message: 'Failed to save environment variables. Please try again.' });
+  }
+};
+
+module.exports = { analyzeRepository, saveEnvVariables };

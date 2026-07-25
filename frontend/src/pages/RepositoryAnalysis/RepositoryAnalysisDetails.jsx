@@ -23,6 +23,7 @@ function RepositoryAnalysisDetails() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [envStepComplete, setEnvStepComplete] = useState(false);
+  const [savedEnvVariables, setSavedEnvVariables] = useState([]);
   const [activeTab, setActiveTab] = useState('architecture');
   const [analysisData, setAnalysisData] = useState(null);
   const [error, setError] = useState(null);
@@ -50,6 +51,8 @@ function RepositoryAnalysisDetails() {
       }
 
       setAnalysisData(payload.result);
+      setSavedEnvVariables(payload.envVariables || []);
+      setEnvStepComplete(Boolean(payload.envConfigured));
     } catch (err) {
       console.error(err);
       setError(err.message);
@@ -63,11 +66,13 @@ function RepositoryAnalysisDetails() {
   useEffect(() => {
     if (repoUrl) {
       setEnvStepComplete(false);
+      setSavedEnvVariables([]);
       setAnalysisData(null);
       setActiveTab('architecture');
       runAnalysis(repoUrl);
     } else {
       setEnvStepComplete(false);
+      setSavedEnvVariables([]);
       setIsLoading(false);
       setAnalysisData(null);
       setError(null);
@@ -128,7 +133,11 @@ function RepositoryAnalysisDetails() {
           <EnvUploadPrompt
             repoUrl={repoUrl}
             envVariables={envVariables}
-            onComplete={() => setEnvStepComplete(true)}
+            savedValues={savedEnvVariables}
+            onComplete={(updatedEnvVariables) => {
+              setSavedEnvVariables(updatedEnvVariables || []);
+              setEnvStepComplete(true);
+            }}
           />
         ) : repoUrl && analysisData ? (
           <div className="analysis-content-container">

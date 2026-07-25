@@ -1,26 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import './EnvUploadPrompt.css';
 
-function EnvUploadPrompt({ repoUrl, envVariables, onComplete }) {
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+function EnvUploadPrompt({ repoUrl, envVariables, savedValues, onComplete }) {
   const [dragActive, setDragActive] = useState(false);
   const [fileName, setFileName] = useState('');
   const [variables, setVariables] = useState([]);
   const [parsingError, setParsingError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   // Extract keys from envVariables (e.g. "DATABASE_URL (Postgres link)" -> "DATABASE_URL")
   const envKeys = envVariables.map(v => v.split(' ')[0]);
 
   useEffect(() => {
-    // Initialize state from template prop variables
+    // Initialize state from template prop variables, pre-filling any previously saved values
+    const savedLookup = new Map(
+      (savedValues || []).map(v => [String(v.key || '').toUpperCase(), v.value || ''])
+    );
     const initialVars = envVariables.map(v => {
       const key = v.split(' ')[0];
       const desc = v.includes('(') ? v.substring(v.indexOf('(')) : '';
-      return { key, value: '', desc };
+      return { key, value: savedLookup.get(key.toUpperCase()) || '', desc };
     });
     setVariables(initialVars);
     setFileName('');
     setParsingError('');
-  }, [repoUrl, envVariables]);
+    setSubmitError('');
+  }, [repoUrl, envVariables, savedValues]);
 
   const handleKeyChange = (index, newKey) => {
     setVariables(prev => {
@@ -120,10 +128,36 @@ function EnvUploadPrompt({ repoUrl, envVariables, onComplete }) {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Environment configured successfully:', variables);
-    onComplete();
+    setSubmitError('');
+    setSubmitting(true);
+
+    try {
+      const appToken = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/analysis/env`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${appToken}`,
+        },
+        body: JSON.stringify({
+          repoUrl,
+          variables: variables.map(v => ({ key: v.key, value: v.value })),
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.message || 'Failed to save environment variables.');
+      }
+
+      onComplete(payload.envVariables);
+    } catch (err) {
+      setSubmitError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const autoFillDemo = () => {
@@ -150,12 +184,12 @@ function EnvUploadPrompt({ repoUrl, envVariables, onComplete }) {
         {/* Status indicator */}
         <div className="env-status-banner">
           <span className="env-pulse-dot"></span>
-          <span>CONFIGURATION DETECTED: .env.example</span>
+          <span>{variables.length} ENVIRONMENT VARIABLE{variables.length === 1 ? '' : 'S'} DETECTED IN CODE</span>
         </div>
 
         <h2 className="env-prompt-title">Environment Setup Required</h2>
         <p className="env-prompt-desc">
-          We detected an <code>.env.example</code> file in the repository. Please upload your production <code>.env</code> file or fill in the required parameters below to configure cloud services and telemetry connections.
+          We scanned this repository's source code and metadata files (like <code>.env.example</code>) for environment variables. Please upload your production <code>.env</code> file or fill in the values below to configure cloud services and telemetry connections.
         </p>
 
         {/* Drag and Drop File Upload Area */}
@@ -251,8 +285,10 @@ function EnvUploadPrompt({ repoUrl, envVariables, onComplete }) {
             </button>
           </div>
 
-          <button type="submit" className="env-submit-btn">
-            Inject Environment & Run Telemetry Analysis →
+          {submitError && <p className="parsing-error-msg">{submitError}</p>}
+
+          <button type="submit" className="env-submit-btn" disabled={submitting}>
+            {submitting ? 'Saving...' : 'Inject Environment & Run Telemetry Analysis →'}
           </button>
         </form>
       </div>
