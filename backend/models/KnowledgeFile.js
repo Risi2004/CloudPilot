@@ -33,6 +33,18 @@ const knowledgeFileSchema = new mongoose.Schema({
     enum: ['Ready', 'Indexing', 'Failed'],
     default: 'Ready'
   },
+  vectorized: {
+    type: Boolean,
+    default: false
+  },
+  vectorizedAt: {
+    type: Date,
+    default: null
+  },
+  vectorChunkIds: {
+    type: [String],
+    default: []
+  },
   uploadedAt: {
     type: Date,
     default: Date.now

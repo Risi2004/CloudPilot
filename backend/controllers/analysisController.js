@@ -1,6 +1,7 @@
 const Analysis = require('../models/Analysis');
-const { fetchProjectMetadataFiles, scanRepoForEnvVars, GithubFileError } = require('../services/githubFileService');
+const { fetchProjectMetadataFiles, scanRepoSource, GithubFileError } = require('../services/githubFileService');
 const { runCodeAnalysisAgent, AnalysisError } = require('../agents/codeAnalysisAgent');
+const { runDeploymentReadinessCheck } = require('../agents/deploymentReadinessAgent');
 
 // Merge the LLM's guessed env vars (e.g. "DATABASE_URL (Postgres link)") with keys
 // actually found by scanning source code, de-duping case-insensitively on the key.
@@ -47,6 +48,7 @@ const analyzeRepository = async (req, res) => {
           analyzedAt: cached.updatedAt,
           envConfigured: cached.envConfigured,
           envVariables: cached.envVariables,
+          deploymentReadiness: cached.deploymentReadiness,
         });
       }
     }
@@ -66,10 +68,15 @@ const analyzeRepository = async (req, res) => {
     });
 
     let scannedEnvVars = [];
+    let secretFindings = [];
+    let localhostFindings = [];
     try {
-      scannedEnvVars = await scanRepoForEnvVars(repoUrl, githubToken);
+      const scanned = await scanRepoSource(repoUrl, githubToken);
+      scannedEnvVars = scanned.envVars;
+      secretFindings = scanned.secretFindings;
+      localhostFindings = scanned.localhostFindings;
     } catch (scanErr) {
-      console.error('Env variable source scan failed (non-fatal):', scanErr.message);
+      console.error('Repository source scan failed (non-fatal):', scanErr.message);
     }
 
     result.buildRequirements = result.buildRequirements || {};
@@ -77,6 +84,18 @@ const analyzeRepository = async (req, res) => {
       result.buildRequirements.envVariables,
       scannedEnvVars
     );
+
+    let deploymentReadiness = null;
+    try {
+      deploymentReadiness = await runDeploymentReadinessCheck({
+        detectedFiles,
+        analysisResult: result,
+        secretFindings,
+        localhostFindings,
+      });
+    } catch (readinessErr) {
+      console.error('Deployment Readiness Agent failed (non-fatal):', readinessErr.message);
+    }
 
     const detectedFilePaths = detectedFiles.map((f) => f.path);
 
@@ -88,6 +107,7 @@ const analyzeRepository = async (req, res) => {
         repoFullName,
         detectedFiles: detectedFilePaths,
         result,
+        deploymentReadiness,
         status: 'completed',
         errorMessage: null,
       },
@@ -103,6 +123,7 @@ const analyzeRepository = async (req, res) => {
       analyzedAt: saved.updatedAt,
       envConfigured: saved.envConfigured,
       envVariables: saved.envVariables,
+      deploymentReadiness: saved.deploymentReadiness,
     });
   } catch (err) {
     if (err instanceof GithubFileError) {

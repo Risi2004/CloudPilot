@@ -1,5 +1,19 @@
 const express = require('express');
-const { getDataSources, addDataSource, getFiles, uploadFile, editDataSource, deleteDataSource, deleteFile, editFile, viewFileContent, getBucketSize } = require('../controllers/knowledgeController');
+const {
+  getDataSources,
+  addDataSource,
+  getFiles,
+  uploadFile,
+  editDataSource,
+  deleteDataSource,
+  deleteFile,
+  editFile,
+  viewFileContent,
+  getBucketSize,
+  getVectorizationStatus,
+  startVectorization,
+  getVectorizationJobStatus
+} = require('../controllers/knowledgeController');
 const { protect, admin } = require('../middleware/auth');
 
 const router = express.Router();
@@ -18,5 +32,8 @@ router.put('/files/:id', editFile);
 router.delete('/files/:id', deleteFile);
 router.get('/files/:id/view', viewFileContent);
 router.get('/storage-size', getBucketSize);
+router.get('/vectorization-status', getVectorizationStatus);
+router.post('/vectorize', startVectorization);
+router.get('/vectorize/:jobId', getVectorizationJobStatus);
 
 module.exports = router;

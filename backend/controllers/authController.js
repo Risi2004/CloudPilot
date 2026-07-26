@@ -328,6 +328,7 @@ const getProfileImage = async (req, res, next) => {
     const { stream, contentType } = await getPrivateImageStream(key);
     
     res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     
     // Pipe the response body stream to express response
     if (typeof stream.pipe === 'function') {

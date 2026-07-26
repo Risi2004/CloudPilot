@@ -23,6 +23,10 @@ const analysisSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.Mixed,
     default: null
   },
+  deploymentReadiness: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
+  },
   status: {
     type: String,
     enum: ['completed', 'failed'],

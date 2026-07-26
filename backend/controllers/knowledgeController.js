@@ -1,6 +1,8 @@
 const DataSource = require('../models/DataSource');
 const KnowledgeFile = require('../models/KnowledgeFile');
 const { createFolder, uploadKnowledgeFile, listR2Folders } = require('../config/s3');
+const { syncFullTreeFromR2 } = require('../services/knowledgeSyncService');
+const { startVectorizationJob, getJobStatus } = require('../services/vectorizationJobService');
 
 // Helper to sanitize key name
 const generateKey = (name) => {
@@ -748,6 +750,94 @@ const getBucketSize = async (req, res, next) => {
   }
 };
 
+const getVectorizationStatus = async (req, res, next) => {
+  try {
+    try {
+      await syncFullTreeFromR2();
+    } catch (syncErr) {
+      console.error('Full R2 tree sync failed (non-fatal):', syncErr.message);
+    }
+
+    const allSources = await DataSource.find({});
+    const allFiles = await KnowledgeFile.find({});
+
+    const sourceById = new Map(allSources.map((s) => [String(s._id), s]));
+
+    const buildPath = (source) => {
+      const parts = [source.name];
+      let current = source;
+      while (current.parentId) {
+        current = sourceById.get(String(current.parentId));
+        if (!current) break;
+        parts.unshift(current.name);
+      }
+      return parts.join(' / ');
+    };
+
+    const getDescendantIds = (parentId) => {
+      const ids = [];
+      const children = allSources.filter((s) => s.parentId && String(s.parentId) === String(parentId));
+      for (const child of children) {
+        ids.push(String(child._id));
+        ids.push(...getDescendantIds(child._id));
+      }
+      return ids;
+    };
+
+    const folders = allSources.map((source) => {
+      const scopeIds = new Set([String(source._id), ...getDescendantIds(source._id)]);
+      const filesInScope = allFiles.filter((f) => scopeIds.has(String(f.dataSourceId)));
+      const totalFiles = filesInScope.length;
+      const vectorizedFiles = filesInScope.filter((f) => f.vectorized).length;
+      const pendingFiles = totalFiles - vectorizedFiles;
+
+      return {
+        _id: source._id,
+        name: source.name,
+        path: buildPath(source),
+        totalFiles,
+        vectorizedFiles,
+        pendingFiles,
+        eligible: pendingFiles > 0
+      };
+    });
+
+    folders.sort((a, b) => a.path.localeCompare(b.path));
+
+    const totalVectorChunks = allFiles.reduce(
+      (sum, f) => sum + (f.vectorChunkIds ? f.vectorChunkIds.length : 0),
+      0
+    );
+
+    res.status(200).json({ folders, totalVectorChunks });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const startVectorization = async (req, res, next) => {
+  try {
+    const { dataSourceIds } = req.body;
+    if (!Array.isArray(dataSourceIds) || dataSourceIds.length === 0) {
+      return res.status(400).json({ message: 'dataSourceIds must be a non-empty array.' });
+    }
+
+    const jobId = await startVectorizationJob(dataSourceIds);
+    res.status(202).json({ jobId });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getVectorizationJobStatus = (req, res) => {
+  const { jobId } = req.params;
+  const job = getJobStatus(jobId);
+  if (!job) {
+    return res.status(404).json({ message: 'Job not found.' });
+  }
+  res.status(200).json({ job });
+};
+
 module.exports = {
   getDataSources,
   addDataSource,
@@ -759,6 +849,9 @@ module.exports = {
   deleteFile,
   editFile,
   viewFileContent,
-  getBucketSize
+  getBucketSize,
+  getVectorizationStatus,
+  startVectorization,
+  getVectorizationJobStatus
 };
 

@@ -58,6 +58,26 @@ const ENV_VAR_PATTERNS = [
   /System\.getenv\(\s*['"]([A-Z_][A-Z0-9_]*)['"]\s*\)/g,
 ];
 
+// Patterns covering common ways real secrets get hardcoded into source instead of read from env.
+// These are separate from ENV_VAR_PATTERNS above, which only match *references* like process.env.X.
+const SECRET_PATTERNS = [
+  { label: 'AWS Access Key ID', regex: /AKIA[0-9A-Z]{16}/g },
+  { label: 'Private key block', regex: /-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/g },
+  { label: 'Stripe live secret key', regex: /sk_live_[0-9a-zA-Z]{16,}/g },
+  { label: 'GitHub token', regex: /gh[pousr]_[0-9a-zA-Z]{20,}/g },
+  { label: 'Slack token', regex: /xox[baprs]-[0-9a-zA-Z-]{10,}/g },
+  {
+    label: 'Hardcoded credential literal',
+    regex: /\b(?:SECRET|PASSWORD|PRIVATE_KEY|API_KEY|ACCESS_KEY)\w*\s*[:=]\s*['"][^'"\s]{8,}['"]/gi,
+  },
+];
+
+// Hardcoded localhost/loopback URLs left over from local development.
+const LOCALHOST_PATTERNS = [
+  /https?:\/\/localhost(?::\d+)?/g,
+  /https?:\/\/127\.0\.0\.1(?::\d+)?/g,
+];
+
 class GithubFileError extends Error {
   constructor(message, statusCode) {
     super(message);
@@ -149,11 +169,16 @@ function getExtension(path) {
 }
 
 /**
- * Recursively walks the repo's default branch tree and regex-scans source files
- * for environment-variable reads (process.env.X, import.meta.env.X, os.getenv, etc).
+ * Recursively walks the repo's default branch tree once and regex-scans source files for:
+ *  - environment-variable reads (process.env.X, import.meta.env.X, os.getenv, etc)
+ *  - hardcoded secrets (API keys, private key blocks, credential literals)
+ *  - hardcoded localhost/loopback URLs
+ *  - a literal committed .env file (a secrets-exposure signal on its own)
  * Best-effort: caps the number/size of files fetched to keep this fast on large repos.
+ * A single tree walk is reused for all four so this remains one recursive-tree fetch
+ * plus up to MAX_SCAN_FILES blob fetches, regardless of how many callers need the data.
  */
-async function scanRepoForEnvVars(repoUrl, githubToken) {
+async function scanRepoSource(repoUrl, githubToken) {
   const { owner, repo } = parseRepoUrl(repoUrl);
 
   const repoInfo = await githubFetch(`/repos/${owner}/${repo}`, githubToken);
@@ -165,6 +190,10 @@ async function scanRepoForEnvVars(repoUrl, githubToken) {
   );
 
   const tree = Array.isArray(treeData.tree) ? treeData.tree : [];
+
+  const committedEnvFile = tree.find(
+    (entry) => entry.type === 'blob' && typeof entry.path === 'string' && /(^|\/)\.env$/i.test(entry.path)
+  );
 
   const candidates = tree
     .filter(
@@ -178,6 +207,8 @@ async function scanRepoForEnvVars(repoUrl, githubToken) {
     .slice(0, MAX_SCAN_FILES);
 
   const keyToFiles = new Map();
+  const secretToFiles = new Map();
+  const localhostFiles = new Set();
 
   for (const entry of candidates) {
     let blob;
@@ -204,11 +235,39 @@ async function scanRepoForEnvVars(repoUrl, githubToken) {
         keyToFiles.get(key).add(entry.path);
       }
     }
+
+    for (const { label, regex } of SECRET_PATTERNS) {
+      regex.lastIndex = 0;
+      if (regex.test(content)) {
+        if (!secretToFiles.has(label)) secretToFiles.set(label, new Set());
+        secretToFiles.get(label).add(entry.path);
+      }
+    }
+
+    for (const pattern of LOCALHOST_PATTERNS) {
+      pattern.lastIndex = 0;
+      if (pattern.test(content)) {
+        localhostFiles.add(entry.path);
+      }
+    }
   }
 
-  return Array.from(keyToFiles.entries())
+  const envVars = Array.from(keyToFiles.entries())
     .map(([key, files]) => ({ key, files: Array.from(files) }))
     .sort((a, b) => a.key.localeCompare(b.key));
+
+  const secretFindings = Array.from(secretToFiles.entries()).map(([label, files]) => ({
+    label,
+    files: Array.from(files),
+  }));
+
+  if (committedEnvFile) {
+    secretFindings.push({ label: 'Committed .env file', files: [committedEnvFile.path] });
+  }
+
+  const localhostFindings = Array.from(localhostFiles);
+
+  return { envVars, secretFindings, localhostFindings };
 }
 
-module.exports = { fetchProjectMetadataFiles, scanRepoForEnvVars, GithubFileError };
+module.exports = { fetchProjectMetadataFiles, scanRepoSource, GithubFileError };

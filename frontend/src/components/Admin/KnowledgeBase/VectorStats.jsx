@@ -1,12 +1,12 @@
 import React from 'react';
 import './VectorStats.css';
 
-function VectorStats({ storageCapacity, mdFileCount }) {
+function VectorStats({ storageCapacity, mdFileCount, totalVectors }) {
   const STATS_DATA = [
     {
       id: 'total-vectors',
       title: 'Total Vectors',
-      value: '-',
+      value: totalVectors !== undefined && totalVectors !== null ? totalVectors : '-',
       colorClass: 'text-white'
     },
     {

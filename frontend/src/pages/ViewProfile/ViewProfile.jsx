@@ -16,12 +16,22 @@ import './ViewProfile.css';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 function ViewProfile() {
-  const [userName, setUserName] = useState('');
-  const [userEmail, setUserEmail] = useState('');
-  const [avatar, setAvatar] = useState(profileIcon);
+  const [userName, setUserName] = useState(() => localStorage.getItem('fullName') || '');
+  const [userEmail, setUserEmail] = useState(() => localStorage.getItem('email') || '');
+  const [avatar, setAvatar] = useState(() => {
+    const savedKey = localStorage.getItem('profileImageKey');
+    const savedImage = localStorage.getItem('profileImage');
+    if (savedKey) {
+      const filename = savedKey.split('/').pop();
+      return `${API_URL}/api/auth/profile-image/${filename}`;
+    } else if (savedImage) {
+      return savedImage;
+    }
+    return profileIcon;
+  });
   const [designation, setDesignation] = useState('Principal Architect');
 
-  const [fullName, setFullName] = useState('');
+  const [fullName, setFullName] = useState(() => localStorage.getItem('fullName') || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

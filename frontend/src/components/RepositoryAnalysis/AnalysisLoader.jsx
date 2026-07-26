@@ -1,9 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './AnalysisLoader.css';
 
 function AnalysisLoader({ repoUrl }) {
   const [logs, setLogs] = useState([]);
   const [percent, setPercent] = useState(0);
+  const terminalBodyRef = useRef(null);
+
+  useEffect(() => {
+    if (terminalBodyRef.current) {
+      terminalBodyRef.current.scrollTop = terminalBodyRef.current.scrollHeight;
+    }
+  }, [logs]);
 
   const logMessages = [
     { text: 'Initializing CloudPilot multi-agent engine...', delay: 200 },
@@ -84,7 +91,7 @@ function AnalysisLoader({ repoUrl }) {
           </div>
           <span className="terminal-title">cloudpilot-agent@audit:~</span>
         </div>
-        <div className="terminal-body">
+        <div className="terminal-body" ref={terminalBodyRef}>
           {logs.map((log, index) => (
             <div key={index} className="terminal-line">
               <span className="line-timestamp">[{log.time}]</span>

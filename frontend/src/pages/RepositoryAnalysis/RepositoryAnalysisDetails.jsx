@@ -13,6 +13,7 @@ import TabDependencies from '../../components/RepositoryAnalysis/TabDependencies
 import TabContainerization from '../../components/RepositoryAnalysis/TabContainerization';
 import TabCloudInfrastructure from '../../components/RepositoryAnalysis/TabCloudInfrastructure';
 import EnvUploadPrompt from '../../components/RepositoryAnalysis/EnvUploadPrompt';
+import DeploymentReadinessReport from '../../components/RepositoryAnalysis/DeploymentReadinessReport';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -24,6 +25,8 @@ function RepositoryAnalysisDetails() {
   const [isLoading, setIsLoading] = useState(false);
   const [envStepComplete, setEnvStepComplete] = useState(false);
   const [savedEnvVariables, setSavedEnvVariables] = useState([]);
+  const [readinessAcknowledged, setReadinessAcknowledged] = useState(false);
+  const [deploymentReadiness, setDeploymentReadiness] = useState(null);
   const [activeTab, setActiveTab] = useState('architecture');
   const [analysisData, setAnalysisData] = useState(null);
   const [error, setError] = useState(null);
@@ -53,6 +56,8 @@ function RepositoryAnalysisDetails() {
       setAnalysisData(payload.result);
       setSavedEnvVariables(payload.envVariables || []);
       setEnvStepComplete(Boolean(payload.envConfigured));
+      setDeploymentReadiness(payload.deploymentReadiness || null);
+      setReadinessAcknowledged(false);
     } catch (err) {
       console.error(err);
       setError(err.message);
@@ -67,12 +72,16 @@ function RepositoryAnalysisDetails() {
     if (repoUrl) {
       setEnvStepComplete(false);
       setSavedEnvVariables([]);
+      setReadinessAcknowledged(false);
+      setDeploymentReadiness(null);
       setAnalysisData(null);
       setActiveTab('architecture');
       runAnalysis(repoUrl);
     } else {
       setEnvStepComplete(false);
       setSavedEnvVariables([]);
+      setReadinessAcknowledged(false);
+      setDeploymentReadiness(null);
       setIsLoading(false);
       setAnalysisData(null);
       setError(null);
@@ -138,6 +147,11 @@ function RepositoryAnalysisDetails() {
               setSavedEnvVariables(updatedEnvVariables || []);
               setEnvStepComplete(true);
             }}
+          />
+        ) : repoUrl && analysisData && deploymentReadiness && !readinessAcknowledged ? (
+          <DeploymentReadinessReport
+            data={deploymentReadiness}
+            onContinue={() => setReadinessAcknowledged(true)}
           />
         ) : repoUrl && analysisData ? (
           <div className="analysis-content-container">
