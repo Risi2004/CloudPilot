@@ -40,4 +40,14 @@ async function deleteChunksByFileId(fileId) {
   await collection.delete({ where: { fileId: String(fileId) } });
 }
 
-module.exports = { heartbeat, upsertChunks, deleteChunksByFileId };
+async function queryChunks({ embedding, nResults = 4, where }) {
+  const collection = await getCollection();
+  return collection.query({
+    queryEmbeddings: [embedding],
+    nResults,
+    where,
+    include: ['documents', 'metadatas', 'distances'],
+  });
+}
+
+module.exports = { heartbeat, upsertChunks, deleteChunksByFileId, queryChunks };

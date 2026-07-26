@@ -14,6 +14,7 @@ import TabContainerization from '../../components/RepositoryAnalysis/TabContaine
 import TabCloudInfrastructure from '../../components/RepositoryAnalysis/TabCloudInfrastructure';
 import EnvUploadPrompt from '../../components/RepositoryAnalysis/EnvUploadPrompt';
 import DeploymentReadinessReport from '../../components/RepositoryAnalysis/DeploymentReadinessReport';
+import TabPlatformSelection from '../../components/RepositoryAnalysis/TabPlatformSelection';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -109,6 +110,8 @@ function RepositoryAnalysisDetails() {
         return <TabContainerization data={analysisData} />;
       case 'infra':
         return <TabCloudInfrastructure data={analysisData} />;
+      case 'platform':
+        return <TabPlatformSelection repoUrl={repoUrl} />;
       default:
         return <TabArchitectureOverview data={analysisData} />;
     }
@@ -214,6 +217,16 @@ function RepositoryAnalysisDetails() {
                   <polygon points="12 2 2 22 22 22"></polygon>
                 </svg>
                 <span>Infrastructure & IaC</span>
+              </button>
+
+              <button
+                className={`tab-toggle-btn ${activeTab === 'platform' ? 'active' : ''}`}
+                onClick={() => setActiveTab('platform')}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                <span>Platform Selection</span>
               </button>
             </div>
 
