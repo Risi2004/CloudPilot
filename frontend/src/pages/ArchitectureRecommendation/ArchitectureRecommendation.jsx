@@ -121,7 +121,7 @@ function ArchitectureRecommendation() {
                   onSelect={setSelectedOptionId}
                 />
 
-                <ArchitectureOptionDetail option={selectedOption} />
+                <ArchitectureOptionDetail option={selectedOption} repoUrl={repoUrl} />
 
                 <button
                   type="button"

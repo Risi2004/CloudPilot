@@ -169,3 +169,25 @@
     grid-template-columns: 1fr;
   }
 }
+
+.arch-deploy-btn {
+  align-self: flex-start;
+  background: #00d4ff;
+  border: none;
+  border-radius: 8px;
+  height: 46px;
+  padding: 0 28px;
+  color: #030712;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2);
+  transition: all 0.2s ease;
+}
+
+.arch-deploy-btn:hover {
+  background: #3ee2ff;
+  box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4);
+  transform: translateY(-1px);
+}

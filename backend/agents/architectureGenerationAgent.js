@@ -14,6 +14,8 @@ CloudPilot's knowledge base currently only contains documentation for Render and
 
 Your job is to propose between ${MIN_OPTIONS} and ${MAX_OPTIONS} distinct, viable deployment architecture options for this specific repository, so the developer can compare them at a glance before committing to one. Vary the options meaningfully - e.g. a single-service monolith vs. a split frontend/backend topology, a fully-managed database vs. an external one, a free/hobby tier vs. a paid tier with better scaling/reliability, serverless-style vs. always-on services - rather than proposing near-duplicates. At least one option must directly reflect the developer's confirmed platform/service choice from the Platform Selection Agent; the others are real alternatives with genuinely different trade-offs, not filler.
 
+Whenever it is realistically possible for this repository, ALWAYS include one option that costs $0/mo end-to-end - built entirely from Render's free web service plan and/or Vercel's free Hobby tier, with every item in its costEstimate.breakdown priced "$0/mo" and monthlyLowUSD/monthlyHighUSD both 0. Only skip this if the repo's actual requirements make it genuinely infeasible on free tiers (e.g. it needs a persistent disk, a paid database with more storage/connections than the free tier allows, multiple always-on background workers, or resources that clearly exceed free-tier limits) - in that case explain the specific blocker in that option's (or the closest option's) reasoning instead of silently omitting it. When you do include a free-tier option, be honest about its real trade-offs in "cons" (e.g. Render's free web services spin down after inactivity and cold-start on the next request; Vercel Hobby is for personal/non-commercial use) rather than presenting it as strictly better than the paid options.
+
 For every option provide a fair, balanced comparison so the developer gets a real high-level view:
 - Concrete pros and cons (not generic marketing language).
 - A monthly cost estimate range in USD grounded in known Render/Vercel pricing tiers (free/hobby/starter/standard, etc.), with a short per-item breakdown. If exact pricing cannot be grounded in the knowledge base, use well-established public pricing tiers for Render/Vercel and say so rather than inventing precise numbers.
@@ -31,7 +33,7 @@ Respond with a single JSON object and NOTHING else - no markdown code fences, no
       "pattern": "string - short architecture pattern label, e.g. 'Monolith on PaaS' or 'Split Frontend/Backend'",
       "summary": "string - 1-2 sentences describing the topology",
       "components": [
-        { "name": "string, e.g. 'Frontend'", "service": "string, e.g. 'Vercel Static/Edge Hosting'", "role": "string - what it does" }
+        { "name": "string, e.g. 'Frontend'", "platform": "render" or "vercel", "service": "string, e.g. 'Vercel Static/Edge Hosting'", "role": "string - what it does" }
       ],
       "pros": ["string - up to 5 concrete advantages"],
       "cons": ["string - up to 5 concrete trade-offs"],
@@ -71,7 +73,12 @@ function getRunner() {
     );
   }
 
-  const runpodModel = new RunpodModel({ model, baseUrl, apiKey });
+  // This agent's schema (3-5 options, each with components/pros/cons/cost
+  // breakdown/reasoning) is far more verbose than the other agents' - give it
+  // extra headroom over the shared default so responses don't get cut off
+  // mid-array, which produces invalid JSON.
+  const maxTokens = Number(process.env.RUNPOD_MAX_TOKENS_ARCHITECTURE) || 8192;
+  const runpodModel = new RunpodModel({ model, baseUrl, apiKey, maxTokens });
 
   agentSingleton = new LlmAgent({
     name: 'architecture_generation_agent',
@@ -87,6 +94,25 @@ function getRunner() {
   return runnerSingleton;
 }
 
+function cleanJsonString(str) {
+  let cleaned = str;
+  // 1. Strip multi-line comments
+  cleaned = cleaned.replace(/\/\*[\s\S]*?\*\//g, '');
+  
+  // 2. Strip single-line comments (ignoring http:// or https://)
+  cleaned = cleaned.replace(/(?:^|[^:])\/\/.*$/gm, (match) => {
+    if (match.trim().startsWith('//')) return '';
+    const idx = match.indexOf('//');
+    if (idx !== -1) return match.slice(0, idx);
+    return match;
+  });
+
+  // 3. Strip trailing commas before closing braces/brackets
+  cleaned = cleaned.replace(/,\s*([}\]])/g, '$1');
+
+  return cleaned.trim();
+}
+
 function extractJson(rawText) {
   let text = rawText.trim();
   const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
@@ -97,8 +123,11 @@ function extractJson(rawText) {
   if (start === -1 || end === -1 || end <= start) {
     throw new ArchitectureGenerationError('Architecture Generation Agent returned invalid JSON: no JSON object found.');
   }
+  
+  const rawObjString = text.slice(start, end + 1);
+  const cleaned = cleanJsonString(rawObjString);
   try {
-    return JSON.parse(text.slice(start, end + 1));
+    return JSON.parse(cleaned);
   } catch (err) {
     throw new ArchitectureGenerationError(`Architecture Generation Agent returned invalid JSON: ${err.message}`);
   }
@@ -199,7 +228,9 @@ function buildUserMessage({ analysisResult, deploymentReadiness, platformRecomme
   ].join('\n');
 }
 
-async function runArchitectureGeneration({ analysisResult, deploymentReadiness, platformRecommendation, kbContext }) {
+const MAX_ATTEMPTS = 3;
+
+async function runArchitectureGenerationOnce({ analysisResult, deploymentReadiness, platformRecommendation, kbContext }) {
   const runner = getRunner();
   const newMessage = {
     role: 'user',
@@ -223,6 +254,28 @@ async function runArchitectureGeneration({ analysisResult, deploymentReadiness, 
   }
 
   return parsed;
+}
+
+/**
+ * Malformed JSON from the model (truncated output, a dropped comma/bracket)
+ * is a transient, non-deterministic failure mode for smaller models asked to
+ * produce a large, deeply-nested response - retrying the same request often
+ * succeeds on the next sample, so we retry a couple of times before giving
+ * the caller a hard error.
+ */
+async function runArchitectureGeneration(args) {
+  let lastErr;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    try {
+      return await runArchitectureGenerationOnce(args);
+    } catch (err) {
+      lastErr = err;
+      const isParseFailure = err instanceof ArchitectureGenerationError;
+      if (!isParseFailure || attempt === MAX_ATTEMPTS) throw err;
+      console.warn(`Architecture Generation Agent attempt ${attempt} failed (${err.message}), retrying...`);
+    }
+  }
+  throw lastErr;
 }
 
 module.exports = { runArchitectureGeneration, ArchitectureGenerationError, MIN_OPTIONS, MAX_OPTIONS };

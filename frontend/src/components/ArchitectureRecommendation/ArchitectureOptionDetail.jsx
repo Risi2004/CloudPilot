@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import './ArchitectureOptionDetail.css';
 
 function formatCostRange(costEstimate) {
@@ -10,7 +11,8 @@ function formatCostRange(costEstimate) {
   return `$${monthlyLowUSD} – $${monthlyHighUSD}/mo`;
 }
 
-function ArchitectureOptionDetail({ option }) {
+function ArchitectureOptionDetail({ option, repoUrl }) {
+  const navigate = useNavigate();
   if (!option) return null;
 
   const components = Array.isArray(option.components) ? option.components : [];
@@ -81,6 +83,14 @@ function ArchitectureOptionDetail({ option }) {
           )}
         </div>
       </div>
+
+      <button
+        type="button"
+        className="arch-deploy-btn"
+        onClick={() => navigate(`/deployment-agent?url=${encodeURIComponent(repoUrl)}&optionId=${encodeURIComponent(option.id)}`)}
+      >
+        Deploy This Option →
+      </button>
     </div>
   );
 }

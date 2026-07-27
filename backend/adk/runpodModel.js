@@ -41,12 +41,13 @@ function toOpenAiMessages(llmRequest) {
  * to fill in (see BaseLlm.generateContentAsync).
  */
 class RunpodModel extends BaseLlm {
-  constructor({ model, baseUrl, apiKey }) {
+  constructor({ model, baseUrl, apiKey, maxTokens }) {
     super({ model });
     if (!baseUrl) throw new Error('RunpodModel requires a baseUrl (RUNPOD_BASE_URL).');
     if (!apiKey) throw new Error('RunpodModel requires an apiKey (RUNPOD_API_KEY).');
     this.baseUrl = baseUrl.replace(/\/+$/, '');
     this.apiKey = apiKey;
+    this.maxTokens = maxTokens || DEFAULT_MAX_TOKENS;
   }
 
   async *generateContentAsync(llmRequest, stream = false, abortSignal) {
@@ -65,7 +66,7 @@ class RunpodModel extends BaseLlm {
           model: this.model,
           messages,
           temperature: 0.2,
-          max_tokens: DEFAULT_MAX_TOKENS,
+          max_tokens: this.maxTokens,
         }),
         signal: abortSignal,
       });
