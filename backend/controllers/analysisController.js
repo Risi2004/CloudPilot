@@ -181,4 +181,14 @@ const saveEnvVariables = async (req, res) => {
   }
 };
 
-module.exports = { analyzeRepository, saveEnvVariables };
+const getAnalyses = async (req, res) => {
+  try {
+    const analyses = await Analysis.find({ userId: req.user._id }).sort({ updatedAt: -1 });
+    return res.status(200).json({ analyses });
+  } catch (err) {
+    console.error('Failed to load analyses:', err);
+    return res.status(500).json({ message: 'Failed to load analyses.' });
+  }
+};
+
+module.exports = { analyzeRepository, saveEnvVariables, getAnalyses };

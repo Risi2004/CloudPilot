@@ -83,36 +83,6 @@
   border-radius: 4px;
 }
 
-.env-section {
-  display: flex;
-  flex-direction: column;
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.env-section:first-child {
-  padding-top: 0;
-  border-top: none;
-}
-
-.env-section-header {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.env-section-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #ffffff;
-}
-
-.env-section-hint {
-  font-size: 11px;
-  color: #64748b;
-}
-
 /* Drag Area style */
 .env-drag-area {
   border: 2px dashed rgba(255, 255, 255, 0.1);
@@ -309,6 +279,26 @@
   background: rgba(0, 0, 0, 0.35);
 }
 
+.env-var-scope-select {
+  flex: 0 0 auto;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 0 8px;
+  color: #94a3b8;
+  outline: none;
+  font-family: inherit;
+  font-size: 11.5px;
+  height: 36px;
+  max-width: 120px;
+  transition: all 0.2s ease;
+}
+
+.env-var-scope-select:focus {
+  border-color: #00d4ff;
+  color: #ffffff;
+}
+
 .env-var-delete-btn {
   background: none;
   border: none;
@@ -359,6 +349,9 @@
     flex-direction: column;
     align-items: stretch;
     gap: 8px;
+  }
+  .env-var-scope-select {
+    max-width: none;
   }
   .env-var-delete-btn {
     align-self: flex-end;

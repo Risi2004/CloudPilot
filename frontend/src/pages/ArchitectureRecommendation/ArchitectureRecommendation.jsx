@@ -90,7 +90,7 @@ function ArchitectureRecommendation() {
             <button
               type="button"
               className="rec-back-btn"
-              onClick={() => navigate(`/repository-analysis?url=${encodeURIComponent(repoUrl)}`)}
+              onClick={() => navigate(`/repositories?url=${encodeURIComponent(repoUrl)}`)}
             >
               ← Back to Repository Analysis
             </button>

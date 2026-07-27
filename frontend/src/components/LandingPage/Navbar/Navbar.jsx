@@ -80,6 +80,7 @@ function Navbar() {
         <div className="navbar-container">
           <div className="navbar-logo" onClick={() => handleLinkClick('home')}>
             <img src={logo} alt="CloudPilot Logo" className="logo-img" />
+            <span className="logo-version-badge">v0.1.0 Beta</span>
           </div>
           
           <div className="navbar-links">
@@ -105,7 +106,10 @@ function Navbar() {
       {/* Mobile Overlay Menu */}
       <div className={`navbar-mobile-overlay ${isOverlayOpen ? 'active' : ''}`}>
         <div className="overlay-header">
-          <img src={logo} alt="CloudPilot Logo" className="logo-img" />
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <img src={logo} alt="CloudPilot Logo" className="logo-img" />
+            <span className="logo-version-badge">v0.1.0 Beta</span>
+          </div>
           <button className="close-btn" onClick={() => setIsOverlayOpen(false)}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>

@@ -308,10 +308,20 @@ async function pushResource(deploymentId, resource) {
   await Deployment.updateOne({ _id: deploymentId }, { $push: { resources: resource } });
 }
 
+// When components deploy in parallel, more than one of them can notice
+// "stopping" around the same time - dedupe so only one actual rollback runs
+// (they all just await the same in-flight promise) instead of each racing to
+// delete the same resources.
+const rollbackInFlight = new Map();
+
 async function checkStopOrThrow(deploymentId) {
   const doc = await Deployment.findById(deploymentId).select('status').lean();
   if (doc && doc.status === 'stopping') {
-    await rollbackDeployment(deploymentId);
+    const key = String(deploymentId);
+    if (!rollbackInFlight.has(key)) {
+      rollbackInFlight.set(key, rollbackDeployment(deploymentId).finally(() => rollbackInFlight.delete(key)));
+    }
+    await rollbackInFlight.get(key);
     throw new DeploymentStoppedSignal();
   }
 }
@@ -365,6 +375,24 @@ async function createResourceStep(deploymentId, deployment, component, cred) {
         },
         { teamId: cred.metadata.teamId }
       );
+
+      // Vercel's create-project call (unlike Render's create-service) never
+      // accepts env vars itself, and wireEnvVarsStep only touches components
+      // that have a cross-service link - so a Vercel component with only
+      // static vars (no link to another service) would otherwise never get
+      // ANY env vars set at all. Set the static ones right after creation,
+      // before the first deploy is even triggered, so they're already in
+      // place for that first build (cross-linked vars still get resolved
+      // later in wireEnvVarsStep, once the other component's live URL exists).
+      if (activeEnvVars.length) {
+        await vercelApiService.createEnvVars(
+          cred.apiKey,
+          project.id,
+          activeEnvVars.map((v) => ({ key: v.key, value: v.value, type: 'encrypted', target: ['production'] })),
+          { teamId: cred.metadata.teamId }
+        );
+      }
+
       await pushResource(deploymentId, {
         componentName: component.name,
         platform: 'vercel',
@@ -625,6 +653,15 @@ async function rollbackDeployment(deploymentId) {
   await Deployment.updateOne({ _id: deploymentId }, { $set: { status: finalStatus, completedAt: new Date() } });
 }
 
+async function runComponentLifecycle(deploymentId, component, cred) {
+  await checkStopOrThrow(deploymentId);
+  const current = await Deployment.findById(deploymentId).lean();
+  await createResourceStep(deploymentId, current, component, cred);
+  await checkStopOrThrow(deploymentId);
+  const withResource = await Deployment.findById(deploymentId).lean();
+  await deployAndPollStep(deploymentId, withResource, component, cred);
+}
+
 async function runOrchestrator(deploymentId) {
   try {
     const deployment = await Deployment.findById(deploymentId).lean();
@@ -643,14 +680,19 @@ async function runOrchestrator(deploymentId) {
       message: 'All required platform credentials are present.',
     });
 
-    for (const component of deployableComponents) {
-      await checkStopOrThrow(deploymentId);
-      const current = await Deployment.findById(deploymentId).lean();
-      await createResourceStep(deploymentId, current, component, creds[component.platform]);
-      await checkStopOrThrow(deploymentId);
-      const withResource = await Deployment.findById(deploymentId).lean();
-      await deployAndPollStep(deploymentId, withResource, component, creds[component.platform]);
-    }
+    // Components on different platforms (or even the same one) don't depend
+    // on each other until the wiring step, so create+deploy them all at once
+    // instead of waiting for each one to finish in turn - only the wiring
+    // step genuinely needs everyone's live URL and stays sequential-after.
+    const results = await Promise.allSettled(
+      deployableComponents.map((component) => runComponentLifecycle(deploymentId, component, creds[component.platform]))
+    );
+
+    const stopped = results.some((r) => r.status === 'rejected' && r.reason instanceof DeploymentStoppedSignal);
+    if (stopped) return;
+
+    const failed = results.find((r) => r.status === 'rejected');
+    if (failed) throw failed.reason;
 
     await checkStopOrThrow(deploymentId);
     const beforeWiring = await Deployment.findById(deploymentId).lean();

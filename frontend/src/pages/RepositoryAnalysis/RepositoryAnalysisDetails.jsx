@@ -112,7 +112,7 @@ function RepositoryAnalysisDetails() {
   }, [repoUrl]);
 
   const handleAnalyzeNew = (newUrl) => {
-    navigate(`/repository-analysis?url=${encodeURIComponent(newUrl)}`);
+    navigate(`/repositories?url=${encodeURIComponent(newUrl)}`);
   };
 
   const handleRetry = () => {

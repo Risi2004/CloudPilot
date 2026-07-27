@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import './EnvUploadPrompt.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-const SHARED_SCOPE = '__shared__';
 
 function parseEnvText(text) {
   const lines = text.split(/\r?\n/);
@@ -38,108 +37,98 @@ function parseEnvText(text) {
   return parsedList;
 }
 
-// Groups the flat, repo-wide list of detected variable-name templates and any
-// previously-saved values into one section per detected deployable component
-// (when the repo has more than one), plus a catch-all "Shared / Other"
-// section for anything not assigned to a specific one. For a monolith (0-1
-// detected components) this collapses to exactly one section, identical to
-// the original single-list behavior.
-function buildInitialSections(envVariables, savedValues, scopeOptions) {
-  const templates = envVariables.map((v) => {
-    const key = v.split(' ')[0];
-    const desc = v.includes('(') ? v.substring(v.indexOf('(')) : '';
-    return { key, desc };
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
+    reader.readAsText(file);
   });
-
-  const savedByScope = {};
-  (savedValues || []).forEach((v) => {
-    const scope = v.scope || SHARED_SCOPE;
-    if (!savedByScope[scope]) savedByScope[scope] = [];
-    savedByScope[scope].push(v);
-  });
-
-  if (!scopeOptions || scopeOptions.length < 2) {
-    const savedLookup = new Map((savedValues || []).map((v) => [String(v.key || '').toUpperCase(), v.value || '']));
-    return [
-      {
-        name: null,
-        variables: templates.map((t) => ({ key: t.key, value: savedLookup.get(t.key.toUpperCase()) || '', desc: t.desc })),
-      },
-    ];
-  }
-
-  const sections = scopeOptions.map((scopeName) => ({
-    name: scopeName,
-    variables: (savedByScope[scopeName] || []).map((v) => ({ key: v.key, value: v.value, desc: '' })),
-  }));
-
-  const assignedKeys = new Set(sections.flatMap((s) => s.variables.map((v) => v.key.toUpperCase())));
-  const sharedSaved = savedByScope[SHARED_SCOPE] || [];
-  const sharedLookup = new Map(sharedSaved.map((v) => [String(v.key || '').toUpperCase(), v.value || '']));
-
-  const sharedVariables = templates
-    .filter((t) => !assignedKeys.has(t.key.toUpperCase()))
-    .map((t) => ({ key: t.key, value: sharedLookup.get(t.key.toUpperCase()) || '', desc: t.desc }));
-
-  sharedSaved.forEach((v) => {
-    const upperKey = String(v.key).toUpperCase();
-    if (!assignedKeys.has(upperKey) && !sharedVariables.some((sv) => sv.key.toUpperCase() === upperKey)) {
-      sharedVariables.push({ key: v.key, value: v.value, desc: '' });
-    }
-  });
-
-  sections.push({ name: null, variables: sharedVariables });
-  return sections;
 }
 
-function EnvSection({ title, hint, variables, onChange, showAutoFill }) {
+function EnvUploadPrompt({ repoUrl, envVariables, savedValues, scopeOptions, onComplete }) {
   const [dragActive, setDragActive] = useState(false);
-  const [fileName, setFileName] = useState('');
+  const [variables, setVariables] = useState([]);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
   const [parsingError, setParsingError] = useState('');
   const [uploadStatus, setUploadStatus] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
-  const updateVar = (index, patch) => {
-    onChange(variables.map((v, idx) => (idx === index ? { ...v, ...patch } : v)));
+  const supportsScoping = Array.isArray(scopeOptions) && scopeOptions.length > 1;
+
+  useEffect(() => {
+    const savedLookup = new Map(
+      (savedValues || []).map((v) => [String(v.key || '').toUpperCase(), v])
+    );
+    const initialVars = envVariables.map((v) => {
+      const key = v.split(' ')[0];
+      const desc = v.includes('(') ? v.substring(v.indexOf('(')) : '';
+      const saved = savedLookup.get(key.toUpperCase());
+      return { key, value: saved?.value || '', desc, scope: saved?.scope || null };
+    });
+    setVariables(initialVars);
+    setUploadedFiles([]);
+    setParsingError('');
+    setSubmitError('');
+    setUploadStatus('');
+  }, [repoUrl, envVariables, savedValues]);
+
+  const handleKeyChange = (index, newKey) => {
+    setVariables((prev) => prev.map((v, idx) => (idx === index ? { ...v, key: newKey } : v)));
+  };
+
+  const handleValueChange = (index, newValue) => {
+    setVariables((prev) => prev.map((v, idx) => (idx === index ? { ...v, value: newValue } : v)));
+  };
+
+  const handleScopeChange = (index, newScope) => {
+    setVariables((prev) => prev.map((v, idx) => (idx === index ? { ...v, scope: newScope || null } : v)));
   };
 
   const handleDeleteVar = (index) => {
-    onChange(variables.filter((_, idx) => idx !== index));
+    setVariables((prev) => prev.filter((_, idx) => idx !== index));
   };
 
   const handleAddVar = () => {
-    onChange([...variables, { key: 'NEW_VARIABLE', value: '', desc: '(Custom)' }]);
+    setVariables((prev) => [...prev, { key: 'NEW_VARIABLE', value: '', desc: '(Custom)', scope: null }]);
   };
 
-  const handleFile = (file) => {
-    if (!file) return;
-    setFileName(file.name);
+  const handleFiles = async (fileList) => {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const parsedList = parseEnvText(e.target.result);
-        let matchCount = 0;
-        const updated = variables.map((v) => ({ ...v }));
+    try {
+      let totalParsed = 0;
+      let totalMatched = 0;
 
-        parsedList.forEach((item) => {
-          const existingIdx = updated.findIndex((v) => v.key.toLowerCase() === item.key.toLowerCase());
-          if (existingIdx !== -1) {
-            updated[existingIdx].value = item.value;
-            matchCount += 1;
-          } else {
-            updated.push({ key: item.key, value: item.value, desc: '(Uploaded)' });
-          }
+      for (const file of files) {
+        const text = await readFileAsText(file);
+        const parsedList = parseEnvText(text);
+        totalParsed += parsedList.length;
+
+        setVariables((prev) => {
+          const updated = prev.map((v) => ({ ...v }));
+          parsedList.forEach((item) => {
+            const existingIdx = updated.findIndex((v) => v.key.toLowerCase() === item.key.toLowerCase());
+            if (existingIdx !== -1) {
+              updated[existingIdx].value = item.value;
+              totalMatched += 1;
+            } else {
+              updated.push({ key: item.key, value: item.value, desc: '(Uploaded)', scope: null });
+            }
+          });
+          return updated;
         });
-
-        onChange(updated);
-        setUploadStatus(`Parsed ${parsedList.length} variables from file (${matchCount} matched existing fields).`);
-        setParsingError('');
-      } catch {
-        setParsingError('Failed to parse .env file format.');
-        setUploadStatus('');
       }
-    };
-    reader.readAsText(file);
+
+      setUploadedFiles((prev) => [...prev, ...files.map((f) => f.name)]);
+      setUploadStatus(`Parsed ${totalParsed} variable${totalParsed === 1 ? '' : 's'} from ${files.length} file${files.length === 1 ? '' : 's'} (${totalMatched} matched existing fields).`);
+      setParsingError('');
+    } catch (err) {
+      setParsingError(err.message || 'Failed to parse one of the uploaded files.');
+      setUploadStatus('');
+    }
   };
 
   const handleDrag = (e) => {
@@ -153,14 +142,49 @@ function EnvSection({ title, hint, variables, onChange, showAutoFill }) {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
   };
 
-  const inputId = `env-file-input-${title || 'shared'}`;
+  const handleFileInput = (e) => {
+    if (e.target.files && e.target.files.length) handleFiles(e.target.files);
+    e.target.value = '';
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitError('');
+    setSubmitting(true);
+
+    try {
+      const appToken = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/analysis/env`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${appToken}`,
+        },
+        body: JSON.stringify({
+          repoUrl,
+          variables: variables.map((v) => ({ key: v.key, value: v.value, scope: v.scope || null })),
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.message || 'Failed to save environment variables.');
+      }
+
+      onComplete(payload.envVariables);
+    } catch (err) {
+      setSubmitError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const autoFillDemo = () => {
-    onChange(
-      variables.map((v) => {
+    setVariables((prev) =>
+      prev.map((v) => {
         let value = v.value;
         if (!value) {
           if (v.key.includes('URL')) {
@@ -177,177 +201,125 @@ function EnvSection({ title, hint, variables, onChange, showAutoFill }) {
   };
 
   return (
-    <div className="env-section">
-      {title && (
-        <div className="env-section-header">
-          <span className="env-section-title">{title}</span>
-          {hint && <span className="env-section-hint">{hint}</span>}
-        </div>
-      )}
-
-      <div
-        className={`env-drag-area ${dragActive ? 'active' : ''} ${fileName ? 'uploaded' : ''}`}
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
-        onDrop={handleDrop}
-      >
-        <input
-          type="file"
-          id={inputId}
-          className="env-hidden-file-input"
-          onChange={(e) => e.target.files && e.target.files[0] && handleFile(e.target.files[0])}
-          accept=".env,.env.example,.txt"
-        />
-        <label htmlFor={inputId} className="env-upload-label">
-          <svg className="upload-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="17 8 12 3 7 8"></polyline>
-            <line x1="12" y1="3" x2="12" y2="15"></line>
-          </svg>
-          {fileName ? (
-            <span className="upload-message-main">Uploaded: <strong>{fileName}</strong></span>
-          ) : (
-            <span className="upload-message-main">
-              Drag & drop {title ? `${title}'s` : 'your'} <strong>.env</strong> file here, or <span className="browse-link">browse</span>
-            </span>
-          )}
-        </label>
-      </div>
-
-      {parsingError && <p className="parsing-error-msg">{parsingError}</p>}
-      {uploadStatus && <p className="parsing-success-msg">{uploadStatus}</p>}
-
-      <div className="divider-row">
-        <span className="divider-text">ENV FIELDS</span>
-        {showAutoFill && (
-          <button type="button" onClick={autoFillDemo} className="auto-fill-btn">⚡ Auto-generate Mock Values</button>
-        )}
-      </div>
-
-      <div className="env-fields-grid">
-        {variables.map((v, idx) => (
-          <div key={idx} className="env-var-row">
-            <div className="env-var-key-col">
-              <input
-                type="text"
-                className="env-var-key-input font-mono"
-                value={v.key}
-                onChange={(e) => updateVar(idx, { key: e.target.value })}
-                placeholder="VARIABLE_NAME"
-                required
-              />
-              {v.desc && <span className="env-var-desc-badge">{v.desc}</span>}
-            </div>
-            <div className="env-var-value-col">
-              <input
-                type="text"
-                className="env-var-value-input"
-                placeholder="Enter value"
-                value={v.value || ''}
-                onChange={(e) => updateVar(idx, { value: e.target.value })}
-              />
-            </div>
-            <button type="button" className="env-var-delete-btn" onClick={() => handleDeleteVar(idx)} title="Delete variable">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                <line x1="10" y1="11" x2="10" y2="17"></line>
-                <line x1="14" y1="11" x2="14" y2="17"></line>
-              </svg>
-            </button>
-          </div>
-        ))}
-      </div>
-
-      <div className="env-actions-row">
-        <button type="button" className="env-add-var-btn" onClick={handleAddVar}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '6px' }}>
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-          Add Custom Variable
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function EnvUploadPrompt({ repoUrl, envVariables, savedValues, scopeOptions, onComplete }) {
-  const [sections, setSections] = useState([]);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState('');
-
-  useEffect(() => {
-    setSections(buildInitialSections(envVariables, savedValues, scopeOptions));
-    setSubmitError('');
-  }, [repoUrl, envVariables, savedValues, scopeOptions]);
-
-  const updateSectionVariables = (sectionIdx, nextVariables) => {
-    setSections((prev) => prev.map((s, i) => (i === sectionIdx ? { ...s, variables: nextVariables } : s)));
-  };
-
-  const totalVariableCount = sections.reduce((sum, s) => sum + s.variables.length, 0);
-  const isMultiSection = sections.length > 1;
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitError('');
-    setSubmitting(true);
-
-    try {
-      const allVars = sections.flatMap((s) => s.variables.map((v) => ({ key: v.key, value: v.value, scope: s.name })));
-      const appToken = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/analysis/env`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${appToken}`,
-        },
-        body: JSON.stringify({ repoUrl, variables: allVars }),
-      });
-
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.message || 'Failed to save environment variables.');
-      }
-
-      onComplete(payload.envVariables);
-    } catch (err) {
-      setSubmitError(err.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
     <div className="env-prompt-container">
       <div className="env-prompt-card">
         <div className="env-status-banner">
           <span className="env-pulse-dot"></span>
-          <span>{totalVariableCount} ENVIRONMENT VARIABLE{totalVariableCount === 1 ? '' : 'S'} DETECTED IN CODE</span>
+          <span>{variables.length} ENVIRONMENT VARIABLE{variables.length === 1 ? '' : 'S'} DETECTED IN CODE</span>
         </div>
 
         <h2 className="env-prompt-title">Environment Setup Required</h2>
         <p className="env-prompt-desc">
           We scanned this repository's source code and metadata files (like <code>.env.example</code>) for environment
-          variables.{' '}
-          {isMultiSection
-            ? 'This repo has multiple deployable services - upload or fill in a separate .env for each one below, so CloudPilot sends the right variables to the right service.'
-            : 'Please upload your production .env file or fill in the values below.'}
+          variables listed below. Upload your production <code>.env</code> file(s) - you can drop or select more than one
+          at once - or fill in the values directly.
         </p>
 
+        <div
+          className={`env-drag-area ${dragActive ? 'active' : ''} ${uploadedFiles.length ? 'uploaded' : ''}`}
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+        >
+          <input
+            type="file"
+            id="env-file-input"
+            className="env-hidden-file-input"
+            onChange={handleFileInput}
+            accept=".env,.env.example,.txt"
+            multiple
+          />
+          <label htmlFor="env-file-input" className="env-upload-label">
+            <svg className="upload-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            {uploadedFiles.length ? (
+              <span className="upload-message-main">Uploaded: <strong>{uploadedFiles.join(', ')}</strong></span>
+            ) : (
+              <span className="upload-message-main">
+                Drag & drop your <strong>.env</strong> file(s) here, or <span className="browse-link">browse</span>
+              </span>
+            )}
+            <span className="upload-message-sub">
+              {uploadedFiles.length ? 'Drop more files to add to the list below' : 'Select multiple files at once if you have separate frontend/backend .env files'}
+            </span>
+          </label>
+        </div>
+
+        {parsingError && <p className="parsing-error-msg">{parsingError}</p>}
+        {uploadStatus && <p className="parsing-success-msg">{uploadStatus}</p>}
+
+        <div className="divider-row">
+          <span className="divider-text">ENV FIELDS</span>
+          <button type="button" onClick={autoFillDemo} className="auto-fill-btn">⚡ Auto-generate Mock Values</button>
+        </div>
+
         <form onSubmit={handleSubmit} className="env-fields-form">
-          {sections.map((section, idx) => (
-            <EnvSection
-              key={section.name || 'shared'}
-              title={isMultiSection ? section.name || 'Shared / Other' : null}
-              hint={isMultiSection && !section.name ? 'Variables not assigned to a specific service above' : null}
-              variables={section.variables}
-              onChange={(next) => updateSectionVariables(idx, next)}
-              showAutoFill={!isMultiSection || idx === sections.length - 1}
-            />
-          ))}
+          <div className="env-fields-grid">
+            {variables.map((v, idx) => (
+              <div key={idx} className="env-var-row">
+                <div className="env-var-key-col">
+                  <input
+                    type="text"
+                    className="env-var-key-input font-mono"
+                    value={v.key}
+                    onChange={(e) => handleKeyChange(idx, e.target.value)}
+                    placeholder="VARIABLE_NAME"
+                    required
+                  />
+                  {v.desc && <span className="env-var-desc-badge">{v.desc}</span>}
+                </div>
+                <div className="env-var-value-col">
+                  <input
+                    type="text"
+                    className="env-var-value-input"
+                    placeholder="Enter value"
+                    value={v.value || ''}
+                    onChange={(e) => handleValueChange(idx, e.target.value)}
+                  />
+                </div>
+                {supportsScoping && (
+                  <select
+                    className="env-var-scope-select"
+                    value={v.scope || ''}
+                    onChange={(e) => handleScopeChange(idx, e.target.value)}
+                    title="Which service needs this variable?"
+                  >
+                    <option value="">Shared / Any</option>
+                    {scopeOptions.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                )}
+                <button
+                  type="button"
+                  className="env-var-delete-btn"
+                  onClick={() => handleDeleteVar(idx)}
+                  title="Delete variable"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="env-actions-row">
+            <button type="button" className="env-add-var-btn" onClick={handleAddVar}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '6px' }}>
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Add Custom Variable
+            </button>
+          </div>
 
           {submitError && <p className="parsing-error-msg">{submitError}</p>}
 

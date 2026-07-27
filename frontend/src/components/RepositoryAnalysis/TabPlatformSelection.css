@@ -42,6 +42,12 @@
   max-height: 420px;
   overflow-y: auto;
   padding-right: 4px;
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.ps-chat-messages::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 .ps-chat-row {

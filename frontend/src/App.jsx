@@ -82,8 +82,6 @@ function App() {
         {/* Protected Routes */}
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/repositories" element={<ProtectedRoute><RepositoryAnalysis /></ProtectedRoute>} />
-        <Route path="/repository-analysis" element={<ProtectedRoute><RepositoryAnalysisDetails /></ProtectedRoute>} />
-        <Route path="/repositoy-analysis" element={<ProtectedRoute><RepositoryAnalysisDetails /></ProtectedRoute>} />
         <Route path="/architecture-recommendation" element={<ProtectedRoute><ArchitectureRecommendation /></ProtectedRoute>} />
         <Route path="/deployment-agent" element={<ProtectedRoute><DeploymentAgent /></ProtectedRoute>} />
         <Route path="/cost-estimation" element={<ProtectedRoute><CostEstimation /></ProtectedRoute>} />

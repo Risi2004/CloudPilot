@@ -132,10 +132,13 @@ const getDeployment = async (req, res) => {
 
 const listDeployments = async (req, res) => {
   const { repoUrl } = req.query;
-  if (!repoUrl) return res.status(400).json({ message: 'repoUrl is required.' });
+  const filter = { userId: req.user._id };
+  if (repoUrl) {
+    filter.repoUrl = repoUrl;
+  }
 
   try {
-    const deployments = await Deployment.find({ userId: req.user._id, repoUrl }).sort({ createdAt: -1 }).limit(20);
+    const deployments = await Deployment.find(filter).sort({ createdAt: -1 }).limit(20);
     return res.status(200).json({ deployments: deployments.map(serializeDeployment) });
   } catch (err) {
     console.error('Failed to list deployments:', err);

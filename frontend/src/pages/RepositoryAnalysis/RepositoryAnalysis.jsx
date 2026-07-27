@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/Dashboard/DashboardLayout';
+import RepositoryAnalysisDetails from './RepositoryAnalysisDetails';
 import './RepositoryAnalysis.css';
 
 // SVG Assets
@@ -8,6 +9,12 @@ import analyzeRepositoryIcon from '../../assets/analyze-repository.svg';
 import githubIcon from '../../assets/github.svg';
 
 function RepositoryAnalysis() {
+  const params = new URLSearchParams(window.location.search);
+  const repoUrlParam = params.get('url');
+
+  if (repoUrlParam) {
+    return <RepositoryAnalysisDetails />;
+  }
   const [repoUrl, setRepoUrl] = useState('');
   const [githubToken, setGithubToken] = useState(localStorage.getItem('github_token') || '');
   const [repos, setRepos] = useState([]);
@@ -67,7 +74,7 @@ function RepositoryAnalysis() {
   const handleAnalyze = (e) => {
     e.preventDefault();
     if (repoUrl.trim()) {
-      navigate(`/repository-analysis?url=${encodeURIComponent(repoUrl.trim())}`);
+      navigate(`/repositories?url=${encodeURIComponent(repoUrl.trim())}`);
     }
   };
 
@@ -224,7 +231,7 @@ function RepositoryAnalysis() {
                       </div>
                       <div className="repo-btn-col">
                         <button
-                          onClick={() => navigate(`/repository-analysis?url=${encodeURIComponent(repo.html_url)}`)}
+                          onClick={() => navigate(`/repositories?url=${encodeURIComponent(repo.html_url)}`)}
                           className="select-repo-btn"
                         >
                           Analyze
