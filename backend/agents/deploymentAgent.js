@@ -96,13 +96,27 @@ function findServiceConfigFor(platformInterview, platform) {
 // "localhost" but must never be silently swapped for another service's URL.
 const LOCAL_HTTP_URL = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i;
 
-function detectEnvVarCandidates(analysis) {
-  return (analysis.envVariables || []).map((v) => ({
-    key: v.key,
-    value: v.value,
-    looksLikeLocalLink: LOCAL_HTTP_URL.test(v.value || ''),
-    linksToComponent: null,
-  }));
+// If the user uploaded separate env files per component (EnvUploadPrompt's
+// per-section upload), each variable carries an explicit `scope` matching
+// that component's name - that's ground truth and should win outright, no
+// heuristics needed. A component only sees vars explicitly scoped to it plus
+// any unscoped ("shared") ones. If nothing in this repo's env vars has a
+// scope at all (the older, single-list flow, or a monolith), every var is a
+// candidate everywhere and the naming-convention heuristic decides inclusion,
+// same as before.
+function detectEnvVarCandidates(analysis, componentName) {
+  const all = analysis.envVariables || [];
+  const anyScoped = all.some((v) => v.scope);
+
+  return all
+    .filter((v) => !anyScoped || !v.scope || String(v.scope).toLowerCase() === String(componentName).toLowerCase())
+    .map((v) => ({
+      key: v.key,
+      value: v.value,
+      looksLikeLocalLink: LOCAL_HTTP_URL.test(v.value || ''),
+      linksToComponent: null,
+      explicitlyScoped: anyScoped && !!v.scope,
+    }));
 }
 
 // Env vars are detected repo-wide (the Code Analysis Agent doesn't scope them
@@ -141,7 +155,8 @@ function sanitizeBuildCommand(candidate) {
   return trimmed;
 }
 
-function defaultIncluded(side, key) {
+function defaultIncluded(side, key, explicitlyScoped) {
+  if (explicitlyScoped) return true; // the user explicitly assigned this var to this component via a per-section upload - trust it outright
   const isClientExposed = CLIENT_EXPOSED_PREFIX.test(key);
   if (side === 'frontend') return isClientExposed;
   if (side === 'backend') return !isClientExposed;
@@ -157,7 +172,6 @@ function buildDeploymentPlan({ analysis, platformInterview, architectureOption }
   const result = analysis.result || {};
   const detectedFiles = result.detectedFiles || [];
   const buildRequirements = result.buildRequirements || {};
-  const envCandidates = detectEnvVarCandidates(analysis);
 
   // The Platform Selection Agent's serviceConfig.plan reflects a single,
   // one-time recommendation made *before* architecture options even existed -
@@ -211,7 +225,10 @@ function buildDeploymentPlan({ analysis, platformInterview, architectureOption }
       vercelFramework: null,
       branch: null,
       envVars: deployable
-        ? envCandidates.map((v) => ({ ...v, included: defaultIncluded(side, v.key) }))
+        ? detectEnvVarCandidates(analysis, c.name).map((v) => ({
+            ...v,
+            included: defaultIncluded(side, v.key, v.explicitlyScoped),
+          }))
         : [],
     };
   });
@@ -223,7 +240,16 @@ function buildDeploymentPlan({ analysis, platformInterview, architectureOption }
       if (!c.deployable) return;
       const other = deployableNames.find((n) => n !== c.name);
       c.envVars.forEach((v) => {
-        if (v.looksLikeLocalLink) v.linksToComponent = other;
+        if (v.looksLikeLocalLink) {
+          v.linksToComponent = other;
+          // defaultIncluded() classified this var purely off naming convention
+          // (e.g. no VITE_/NEXT_PUBLIC_ prefix), which can mark it excluded
+          // even though it's the very variable that's supposed to carry the
+          // other service's URL - an explicit cross-link always overrides
+          // that guess, otherwise the wiring step silently skips it later
+          // (it only processes vars where included !== false).
+          v.included = true;
+        }
       });
     });
   }

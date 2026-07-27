@@ -146,6 +146,13 @@ function RepositoryAnalysisDetails() {
   };
 
   const envVariables = analysisData?.buildRequirements?.envVariables || [];
+  // Lets the env upload step offer one section per deployable component
+  // (e.g. "Frontend"/"Backend") instead of always dumping every detected
+  // variable into one flat list - excludes managed datastores, since there's
+  // nothing to "upload an env file" for those.
+  const scopeOptions = (analysisData?.architecture?.components || [])
+    .map((c) => c.name)
+    .filter((name) => name && !/postgres|database|mysql|mongo|redis|cache|datastore/i.test(name));
 
   return (
     <DashboardLayout>
@@ -174,6 +181,7 @@ function RepositoryAnalysisDetails() {
             repoUrl={repoUrl}
             envVariables={envVariables}
             savedValues={savedEnvVariables}
+            scopeOptions={scopeOptions}
             onComplete={(updatedEnvVariables) => {
               setSavedEnvVariables(updatedEnvVariables || []);
               setEnvStepComplete(true);

@@ -83,6 +83,36 @@
   border-radius: 4px;
 }
 
+.env-section {
+  display: flex;
+  flex-direction: column;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.env-section:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.env-section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.env-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.env-section-hint {
+  font-size: 11px;
+  color: #64748b;
+}
+
 /* Drag Area style */
 .env-drag-area {
   border: 2px dashed rgba(255, 255, 255, 0.1);

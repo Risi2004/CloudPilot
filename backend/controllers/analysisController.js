@@ -148,7 +148,11 @@ const saveEnvVariables = async (req, res) => {
   }
 
   const cleaned = variables
-    .map((v) => ({ key: String(v?.key || '').trim(), value: String(v?.value ?? '') }))
+    .map((v) => ({
+      key: String(v?.key || '').trim(),
+      value: String(v?.value ?? ''),
+      scope: v?.scope ? String(v.scope).trim() : null,
+    }))
     .filter((v) => v.key.length > 0);
 
   if (cleaned.length === 0) {

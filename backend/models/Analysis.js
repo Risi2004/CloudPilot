@@ -40,7 +40,12 @@ const analysisSchema = new mongoose.Schema({
     type: [
       {
         key: { type: String, required: true, trim: true },
-        value: { type: String, default: '' }
+        value: { type: String, default: '' },
+        // Which detected component/directory this var belongs to (e.g.
+        // "Frontend", "Backend"), set when the user uploads a separate env
+        // file per component. null/omitted means unscoped - the Deployment
+        // Agent falls back to naming-convention heuristics for those.
+        scope: { type: String, default: null }
       }
     ],
     default: []
