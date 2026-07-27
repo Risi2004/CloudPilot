@@ -13,6 +13,10 @@ const messageSchema = new mongoose.Schema({
   quickReplies: {
     type: [String],
     default: undefined
+  },
+  confidence: {
+    type: String,
+    default: undefined
   }
 }, { timestamps: true, _id: false });
 

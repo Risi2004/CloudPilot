@@ -125,16 +125,29 @@ async function fetchProjectMetadataFiles(repoUrl, githubToken) {
   }
 
   const { owner, repo } = parseRepoUrl(repoUrl);
-  const rootEntries = await githubFetch(`/repos/${owner}/${repo}/contents/`, githubToken);
+  
+  // Get repository info to find the default branch name
+  const repoInfo = await githubFetch(`/repos/${owner}/${repo}`, githubToken);
+  const branch = repoInfo.default_branch || 'main';
 
-  if (!Array.isArray(rootEntries)) {
-    throw new GithubFileError('Unexpected response while listing repository contents.', 502);
-  }
-
-  const candidateLookup = new Set(CANDIDATE_FILES.map((f) => f.toLowerCase()));
-  const matches = rootEntries.filter(
-    (entry) => entry.type === 'file' && candidateLookup.has(entry.name.toLowerCase())
+  // Fetch the entire tree recursively to support nested metadata files (e.g. backend/package.json)
+  const treeData = await githubFetch(
+    `/repos/${owner}/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`,
+    githubToken
   );
+
+  const tree = Array.isArray(treeData.tree) ? treeData.tree : [];
+  const candidateLookup = new Set(CANDIDATE_FILES.map((f) => f.toLowerCase()));
+
+  // Filter tree entries for blobs whose file name (basename) matches one of our candidates
+  const matches = tree.filter((entry) => {
+    if (entry.type !== 'blob' || typeof entry.path !== 'string') return false;
+    
+    // Extract filename from path
+    const parts = entry.path.split('/');
+    const filename = parts[parts.length - 1];
+    return candidateLookup.has(filename.toLowerCase());
+  });
 
   const detectedFiles = [];
   let totalChars = 0;

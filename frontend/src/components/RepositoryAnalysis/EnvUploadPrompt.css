@@ -152,6 +152,13 @@
   font-weight: 600;
 }
 
+.parsing-success-msg {
+  color: #10b981;
+  font-size: 12px;
+  margin: 4px 0 16px 0;
+  font-weight: 600;
+}
+
 /* Divider & auto-fill button */
 .divider-row {
   display: flex;

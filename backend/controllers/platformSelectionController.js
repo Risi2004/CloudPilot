@@ -21,6 +21,7 @@ function toPlainMessages(doc) {
     role: m.role,
     content: m.content,
     quickReplies: m.quickReplies,
+    confidence: m.confidence,
     createdAt: m.createdAt,
   }));
 }
@@ -86,6 +87,7 @@ const startInterview = async (req, res) => {
       role: 'agent',
       content: turn.message,
       quickReplies: turn.type === 'question' ? turn.quickReplies : undefined,
+      confidence: turn.confidence || undefined,
     };
 
     const interview = await PlatformInterview.findOneAndUpdate(
@@ -154,6 +156,7 @@ const postMessage = async (req, res) => {
       role: 'agent',
       content: turn.message,
       quickReplies: turn.type === 'question' ? turn.quickReplies : undefined,
+      confidence: turn.confidence || undefined,
     });
 
     if (turn.type === 'recommendation') {

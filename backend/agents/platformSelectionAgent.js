@@ -16,6 +16,7 @@ Rules for the interview:
 - Ask ONE question per turn. Never ask a question that is generic or already answered earlier in the conversation - tailor every question to this repo's actual language, framework, architecture, detected components, dependencies, and any gaps from its deployment-readiness checklist (e.g. only ask about database plans if a database dependency was detected; only ask about background workers or cron if the architecture suggests one; skip questions that don't apply to a static frontend).
 - Provide 2 to 5 short "quickReplies" (a few words each) with each question representing likely answers, but the developer may also type a free-text answer instead.
 - Ask at least ${MIN_QUESTIONS} questions before recommending a platform, and never more than ${MAX_QUESTIONS}. If you are told the recommendation is now mandatory, you MUST respond with a "recommendation" turn immediately, regardless of how many questions you've asked.
+- Tailor the interview to the identified subdirectories/components (e.g., if there are separate 'backend' and 'frontend' directories). Ask the developer what deployment plan they have in mind for these directories. If their plan is good/viable on Render or Vercel, validate it and help them proceed with it. Otherwise, suggest a deployment plan (e.g. deploying frontend to Vercel and backend to Render) and ask for their permission/approval.
 - Use the provided knowledge-base excerpts to decide which questions are actually relevant and to justify the final recommendation with real platform capabilities. If no excerpts are relevant to a point you want to make, rely on well-established, uncontroversial facts about Render/Vercel instead of inventing specifics.
 
 Respond with a single JSON object and NOTHING else - no markdown code fences, no prose before or after. Use EXACTLY one of these two shapes:
@@ -24,27 +25,32 @@ Question turn:
 {
   "type": "question",
   "message": "string - the single question to ask the developer next",
-  "quickReplies": ["string", "string"]
+  "quickReplies": ["string", "string"],
+  "confidence": "High", "Medium", or "Low"
 }
 
 Final recommendation turn:
 {
   "type": "recommendation",
   "message": "string - one short lead-in sentence introducing the recommendation",
-  "platform": "Render" or "Vercel",
-  "confidence": "High", "Medium", or "Low",
-  "serviceConfig": {
-    "serviceType": "string, e.g. 'Web Service', 'Static Site', 'Background Worker'",
-    "plan": "string, e.g. 'Starter', 'Hobby', 'Standard'",
-    "region": "string",
-    "buildCommand": "string",
-    "startCommand": "string",
-    "database": "string, or 'Not needed'",
-    "scaling": "string describing scaling/instance approach",
-    "envHandling": "string describing how env vars/secrets should be configured"
-  },
-  "reasoning": ["string - up to 5 short bullet points, each grounded in a fact from the repo analysis, the developer's answers, or the knowledge-base excerpts"],
-  "citations": ["string - short labels of the knowledge-base excerpts actually used, if any"]
+  "recommendations": [
+    {
+      "platform": "Render" or "Vercel",
+      "confidence": "High", "Medium", or "Low",
+      "serviceConfig": {
+        "serviceType": "string, e.g. 'Web Service', 'Static Site', 'Background Worker'",
+        "plan": "string, e.g. 'Starter', 'Hobby', 'Standard'",
+        "region": "string",
+        "buildCommand": "string",
+        "startCommand": "string",
+        "database": "string, or 'Not needed'",
+        "scaling": "string describing scaling/instance approach",
+        "envHandling": "string describing how env vars/secrets should be configured"
+      },
+      "reasoning": ["string - up to 5 short bullet points, each grounded in a fact from the repo analysis, the developer's answers, or the knowledge-base excerpts"],
+      "citations": ["string - short labels of the knowledge-base excerpts actually used, if any"]
+    }
+  ]
 }`;
 
 let agentSingleton = null;
@@ -103,6 +109,18 @@ function summarizeRepoContext({ analysisResult, deploymentReadiness }) {
   const dependencyNames = (r.dependencies || []).slice(0, 15).map((d) => d.name).filter(Boolean);
   const coreFeatureTitles = (r.coreFeatures || []).map((f) => f.title).filter(Boolean);
 
+  const detectedFiles = r.detectedFiles || [];
+  const directories = new Set();
+  detectedFiles.forEach((filePath) => {
+    const parts = filePath.split('/');
+    if (parts.length > 1) {
+      directories.add(parts[0]);
+    } else {
+      directories.add('root');
+    }
+  });
+  const identifiedDirs = Array.from(directories).join(', ');
+
   const lines = [
     `Language: ${r.language || 'Not detected'}`,
     `Framework: ${r.framework || 'Not detected'}`,
@@ -117,6 +135,7 @@ function summarizeRepoContext({ analysisResult, deploymentReadiness }) {
     `Start command: ${buildRequirements.startCommand || 'Not detected'}`,
     `Env variables referenced: ${(buildRequirements.envVariables || []).join(', ') || 'None detected'}`,
     `Core features: ${coreFeatureTitles.join(', ') || 'None detected'}`,
+    `Identified Directories: ${identifiedDirs || 'root'}`,
   ];
 
   if (deploymentReadiness) {
@@ -155,6 +174,15 @@ function formatTranscript(history) {
 function buildUserMessage({ analysisResult, deploymentReadiness, history, kbContext, mustRecommendNow }) {
   const questionsAsked = (history || []).filter((m) => m.role === 'agent').length;
 
+  let instruction = '';
+  if (mustRecommendNow) {
+    instruction = 'The question cap has been reached. You must respond with a "recommendation" turn now.';
+  } else if (questionsAsked < MIN_QUESTIONS) {
+    instruction = `You have only asked ${questionsAsked} questions so far. You MUST ask another tailored question. Do NOT recommend a platform yet (minimum is ${MIN_QUESTIONS} questions).`;
+  } else {
+    instruction = 'Decide whether to ask another tailored question or, if you have enough information, respond with the final "recommendation" turn.';
+  }
+
   return [
     '--- REPOSITORY CONTEXT ---',
     summarizeRepoContext({ analysisResult, deploymentReadiness }),
@@ -167,9 +195,7 @@ function buildUserMessage({ analysisResult, deploymentReadiness, history, kbCont
     '',
     `--- STATUS ---`,
     `Questions asked so far: ${questionsAsked}.`,
-    mustRecommendNow
-      ? 'The question cap has been reached. You must respond with a "recommendation" turn now.'
-      : 'Decide whether to ask another tailored question or, if you have enough information, respond with the final "recommendation" turn.',
+    instruction,
   ].join('\n');
 }
 

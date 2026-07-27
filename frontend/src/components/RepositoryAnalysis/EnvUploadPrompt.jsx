@@ -10,6 +10,7 @@ function EnvUploadPrompt({ repoUrl, envVariables, savedValues, onComplete }) {
   const [parsingError, setParsingError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [uploadStatus, setUploadStatus] = useState('');
 
   // Extract keys from envVariables (e.g. "DATABASE_URL (Postgres link)" -> "DATABASE_URL")
   const envKeys = envVariables.map(v => v.split(' ')[0]);
@@ -28,22 +29,15 @@ function EnvUploadPrompt({ repoUrl, envVariables, savedValues, onComplete }) {
     setFileName('');
     setParsingError('');
     setSubmitError('');
+    setUploadStatus('');
   }, [repoUrl, envVariables, savedValues]);
 
   const handleKeyChange = (index, newKey) => {
-    setVariables(prev => {
-      const updated = [...prev];
-      updated[index].key = newKey;
-      return updated;
-    });
+    setVariables(prev => prev.map((v, idx) => idx === index ? { ...v, key: newKey } : v));
   };
 
   const handleValueChange = (index, newValue) => {
-    setVariables(prev => {
-      const updated = [...prev];
-      updated[index].value = newValue;
-      return updated;
-    });
+    setVariables(prev => prev.map((v, idx) => idx === index ? { ...v, value: newValue } : v));
   };
 
   const handleDeleteVar = (index) => {
@@ -56,36 +50,62 @@ function EnvUploadPrompt({ repoUrl, envVariables, savedValues, onComplete }) {
 
   const parseEnvContent = (text) => {
     try {
-      const lines = text.split('\n');
-      const parsedVars = [...variables];
+      const lines = text.split(/\r?\n/);
       let matchCount = 0;
+      let totalParsed = 0;
+      const parsedList = [];
 
       lines.forEach(line => {
         const trimmed = line.trim();
         if (trimmed && !trimmed.startsWith('#')) {
           const parts = trimmed.split('=');
           if (parts.length >= 2) {
-            const key = parts[0].trim();
-            const val = parts.slice(1).join('=').trim().replace(/^['"]|['"]$/g, ''); // strip quotes
-            
-            // Check if this key already exists in our list
-            const existingIdx = parsedVars.findIndex(v => v.key.toLowerCase() === key.toLowerCase());
-            if (existingIdx !== -1) {
-              parsedVars[existingIdx].value = val;
-            } else {
-              // It is a new custom key from the file! Add it!
-              parsedVars.push({ key, value: val, desc: '(Uploaded)' });
+            let key = parts[0].trim();
+            // Strip matching quotes from key
+            key = key.replace(/^['"]|['"]$/g, '').trim();
+            if (key.startsWith('export ')) {
+              key = key.replace(/^export\s+/, '').trim();
             }
-            matchCount++;
+
+            let val = parts.slice(1).join('=').trim();
+            const hasQuotes = /^(["']).*\1$/.test(val);
+            if (!hasQuotes) {
+              const hashIdx = val.indexOf('#');
+              if (hashIdx !== -1) {
+                val = val.substring(0, hashIdx).trim();
+              }
+            } else {
+              val = val.replace(/^['"]|['"]$/g, '');
+            }
+
+            parsedList.push({ key, value: val });
+            totalParsed++;
           }
         }
       });
 
-      setVariables(parsedVars);
+      setVariables(prevVariables => {
+        const updatedVars = prevVariables.map(v => ({ ...v }));
+        
+        parsedList.forEach(item => {
+          const existingIdx = updatedVars.findIndex(v => v.key.toLowerCase() === item.key.toLowerCase());
+          if (existingIdx !== -1) {
+            updatedVars[existingIdx].value = item.value;
+            matchCount++;
+          } else {
+            updatedVars.push({ key: item.key, value: item.value, desc: '(Uploaded)' });
+          }
+        });
+
+        setUploadStatus(`Parsed ${totalParsed} variables from file (${matchCount} matched code analysis requirements).`);
+        return updatedVars;
+      });
+
       setParsingError('');
-      return matchCount;
+      return totalParsed;
     } catch (err) {
       setParsingError('Failed to parse .env file format.');
+      setUploadStatus('');
       return 0;
     }
   };
@@ -223,6 +243,7 @@ function EnvUploadPrompt({ repoUrl, envVariables, savedValues, onComplete }) {
         </div>
 
         {parsingError && <p className="parsing-error-msg">{parsingError}</p>}
+        {uploadStatus && <p className="parsing-success-msg">{uploadStatus}</p>}
 
         <div className="divider-row">
           <span className="divider-text">ENV FIELDS</span>

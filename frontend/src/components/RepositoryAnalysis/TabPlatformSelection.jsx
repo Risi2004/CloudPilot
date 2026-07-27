@@ -11,67 +11,86 @@ function authHeaders() {
   };
 }
 
-function RecommendationCard({ recommendation, onRestart }) {
+function RecommendationCard({ recommendation, onRestart, repoUrl }) {
   if (!recommendation) return null;
-  const config = recommendation.serviceConfig || {};
-  const reasoning = Array.isArray(recommendation.reasoning) ? recommendation.reasoning : [];
-  const citations = Array.isArray(recommendation.citations) ? recommendation.citations : [];
-
-  const configRows = [
-    ['Service Type', config.serviceType],
-    ['Plan', config.plan],
-    ['Region', config.region],
-    ['Build Command', config.buildCommand],
-    ['Start Command', config.startCommand],
-    ['Database', config.database],
-    ['Scaling', config.scaling],
-    ['Env Handling', config.envHandling],
-  ].filter(([, value]) => value);
+  const list = Array.isArray(recommendation.recommendations)
+    ? recommendation.recommendations
+    : [recommendation];
 
   return (
-    <div className="ps-recommendation-card">
-      <div className="ps-recommendation-header">
-        <div className="ps-platform-badge">{recommendation.platform}</div>
-        {recommendation.confidence && (
-          <div className={`ps-confidence-pill ps-confidence-${String(recommendation.confidence).toLowerCase()}`}>
-            {recommendation.confidence} confidence
-          </div>
-        )}
-      </div>
+    <div className="ps-recommendations-wrapper">
+      {list.map((rec, index) => {
+        const config = rec.serviceConfig || {};
+        const reasoning = Array.isArray(rec.reasoning) ? rec.reasoning : [];
+        const citations = Array.isArray(rec.citations) ? rec.citations : [];
 
-      {configRows.length > 0 && (
-        <div className="ps-config-grid">
-          {configRows.map(([label, value]) => (
-            <div key={label} className="ps-config-row">
-              <span className="ps-config-label">{label}</span>
-              <span className="ps-config-value">{value}</span>
+        const configRows = [
+          ['Service Type', config.serviceType],
+          ['Plan', config.plan],
+          ['Region', config.region],
+          ['Build Command', config.buildCommand],
+          ['Start Command', config.startCommand],
+          ['Database', config.database],
+          ['Scaling', config.scaling],
+          ['Env Handling', config.envHandling],
+        ].filter(([, value]) => value);
+
+        return (
+          <div key={index} className="ps-recommendation-card" style={{ marginBottom: index < list.length - 1 ? '24px' : '0' }}>
+            <div className="ps-recommendation-header">
+              <div className="ps-platform-badge">{rec.platform}</div>
+              {rec.confidence && (
+                <div className={`ps-confidence-pill ps-confidence-${String(rec.confidence).toLowerCase()}`}>
+                  {rec.confidence} confidence
+                </div>
+              )}
             </div>
-          ))}
-        </div>
-      )}
 
-      {reasoning.length > 0 && (
-        <div className="ps-reasoning-box">
-          <div className="ps-reasoning-title">Why this recommendation</div>
-          <ul className="ps-reasoning-list">
-            {reasoning.map((r, idx) => (
-              <li key={idx}>{r}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+            {configRows.length > 0 && (
+              <div className="ps-config-grid">
+                {configRows.map(([label, value]) => (
+                  <div key={label} className="ps-config-row">
+                    <span className="ps-config-label">{label}</span>
+                    <span className="ps-config-value">{value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
-      {citations.length > 0 && (
-        <div className="ps-citations-row">
-          {citations.map((c, idx) => (
-            <span key={idx} className="ps-citation-tag">{c}</span>
-          ))}
-        </div>
-      )}
+            {reasoning.length > 0 && (
+              <div className="ps-reasoning-box">
+                <div className="ps-reasoning-title">Why this recommendation</div>
+                <ul className="ps-reasoning-list">
+                  {reasoning.map((r, idx) => (
+                    <li key={idx}>{r}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
-      <button type="button" className="ps-restart-btn" onClick={onRestart}>
-        Restart Interview
-      </button>
+            {citations.length > 0 && (
+              <div className="ps-citations-row">
+                {citations.map((c, idx) => (
+                  <span key={idx} className="ps-citation-tag">{c}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      <div className="ps-recommendation-actions-row">
+        <button 
+          type="button" 
+          className="ps-suggest-arch-btn" 
+          onClick={() => window.location.href = `/architecture-recommendation?url=${encodeURIComponent(repoUrl)}`}
+        >
+          Suggest Architecture
+        </button>
+        <button type="button" className="ps-restart-btn" onClick={onRestart}>
+          Restart Interview
+        </button>
+      </div>
     </div>
   );
 }
@@ -152,7 +171,7 @@ function TabPlatformSelection({ repoUrl }) {
   };
 
   const handleRestart = async () => {
-    setSending(true);
+    setLoading(true);
     setError(null);
     try {
       const res = await fetch(`${API_URL}/api/platform-selection/start`, {
@@ -167,7 +186,7 @@ function TabPlatformSelection({ repoUrl }) {
       console.error(err);
       setError(err.message);
     } finally {
-      setSending(false);
+      setLoading(false);
     }
   };
 
@@ -187,7 +206,10 @@ function TabPlatformSelection({ repoUrl }) {
 
       <div className="ps-chat-container">
         {loading ? (
-          <div className="ps-loading-state">Starting the interview...</div>
+          <div className="ps-loading-state">
+            <div className="ps-loading-spinner"></div>
+            <span>Starting the interview...</span>
+          </div>
         ) : (
           <>
             <div className="ps-chat-messages" ref={scrollRef}>
@@ -204,7 +226,11 @@ function TabPlatformSelection({ repoUrl }) {
             </div>
 
             {interview && interview.status === 'completed' && (
-              <RecommendationCard recommendation={interview.recommendation} onRestart={handleRestart} />
+              <RecommendationCard 
+                recommendation={interview.recommendation} 
+                onRestart={handleRestart} 
+                repoUrl={repoUrl}
+              />
             )}
 
             {isInProgress && (

@@ -31,6 +31,7 @@ function RepositoryAnalysisDetails() {
   const [activeTab, setActiveTab] = useState('architecture');
   const [analysisData, setAnalysisData] = useState(null);
   const [error, setError] = useState(null);
+  const [interviewStatus, setInterviewStatus] = useState(null);
 
   const runAnalysis = async (url, force = false) => {
     setIsLoading(true);
@@ -59,6 +60,25 @@ function RepositoryAnalysisDetails() {
       setEnvStepComplete(Boolean(payload.envConfigured));
       setDeploymentReadiness(payload.deploymentReadiness || null);
       setReadinessAcknowledged(false);
+
+      // Pre-fetch platform selection interview status
+      try {
+        const interviewResponse = await fetch(`${API_URL}/api/platform-selection?repoUrl=${encodeURIComponent(url)}`, {
+          headers: {
+            Authorization: `Bearer ${appToken}`,
+          },
+        });
+        if (interviewResponse.ok) {
+          const interviewPayload = await interviewResponse.json();
+          if (interviewPayload.interview) {
+            setInterviewStatus(interviewPayload.interview.status);
+          } else {
+            setInterviewStatus(null);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to pre-fetch interview status:', err);
+      }
     } catch (err) {
       console.error(err);
       setError(err.message);
@@ -76,6 +96,7 @@ function RepositoryAnalysisDetails() {
       setReadinessAcknowledged(false);
       setDeploymentReadiness(null);
       setAnalysisData(null);
+      setInterviewStatus(null);
       setActiveTab('architecture');
       runAnalysis(repoUrl);
     } else {
@@ -86,6 +107,7 @@ function RepositoryAnalysisDetails() {
       setIsLoading(false);
       setAnalysisData(null);
       setError(null);
+      setInterviewStatus(null);
     }
   }, [repoUrl]);
 
@@ -111,7 +133,13 @@ function RepositoryAnalysisDetails() {
       case 'infra':
         return <TabCloudInfrastructure data={analysisData} />;
       case 'platform':
-        return <TabPlatformSelection repoUrl={repoUrl} />;
+        return (
+          <TabPlatformSelection 
+            repoUrl={repoUrl} 
+            onBack={() => setActiveTab('architecture')} 
+            onStatusChange={setInterviewStatus} 
+          />
+        );
       default:
         return <TabArchitectureOverview data={analysisData} />;
     }
@@ -154,12 +182,21 @@ function RepositoryAnalysisDetails() {
         ) : repoUrl && analysisData && deploymentReadiness && !readinessAcknowledged ? (
           <DeploymentReadinessReport
             data={deploymentReadiness}
-            onContinue={() => setReadinessAcknowledged(true)}
+            onContinue={() => {
+              setReadinessAcknowledged(true);
+              setActiveTab('platform');
+            }}
           />
         ) : repoUrl && analysisData ? (
           <div className="analysis-content-container">
             {/* Top Search & Details Header */}
-            <AnalysisHeader currentUrl={repoUrl} onAnalyzeNew={handleAnalyzeNew} />
+            <AnalysisHeader 
+              currentUrl={repoUrl} 
+              onAnalyzeNew={handleAnalyzeNew} 
+              onPlatformSelectClick={() => setActiveTab('platform')}
+              interviewStatus={interviewStatus}
+              activeTab={activeTab}
+            />
 
             {/* General Metrics summary cards */}
             {analysisData && <AnalysisSummary data={analysisData} />}
@@ -218,16 +255,6 @@ function RepositoryAnalysisDetails() {
                 </svg>
                 <span>Infrastructure & IaC</span>
               </button>
-
-              <button
-                className={`tab-toggle-btn ${activeTab === 'platform' ? 'active' : ''}`}
-                onClick={() => setActiveTab('platform')}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                </svg>
-                <span>Platform Selection</span>
-              </button>
             </div>
 
             {/* Display active detailed panel */}
@@ -247,7 +274,7 @@ function RepositoryAnalysisDetails() {
               </div>
               <h2 className="empty-title">Analyze Repository</h2>
               <p className="empty-desc">No repository URL selected. Enter a GitHub repo URL below to launch CloudPilot telemetry profiling.</p>
-              
+
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
