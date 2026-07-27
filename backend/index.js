@@ -19,6 +19,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/github', require('./routes/githubRoutes'));
 app.use('/api/analysis', require('./routes/analysisRoutes'));
 app.use('/api/platform-selection', require('./routes/platformSelectionRoutes'));
+app.use('/api/architecture', require('./routes/architectureRoutes'));
 app.use('/api/tickets', require('./routes/ticketRoutes'));
 app.use('/api/knowledge', require('./routes/knowledgeRoutes'));
 app.use('/api/subscriptions', require('./routes/subscriptionRoutes'));
