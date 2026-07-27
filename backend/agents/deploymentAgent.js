@@ -126,6 +126,21 @@ function classifyComponentSide(component) {
   return 'unknown';
 }
 
+// A "build command" that actually starts a dev server (or any long-running
+// process) never exits, so the deploy hangs forever waiting for a "build" to
+// finish that was never going to finish. LLM-suggested commands (from the
+// Platform Selection interview) aren't validated against the real repo, so
+// reject anything that looks like a dev/serve/start invocation rather than
+// trusting it blindly - falling back to '' (the platform's own auto-detect)
+// is always safer than running the wrong script.
+const DEV_LIKE_COMMAND = /(^|\s)(dev|serve|start)(\s|$)|vite\s*$|next\s+dev|react-scripts\s+start|webpack(-dev-server|\s+serve)/i;
+
+function sanitizeBuildCommand(candidate) {
+  const trimmed = String(candidate || '').trim();
+  if (!trimmed || DEV_LIKE_COMMAND.test(trimmed)) return '';
+  return trimmed;
+}
+
 function defaultIncluded(side, key) {
   const isClientExposed = CLIENT_EXPOSED_PREFIX.test(key);
   if (side === 'frontend') return isClientExposed;
@@ -167,6 +182,18 @@ function buildDeploymentPlan({ analysis, platformInterview, architectureOption }
     const serviceConfig = findServiceConfigFor(platformInterview, platform);
     const side = classifyComponentSide(c);
 
+    // Vercel's own framework auto-detection (from the repo's package.json /
+    // config files) is far more reliable than a freeform command an earlier
+    // interview happened to suggest - default to '' (auto-detect) there and
+    // only use the interview's value if it survives sanitization AND the
+    // developer explicitly wants it (they can always type one in Review).
+    // Render has no equivalent auto-detection, so it still inherits a
+    // sanitized default from the interview/repo analysis.
+    const buildCommand =
+      platform === 'vercel'
+        ? ''
+        : sanitizeBuildCommand(serviceConfig.buildCommand) || sanitizeBuildCommand(buildRequirements.buildCommand);
+
     return {
       name: c.name || 'Component',
       platform,
@@ -177,7 +204,7 @@ function buildDeploymentPlan({ analysis, platformInterview, architectureOption }
       rootDir: inferRootDir(c.name, detectedFiles),
       serviceType: 'web_service',
       runtime: mapLanguageToRenderRuntime(result.language),
-      buildCommand: serviceConfig.buildCommand || buildRequirements.buildCommand || '',
+      buildCommand,
       startCommand: serviceConfig.startCommand || buildRequirements.startCommand || '',
       plan: isFreeOption ? 'free' : mapPlanTier(serviceConfig.plan),
       region: mapRenderRegion(serviceConfig.region),
@@ -332,22 +359,28 @@ async function createResourceStep(deploymentId, deployment, component, cred) {
 
 async function pollRenderDeploy(deploymentId, stepKey, cred, resource, deployId) {
   const deadline = Date.now() + POLL_TIMEOUT_MS;
-  let seenLogCount = 0;
+  // A time cursor (not an array-length/index count) so logs keep flowing no
+  // matter how many lines a verbose build produces - an index-based "seen
+  // count" against a fixed-size page would silently stop advancing forever
+  // once the build passed that page size, even though the real deploy kept
+  // progressing (or had already finished) on Render's side.
+  let startTime;
   while (Date.now() < deadline) {
     await checkStopOrThrow(deploymentId);
     const deploy = await renderApiService.getDeploy(cred.apiKey, resource.platformResourceId, deployId);
 
     try {
-      const logs = await renderApiService.listBuildLogs(cred.apiKey, {
+      const { logs, nextStartTime } = await renderApiService.listBuildLogs(cred.apiKey, {
         ownerId: cred.metadata.ownerId,
         resource: resource.platformResourceId,
+        startTime,
         limit: 100,
       });
-      if (logs.length > seenLogCount) {
-        const lines = logs.slice(seenLogCount).map((l) => l.message || l.text || JSON.stringify(l));
+      if (logs.length) {
+        const lines = logs.map((l) => l.message || l.text || JSON.stringify(l));
         await appendStepLog(deploymentId, stepKey, lines);
-        seenLogCount = logs.length;
       }
+      if (nextStartTime) startTime = nextStartTime;
     } catch (logErr) {
       // Logs are best-effort - never fail the deploy just because log fetching hiccuped.
     }
@@ -363,7 +396,10 @@ async function pollRenderDeploy(deploymentId, stepKey, cred, resource, deployId)
 
 async function pollVercelDeployment(deploymentId, stepKey, cred, deploymentRecordId) {
   const deadline = Date.now() + POLL_TIMEOUT_MS;
-  let seenLogCount = 0;
+  // Same time-cursor fix as pollRenderDeploy - track the last event's
+  // timestamp, not how many we've shown, so logs never silently stop
+  // advancing once a build passes a fixed page size.
+  let since;
   let readyState = 'QUEUED';
   while (Date.now() < deadline) {
     await checkStopOrThrow(deploymentId);
@@ -371,14 +407,17 @@ async function pollVercelDeployment(deploymentId, stepKey, cred, deploymentRecor
     readyState = polled.readyState;
 
     try {
-      const events = await vercelApiService.getDeploymentEvents(cred.apiKey, deploymentRecordId, { teamId: cred.metadata.teamId });
-      if (events.length > seenLogCount) {
+      const events = await vercelApiService.getDeploymentEvents(cred.apiKey, deploymentRecordId, {
+        teamId: cred.metadata.teamId,
+        since,
+      });
+      if (events.length) {
         const lines = events
-          .slice(seenLogCount)
           .map((e) => e.text || (e.payload && e.payload.text) || e.type)
           .filter(Boolean);
         await appendStepLog(deploymentId, stepKey, lines);
-        seenLogCount = events.length;
+        const maxCreated = events.reduce((max, e) => Math.max(max, e.created || 0), since || 0);
+        if (maxCreated > (since || 0)) since = maxCreated + 1;
       }
     } catch (logErr) {
       // Best-effort logs, same as Render.

@@ -70,8 +70,12 @@ async function getDeployment(apiKey, deploymentId, { teamId } = {}) {
   return vercelFetch(apiKey, withTeam(`/v13/deployments/${encodeURIComponent(deploymentId)}`, teamId));
 }
 
-async function getDeploymentEvents(apiKey, deploymentId, { teamId, limit = 100 } = {}) {
-  const path = withTeam(`/v3/deployments/${encodeURIComponent(deploymentId)}/events?limit=${limit}&direction=forward`, teamId);
+async function getDeploymentEvents(apiKey, deploymentId, { teamId, limit = 200, since } = {}) {
+  const params = new URLSearchParams();
+  params.set('limit', String(limit));
+  params.set('direction', 'forward');
+  if (since) params.set('since', String(since));
+  const path = withTeam(`/v3/deployments/${encodeURIComponent(deploymentId)}/events?${params.toString()}`, teamId);
   const events = await vercelFetch(apiKey, path);
   return Array.isArray(events) ? events : [];
 }

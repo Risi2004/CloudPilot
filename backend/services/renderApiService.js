@@ -67,15 +67,19 @@ async function getDeploy(apiKey, serviceId, deployId) {
   return renderFetch(apiKey, `/services/${encodeURIComponent(serviceId)}/deploys/${encodeURIComponent(deployId)}`);
 }
 
-async function listBuildLogs(apiKey, { ownerId, resource, limit = 50 }) {
+async function listBuildLogs(apiKey, { ownerId, resource, limit = 100, startTime } = {}) {
   const params = new URLSearchParams();
   params.set('ownerId', ownerId);
   params.append('resource', resource);
   params.append('type', 'build');
   params.set('limit', String(limit));
   params.set('direction', 'forward');
+  if (startTime) params.set('startTime', startTime);
   const result = await renderFetch(apiKey, `/logs?${params.toString()}`);
-  return (result && result.logs) || [];
+  return {
+    logs: (result && result.logs) || [],
+    nextStartTime: result && result.nextStartTime,
+  };
 }
 
 async function deleteService(apiKey, serviceId) {
