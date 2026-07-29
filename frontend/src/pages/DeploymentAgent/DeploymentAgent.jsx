@@ -4,6 +4,7 @@ import DashboardLayout from '../../components/Dashboard/DashboardLayout';
 import PlatformCredentialsPanel from '../../components/DeploymentAgent/PlatformCredentialsPanel';
 import DeploymentPlanReview from '../../components/DeploymentAgent/DeploymentPlanReview';
 import DeploymentPipelineView from '../../components/DeploymentAgent/DeploymentPipelineView';
+import DeploymentVerificationPanel from '../../components/DeploymentAgent/DeploymentVerificationPanel';
 import './DeploymentAgent.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -259,6 +260,10 @@ function DeploymentAgent() {
                 rollingBack={rollingBack}
                 onUpdateEnvVars={handleUpdateEnvVars}
               />
+            )}
+
+            {!loading && !gatingError && deployment && deployment.status === 'succeeded' && (
+              <DeploymentVerificationPanel deploymentId={deployment.id} />
             )}
 
             {!loading && !gatingError && canRetry && (

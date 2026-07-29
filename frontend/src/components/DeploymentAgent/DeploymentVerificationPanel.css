@@ -1,0 +1,59 @@
+.dvp-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dvp-verify-btn {
+  align-self: flex-start;
+  background: #00d4ff;
+  border: none;
+  border-radius: 8px;
+  height: 46px;
+  padding: 0 24px;
+  color: #030712;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2);
+  transition: all 0.2s ease;
+}
+
+.dvp-verify-btn:hover:not(:disabled) {
+  background: #3ee2ff;
+  box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4);
+}
+
+.dvp-verify-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dvp-error-banner {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 13px;
+}
+
+.dvp-retry-btn {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  color: #00d4ff;
+  border-radius: 8px;
+  height: 42px;
+  padding: 0 20px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dvp-retry-btn:hover {
+  background: rgba(0, 212, 255, 0.08);
+}

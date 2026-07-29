@@ -284,19 +284,32 @@
   background: rgba(0, 0, 0, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 6px;
-  padding: 0 8px;
+  padding: 0 24px 0 10px;
   color: #94a3b8;
   outline: none;
   font-family: inherit;
   font-size: 11.5px;
   height: 36px;
-  max-width: 120px;
+  max-width: 130px;
   transition: all 0.2s ease;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300d4ff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 10px;
 }
 
 .env-var-scope-select:focus {
   border-color: #00d4ff;
   color: #ffffff;
+}
+
+.env-var-scope-select option {
+  background-color: #051424;
+  color: #e2e8f0;
 }
 
 .env-var-delete-btn {

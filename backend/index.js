@@ -22,6 +22,7 @@ app.use('/api/platform-selection', require('./routes/platformSelectionRoutes'));
 app.use('/api/architecture', require('./routes/architectureRoutes'));
 app.use('/api/credentials', require('./routes/credentialRoutes'));
 app.use('/api/deployment', require('./routes/deploymentRoutes'));
+app.use('/api/verification', require('./routes/verificationRoutes'));
 app.use('/api/tickets', require('./routes/ticketRoutes'));
 app.use('/api/knowledge', require('./routes/knowledgeRoutes'));
 app.use('/api/subscriptions', require('./routes/subscriptionRoutes'));

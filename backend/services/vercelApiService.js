@@ -84,6 +84,16 @@ async function deleteProject(apiKey, projectIdOrName, { teamId } = {}) {
   return vercelFetch(apiKey, withTeam(`/v9/projects/${encodeURIComponent(projectIdOrName)}`, teamId), { method: 'DELETE' });
 }
 
+// Note: Vercel only returns decrypted values for some env var types - entries
+// created as "encrypted" (what createEnvVars uses) may come back with no
+// `value` field at all. Callers must treat a missing value as "unknown", not
+// as evidence of anything, and only act on values that are actually present.
+async function listEnvVars(apiKey, projectIdOrName, { teamId } = {}) {
+  const result = await vercelFetch(apiKey, withTeam(`/v9/projects/${encodeURIComponent(projectIdOrName)}/env`, teamId));
+  const list = (result && result.envs) || [];
+  return list.map((v) => ({ key: v.key, value: v.value }));
+}
+
 const VERCEL_DEPLOY_TERMINAL_SUCCESS = new Set(['READY']);
 const VERCEL_DEPLOY_TERMINAL_FAILURE = new Set(['ERROR', 'CANCELED']);
 
@@ -92,6 +102,7 @@ module.exports = {
   getAuthenticatedUser,
   createProject,
   createEnvVars,
+  listEnvVars,
   createDeployment,
   getDeployment,
   getDeploymentEvents,

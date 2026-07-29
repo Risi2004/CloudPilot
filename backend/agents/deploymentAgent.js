@@ -204,9 +204,7 @@ function buildDeploymentPlan({ analysis, platformInterview, architectureOption }
     // Render has no equivalent auto-detection, so it still inherits a
     // sanitized default from the interview/repo analysis.
     const buildCommand =
-      platform === 'vercel'
-        ? ''
-        : sanitizeBuildCommand(serviceConfig.buildCommand) || sanitizeBuildCommand(buildRequirements.buildCommand);
+      sanitizeBuildCommand(serviceConfig.buildCommand) || sanitizeBuildCommand(buildRequirements.buildCommand) || '';
 
     return {
       name: c.name || 'Component',

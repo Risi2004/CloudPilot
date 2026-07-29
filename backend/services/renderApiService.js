@@ -56,6 +56,12 @@ async function updateEnvVars(apiKey, serviceId, envVars) {
   });
 }
 
+async function listEnvVars(apiKey, serviceId) {
+  const result = await renderFetch(apiKey, `/services/${encodeURIComponent(serviceId)}/env-vars?limit=100`);
+  const list = Array.isArray(result) ? result : [];
+  return list.map((entry) => entry.envVar || entry).filter((v) => v && v.key);
+}
+
 async function triggerDeploy(apiKey, serviceId, { clearCache = 'do_not_clear' } = {}) {
   return renderFetch(apiKey, `/services/${encodeURIComponent(serviceId)}/deploys`, {
     method: 'POST',
@@ -94,6 +100,7 @@ module.exports = {
   getWorkspaceOwnerId,
   createService,
   updateEnvVars,
+  listEnvVars,
   triggerDeploy,
   getDeploy,
   listBuildLogs,

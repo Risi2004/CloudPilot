@@ -283,4 +283,100 @@ async function scanRepoSource(repoUrl, githubToken) {
   return { envVars, secretFindings, localhostFindings };
 }
 
-module.exports = { fetchProjectMetadataFiles, scanRepoSource, GithubFileError };
+// Path segments that strongly suggest a file contains auth-related routes,
+// regardless of framework (Express/Flask/Django/Next.js/etc all tend to name
+// things this way).
+const AUTH_PATH_KEYWORDS = /(^|\/)(auth|login|register|signup|signin|session|user|account)s?[^/]*\.(js|jsx|ts|tsx|mjs|cjs|py|rb|go|java|php)$/i;
+
+// Common app entrypoint filenames - small apps often inline auth routes
+// directly here instead of a dedicated auth file.
+const ENTRYPOINT_FILENAMES = new Set([
+  'server.js', 'app.js', 'index.js', 'main.js',
+  'app.py', 'main.py', 'manage.py', 'urls.py',
+]);
+
+// Deliberately smaller than the shared metadata-file caps above - this
+// content all gets read by a reasoning model in one shot to infer a test
+// plan, and a big pile of source code can make it spend so much of its
+// token budget "thinking" that it never gets around to writing an answer.
+// Fewer, shorter excerpts keep that reasoning burden bounded.
+const MAX_AUTH_CANDIDATE_FILES = 6;
+const MAX_AUTH_CHARS_PER_FILE = 2000;
+const MAX_AUTH_TOTAL_CHARS = 8000;
+
+/**
+ * Best-effort discovery of files likely to define this repo's registration/
+ * login/protected-route endpoints, for the Deployment Verification Agent's
+ * LLM step to read and infer the actual test plan from - mirrors
+ * scanRepoSource's tree-walk, but returns raw file content (like
+ * fetchProjectMetadataFiles) rather than trying to regex-parse exact routes
+ * itself, since reading code to find the real endpoints is exactly what the
+ * LLM step is for (same division of labor as the Code Analysis Agent).
+ */
+async function discoverAuthRoutes(repoUrl, githubToken) {
+  const { owner, repo } = parseRepoUrl(repoUrl);
+
+  const repoInfo = await githubFetch(`/repos/${owner}/${repo}`, githubToken);
+  const branch = repoInfo.default_branch || 'main';
+
+  const treeData = await githubFetch(
+    `/repos/${owner}/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`,
+    githubToken
+  );
+  const tree = Array.isArray(treeData.tree) ? treeData.tree : [];
+
+  const scannable = tree.filter(
+    (entry) =>
+      entry.type === 'blob' &&
+      typeof entry.path === 'string' &&
+      SCANNABLE_EXTENSIONS.has(getExtension(entry.path)) &&
+      !isIgnoredPath(entry.path) &&
+      (typeof entry.size !== 'number' || entry.size <= MAX_SCAN_FILE_SIZE)
+  );
+
+  const byAuthPath = scannable.filter((entry) => AUTH_PATH_KEYWORDS.test(entry.path));
+  const byEntrypoint = scannable.filter((entry) => ENTRYPOINT_FILENAMES.has(entry.path.split('/').pop().toLowerCase()));
+
+  const seen = new Set();
+  const candidates = [...byAuthPath, ...byEntrypoint]
+    .filter((entry) => {
+      if (seen.has(entry.path)) return false;
+      seen.add(entry.path);
+      return true;
+    })
+    .slice(0, MAX_AUTH_CANDIDATE_FILES);
+
+  const candidateFiles = [];
+  let totalChars = 0;
+
+  for (const entry of candidates) {
+    if (totalChars >= MAX_AUTH_TOTAL_CHARS) break;
+    let blob;
+    try {
+      blob = await githubFetch(`/repos/${owner}/${repo}/git/blobs/${entry.sha}`, githubToken);
+    } catch (err) {
+      continue; // best-effort: skip files that fail to fetch
+    }
+    if (blob.encoding !== 'base64' || typeof blob.content !== 'string') continue;
+
+    let content;
+    try {
+      content = Buffer.from(blob.content, 'base64').toString('utf-8');
+    } catch (err) {
+      continue;
+    }
+
+    const remainingBudget = MAX_AUTH_TOTAL_CHARS - totalChars;
+    const cap = Math.min(MAX_AUTH_CHARS_PER_FILE, remainingBudget);
+    if (content.length > cap) {
+      content = `${content.slice(0, cap)}\n...[truncated]`;
+    }
+
+    candidateFiles.push({ path: entry.path, content });
+    totalChars += content.length;
+  }
+
+  return { candidateFiles, repoFullName: `${owner}/${repo}` };
+}
+
+module.exports = { fetchProjectMetadataFiles, scanRepoSource, discoverAuthRoutes, GithubFileError };

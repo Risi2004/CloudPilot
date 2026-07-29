@@ -154,7 +154,6 @@
   min-width: 140px;
 }
 
-.dpr-link-select,
 .dpr-envvar-value {
   background: rgba(0, 0, 0, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -164,15 +163,39 @@
   color: #ffffff;
   font-size: 11.5px;
   font-family: inherit;
+  flex: 1;
+  min-width: 140px;
 }
 
 .dpr-link-select {
   min-width: 180px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  height: 30px;
+  padding: 0 24px 0 8px;
+  color: #ffffff;
+  font-size: 11.5px;
+  font-family: inherit;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300d4ff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 10px;
+  transition: all 0.2s ease;
 }
 
-.dpr-envvar-value {
-  flex: 1;
-  min-width: 140px;
+.dpr-link-select:focus {
+  border-color: rgba(0, 212, 255, 0.4);
+  outline: none;
+}
+
+.dpr-link-select option {
+  background-color: #051424;
+  color: #e2e8f0;
 }
 
 .dpr-link-select-placeholder {
@@ -218,4 +241,50 @@
 .dpr-start-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.dpr-envvars-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.dpr-add-var-btn {
+  background: rgba(0, 212, 255, 0.05);
+  border: 1px dashed rgba(0, 212, 255, 0.3);
+  border-radius: 6px;
+  color: #00d4ff;
+  padding: 4px 10px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.dpr-add-var-btn:hover {
+  background: rgba(0, 212, 255, 0.1);
+  border-color: #00d4ff;
+  color: #ffffff;
+}
+
+.dpr-envvar-delete-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.dpr-envvar-delete-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
 }

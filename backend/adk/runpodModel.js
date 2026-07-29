@@ -81,7 +81,27 @@ class RunpodModel extends BaseLlm {
 
     const data = await response.json();
     const choice = data.choices && data.choices[0];
-    const text = (choice && choice.message && choice.message.content) || '';
+    const message = choice && choice.message;
+    // Reasoning models served via vLLM/SGLang-style OpenAI-compatible APIs
+    // (Qwen3 included) often write extended chain-of-thought into a separate
+    // `reasoning_content` field, leaving `content` empty until the reasoning
+    // phase finishes - on a large-context prompt the model can burn its
+    // entire max_tokens budget "thinking" and never reach an actual answer,
+    // so `content` comes back completely empty even though the model did
+    // produce output. Falling back to `reasoning_content` means we still
+    // surface *something* usable instead of a bare "no response" error.
+    let text = (message && message.content) || '';
+    if (!text && message && typeof message.reasoning_content === 'string' && message.reasoning_content.trim()) {
+      text = message.reasoning_content;
+    }
+
+    if (!text) {
+      console.warn(
+        `RunpodModel: empty completion (finishReason=${choice && choice.finish_reason}, ` +
+        `usage=${JSON.stringify(data.usage)}). This usually means the model ran out of ` +
+        `max_tokens before producing any output - consider raising it for this call.`
+      );
+    }
 
     yield {
       content: { role: 'model', parts: [{ text }] },
