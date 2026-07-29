@@ -98,12 +98,15 @@ function parseRepoUrl(repoUrl) {
   return { owner: match[1], repo: match[2] };
 }
 
-async function githubFetch(path, githubToken) {
+async function githubFetch(path, githubToken, { method = 'GET', body } = {}) {
   const response = await fetch(`${GITHUB_API}${path}`, {
+    method,
     headers: {
       Authorization: `token ${githubToken}`,
       Accept: 'application/vnd.github.v3+json',
+      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
     },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
   if (response.status === 401) {
@@ -116,6 +119,7 @@ async function githubFetch(path, githubToken) {
     const text = await response.text().catch(() => '');
     throw new GithubFileError(`GitHub API request failed (${response.status}): ${text.slice(0, 300)}`, 502);
   }
+  if (response.status === 204) return null;
   return response.json();
 }
 
@@ -379,4 +383,118 @@ async function discoverAuthRoutes(repoUrl, githubToken) {
   return { candidateFiles, repoFullName: `${owner}/${repo}` };
 }
 
-module.exports = { fetchProjectMetadataFiles, scanRepoSource, discoverAuthRoutes, GithubFileError };
+// Deliberately smaller than fetchProjectMetadataFiles' per-file cap - this is
+// used to fetch a small, targeted set of files implicated by a specific error
+// (stack trace paths, not a broad repo scan), for the Troubleshooting Agent's
+// code-fix LLM step to read in full.
+const MAX_TROUBLESHOOTING_FILE_CHARS = 6000;
+
+/**
+ * Reads a single file's content off the repo's default branch. Used by the
+ * Deployment Troubleshooting Agent to fetch only the specific file(s) a
+ * parsed error/stack trace points at, rather than scanning the whole repo.
+ */
+async function fetchFileContent(repoUrl, path, githubToken) {
+  if (!githubToken) {
+    throw new GithubFileError('A GitHub token is required to read this file.', 401);
+  }
+  const { owner, repo } = parseRepoUrl(repoUrl);
+
+  const fileData = await githubFetch(`/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`, githubToken);
+  if (fileData.encoding !== 'base64' || typeof fileData.content !== 'string') {
+    throw new GithubFileError(`Could not read "${path}" as a text file.`, 422);
+  }
+
+  let content = Buffer.from(fileData.content, 'base64').toString('utf-8');
+  let truncated = false;
+  if (content.length > MAX_TROUBLESHOOTING_FILE_CHARS) {
+    content = content.slice(0, MAX_TROUBLESHOOTING_FILE_CHARS);
+    truncated = true;
+  }
+
+  return { path, content, truncated, sha: fileData.sha };
+}
+
+// Safety cap: a single automated troubleshooting fix should never touch a
+// sprawling set of files - if the model wants to change more than this, the
+// fix is treated as unreliable rather than committed.
+const COMMIT_MAX_FILES = 5;
+
+/**
+ * Commits one or more full-file replacements directly to a branch (default:
+ * the repo's default branch) using the standard GitHub "commit multiple
+ * files" REST sequence: read the branch ref -> read its commit's tree ->
+ * create a blob per file -> create a new tree on top of the base tree ->
+ * create a commit -> move the branch ref to it. No PR is opened - this is
+ * used only after the user has explicitly approved the exact file contents
+ * being pushed.
+ */
+async function commitFiles(repoUrl, { files, message, branch } = {}, githubToken) {
+  if (!githubToken) {
+    throw new GithubFileError('A GitHub token is required to push changes.', 401);
+  }
+  if (!Array.isArray(files) || files.length === 0) {
+    throw new GithubFileError('No files were provided to commit.', 400);
+  }
+  if (files.length > COMMIT_MAX_FILES) {
+    throw new GithubFileError(`Refusing to commit more than ${COMMIT_MAX_FILES} files in a single automated fix.`, 400);
+  }
+  for (const file of files) {
+    if (!file || typeof file.path !== 'string' || typeof file.content !== 'string') {
+      throw new GithubFileError('Each file to commit needs a "path" and "content" string.', 400);
+    }
+  }
+
+  const { owner, repo } = parseRepoUrl(repoUrl);
+  const repoInfo = await githubFetch(`/repos/${owner}/${repo}`, githubToken);
+  const targetBranch = branch || repoInfo.default_branch || 'main';
+
+  const refData = await githubFetch(`/repos/${owner}/${repo}/git/refs/heads/${encodeURIComponent(targetBranch)}`, githubToken);
+  const latestCommitSha = refData.object.sha;
+
+  const latestCommit = await githubFetch(`/repos/${owner}/${repo}/git/commits/${latestCommitSha}`, githubToken);
+  const baseTreeSha = latestCommit.tree.sha;
+
+  const treeEntries = [];
+  for (const file of files) {
+    const blob = await githubFetch(`/repos/${owner}/${repo}/git/blobs`, githubToken, {
+      method: 'POST',
+      body: { content: file.content, encoding: 'utf-8' },
+    });
+    treeEntries.push({ path: file.path, mode: '100644', type: 'blob', sha: blob.sha });
+  }
+
+  const newTree = await githubFetch(`/repos/${owner}/${repo}/git/trees`, githubToken, {
+    method: 'POST',
+    body: { base_tree: baseTreeSha, tree: treeEntries },
+  });
+
+  const newCommit = await githubFetch(`/repos/${owner}/${repo}/git/commits`, githubToken, {
+    method: 'POST',
+    body: {
+      message: message || 'CloudPilot: automated deployment fix',
+      tree: newTree.sha,
+      parents: [latestCommitSha],
+    },
+  });
+
+  await githubFetch(`/repos/${owner}/${repo}/git/refs/heads/${encodeURIComponent(targetBranch)}`, githubToken, {
+    method: 'PATCH',
+    body: { sha: newCommit.sha },
+  });
+
+  return {
+    sha: newCommit.sha,
+    url: `https://github.com/${owner}/${repo}/commit/${newCommit.sha}`,
+    branch: targetBranch,
+  };
+}
+
+module.exports = {
+  fetchProjectMetadataFiles,
+  scanRepoSource,
+  discoverAuthRoutes,
+  fetchFileContent,
+  commitFiles,
+  GithubFileError,
+};

@@ -5,6 +5,7 @@ import PlatformCredentialsPanel from '../../components/DeploymentAgent/PlatformC
 import DeploymentPlanReview from '../../components/DeploymentAgent/DeploymentPlanReview';
 import DeploymentPipelineView from '../../components/DeploymentAgent/DeploymentPipelineView';
 import DeploymentVerificationPanel from '../../components/DeploymentAgent/DeploymentVerificationPanel';
+import DeploymentTroubleshootingPanel from '../../components/DeploymentAgent/DeploymentTroubleshootingPanel';
 import './DeploymentAgent.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -264,6 +265,10 @@ function DeploymentAgent() {
 
             {!loading && !gatingError && deployment && deployment.status === 'succeeded' && (
               <DeploymentVerificationPanel deploymentId={deployment.id} />
+            )}
+
+            {!loading && !gatingError && deployment && deployment.status === 'failed' && (
+              <DeploymentTroubleshootingPanel deploymentId={deployment.id} />
             )}
 
             {!loading && !gatingError && canRetry && (
