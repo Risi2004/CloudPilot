@@ -1,5 +1,6 @@
 const { LlmAgent, InMemoryRunner, isFinalResponse, stringifyContent } = require('@google/adk');
 const { RunpodModel } = require('../adk/runpodModel');
+const { extractJsonObject } = require('../utils/llmJson');
 
 class PlatformSelectionError extends Error {}
 
@@ -105,42 +106,11 @@ function getRunner() {
   return runnerSingleton;
 }
 
-function cleanJsonString(str) {
-  let cleaned = str;
-  // 1. Strip multi-line comments
-  cleaned = cleaned.replace(/\/\*[\s\S]*?\*\//g, '');
-  
-  // 2. Strip single-line comments (ignoring http:// or https://)
-  cleaned = cleaned.replace(/(?:^|[^:])\/\/.*$/gm, (match) => {
-    if (match.trim().startsWith('//')) return '';
-    const idx = match.indexOf('//');
-    if (idx !== -1) return match.slice(0, idx);
-    return match;
-  });
-
-  // 3. Strip trailing commas before closing braces/brackets
-  cleaned = cleaned.replace(/,\s*([}\]])/g, '$1');
-
-  return cleaned.trim();
-}
-
 function extractJson(rawText) {
-  let text = rawText.trim();
-  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  if (fenceMatch) text = fenceMatch[1].trim();
-
-  const start = text.indexOf('{');
-  const end = text.lastIndexOf('}');
-  if (start === -1 || end === -1 || end <= start) {
-    throw new PlatformSelectionError('Platform Selection Agent returned invalid JSON: no JSON object found.');
-  }
-  
-  const rawObjString = text.slice(start, end + 1);
-  const cleaned = cleanJsonString(rawObjString);
   try {
-    return JSON.parse(cleaned);
+    return extractJsonObject(rawText, 'Platform Selection Agent returned invalid JSON');
   } catch (err) {
-    throw new PlatformSelectionError(`Platform Selection Agent returned invalid JSON: ${err.message}`);
+    throw new PlatformSelectionError(err.message);
   }
 }
 

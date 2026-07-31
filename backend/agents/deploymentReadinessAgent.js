@@ -1,5 +1,6 @@
 const { LlmAgent, InMemoryRunner, isFinalResponse, stringifyContent } = require('@google/adk');
 const { RunpodModel } = require('../adk/runpodModel');
+const { extractJsonObject } = require('../utils/llmJson');
 
 const TRUNCATION_MARKER = '...[truncated]';
 const SUPPORTED_NODE_MAJORS = [18, 20, 22];
@@ -60,39 +61,8 @@ function getRunner() {
   return runnerSingleton;
 }
 
-function cleanJsonString(str) {
-  let cleaned = str;
-  // 1. Strip multi-line comments
-  cleaned = cleaned.replace(/\/\*[\s\S]*?\*\//g, '');
-  
-  // 2. Strip single-line comments (ignoring http:// or https://)
-  cleaned = cleaned.replace(/(?:^|[^:])\/\/.*$/gm, (match) => {
-    if (match.trim().startsWith('//')) return '';
-    const idx = match.indexOf('//');
-    if (idx !== -1) return match.slice(0, idx);
-    return match;
-  });
-
-  // 3. Strip trailing commas before closing braces/brackets
-  cleaned = cleaned.replace(/,\s*([}\]])/g, '$1');
-
-  return cleaned.trim();
-}
-
 function extractJson(rawText) {
-  let text = rawText.trim();
-  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  if (fenceMatch) text = fenceMatch[1].trim();
-
-  const start = text.indexOf('{');
-  const end = text.lastIndexOf('}');
-  if (start === -1 || end === -1 || end <= start) {
-    throw new Error('No JSON object found in response.');
-  }
-  
-  const rawObjString = text.slice(start, end + 1);
-  const cleaned = cleanJsonString(rawObjString);
-  return JSON.parse(cleaned);
+  return extractJsonObject(rawText, 'Deployment Readiness Agent returned invalid JSON');
 }
 
 function findFile(detectedFiles, matcher) {

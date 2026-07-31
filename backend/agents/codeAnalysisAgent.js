@@ -1,5 +1,6 @@
 const { LlmAgent, InMemoryRunner, isFinalResponse, stringifyContent } = require('@google/adk');
 const { RunpodModel } = require('../adk/runpodModel');
+const { extractJsonObject } = require('../utils/llmJson');
 
 class AnalysisError extends Error {}
 
@@ -74,28 +75,10 @@ function buildUserMessage({ repoUrl, files }) {
 }
 
 function extractJson(rawText) {
-  let text = rawText.trim();
-
-  // Strip ```json ... ``` or ``` ... ``` fences if the model added them anyway.
-  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  if (fenceMatch) {
-    text = fenceMatch[1].trim();
-  }
-
   try {
-    return JSON.parse(text);
+    return extractJsonObject(rawText, 'Code Analysis Agent returned invalid JSON');
   } catch (err) {
-    // Fallback: grab the first top-level {...} block and retry once.
-    const start = text.indexOf('{');
-    const end = text.lastIndexOf('}');
-    if (start !== -1 && end !== -1 && end > start) {
-      try {
-        return JSON.parse(text.slice(start, end + 1));
-      } catch (err2) {
-        throw new AnalysisError(`Code Analysis Agent returned invalid JSON: ${err2.message}`);
-      }
-    }
-    throw new AnalysisError(`Code Analysis Agent returned invalid JSON: ${err.message}`);
+    throw new AnalysisError(err.message);
   }
 }
 

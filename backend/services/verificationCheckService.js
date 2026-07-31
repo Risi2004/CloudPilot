@@ -37,6 +37,28 @@ async function checkReachable(url) {
   if (!url) return { status: 'fail', message: 'No live URL is known for this component yet.' };
   try {
     const res = await fetchWithTimeout(url, { method: 'GET' });
+
+    // fetch() follows redirects by default and reports the *final* status,
+    // so a host behind a login/SSO wall (e.g. Vercel Deployment Protection)
+    // still comes back HTTP 200 - just for the wall's page, not the app. Any
+    // redirect that lands on a different origin than the one we asked for is
+    // never the deployed app itself, regardless of its status code.
+    let requestedOrigin;
+    let finalOrigin;
+    try {
+      requestedOrigin = new URL(url).origin;
+      finalOrigin = new URL(res.url).origin;
+    } catch (_urlErr) {
+      requestedOrigin = null;
+      finalOrigin = null;
+    }
+    if (requestedOrigin && finalOrigin && requestedOrigin !== finalOrigin) {
+      return {
+        status: 'fail',
+        message: `Redirected off-domain to ${finalOrigin} instead of loading the app - likely a login/SSO wall (e.g. Vercel Deployment Protection) blocking public access.`,
+      };
+    }
+
     if (res.status >= 200 && res.status < 400) {
       return { status: 'pass', message: `Responded with HTTP ${res.status}.` };
     }

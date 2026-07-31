@@ -28,6 +28,16 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Render's build log lines are terminal output and come through with raw
+// ANSI color/cursor escape codes (e.g. "\x1b[34m==>\x1b[0m") - harmless in a
+// real terminal, but they render as garbled literal escape sequences in the
+// plain-text log viewer in the UI, so strip them before ever storing a line.
+// eslint-disable-next-line no-control-regex
+const ANSI_ESCAPE_PATTERN = /\x1b\[[0-9;]*[a-zA-Z]/g;
+function stripAnsi(str) {
+  return String(str || '').replace(ANSI_ESCAPE_PATTERN, '');
+}
+
 function slugify(str) {
   return (
     String(str || '')
@@ -187,11 +197,32 @@ function buildDeploymentPlan({ analysis, platformInterview, architectureOption }
   const rawComponents = Array.isArray(architectureOption.components) ? architectureOption.components : [];
   const components = rawComponents.map((c) => {
     const declaredPlatform = String(c.platform || '').toLowerCase();
-    const platform = ['render', 'vercel'].includes(declaredPlatform)
-      ? declaredPlatform
-      : /vercel/i.test(c.service || '')
-      ? 'vercel'
-      : 'render';
+    const isValidDeclared = ['render', 'vercel'].includes(declaredPlatform);
+
+    // The "service" field (e.g. "Render Web Service") is longer, more specific
+    // free text than the single-word "platform" enum from the same LLM
+    // response, so when they disagree it's a stronger signal - the model far
+    // more often gets the descriptive service text right than the separate
+    // structured enum, which is exactly how a mixed-platform option (e.g.
+    // frontend on Vercel, backend on Render) can silently collapse onto one
+    // platform if "platform" is trusted blindly. Only treat the text as
+    // authoritative when it unambiguously names exactly one platform.
+    const serviceText = `${c.service || ''} ${c.role || ''}`;
+    const mentionsRender = /render/i.test(serviceText);
+    const mentionsVercel = /vercel/i.test(serviceText);
+    const textPlatform = mentionsRender && !mentionsVercel ? 'render' : mentionsVercel && !mentionsRender ? 'vercel' : null;
+
+    let platform;
+    if (textPlatform && isValidDeclared && textPlatform !== declaredPlatform) {
+      console.warn(
+        `Architecture option "${architectureOption.id}" component "${c.name}" declared platform "${declaredPlatform}" but its service text ("${c.service}") indicates "${textPlatform}" - using "${textPlatform}".`
+      );
+      platform = textPlatform;
+    } else if (isValidDeclared) {
+      platform = declaredPlatform;
+    } else {
+      platform = textPlatform || 'render';
+    }
     const deployable = !DATASTORE_KEYWORDS.test(`${c.name || ''} ${c.service || ''} ${c.role || ''}`);
     const serviceConfig = findServiceConfigFor(platformInterview, platform);
     const side = classifyComponentSide(c);
@@ -374,6 +405,11 @@ async function createResourceStep(deploymentId, deployment, component, cred) {
         { teamId: cred.metadata.teamId }
       );
 
+      // New projects often default to Vercel Authentication (Deployment
+      // Protection), which would otherwise leave the app CloudPilot just
+      // deployed inaccessible to real visitors behind a vercel.com login wall.
+      await vercelApiService.disableDeploymentProtection(cred.apiKey, project.id, { teamId: cred.metadata.teamId });
+
       // Vercel's create-project call (unlike Render's create-service) never
       // accepts env vars itself, and wireEnvVarsStep only touches components
       // that have a cross-service link - so a Vercel component with only
@@ -429,7 +465,7 @@ async function pollRenderDeploy(deploymentId, stepKey, cred, resource, deployId)
         limit: 100,
       });
       if (logs.length) {
-        const lines = logs.map((l) => l.message || l.text || JSON.stringify(l));
+        const lines = logs.map((l) => stripAnsi(l.message || l.text || JSON.stringify(l)));
         await appendStepLog(deploymentId, stepKey, lines);
       }
       if (nextStartTime) startTime = nextStartTime;

@@ -1,5 +1,6 @@
 const { LlmAgent, InMemoryRunner, isFinalResponse, stringifyContent } = require('@google/adk');
 const { RunpodModel } = require('../adk/runpodModel');
+const { extractJsonObject } = require('../utils/llmJson');
 
 class ArchitectureGenerationError extends Error {}
 
@@ -55,7 +56,9 @@ Respond with a single JSON object and NOTHING else - no markdown code fences, no
     }
   ],
   "recommendedOptionId": "string - must match the id of exactly one option in the list, the one with recommended: true"
-}`;
+}
+
+Within every component, "platform" MUST exactly agree with "service" - never let them contradict each other. A component whose "service" names a Render offering (e.g. "Render Web Service", "Render Static Site") must have "platform": "render"; a component whose "service" names a Vercel offering (e.g. "Vercel Static/Edge Hosting", "Vercel Serverless Functions") must have "platform": "vercel". For a split/mixed-platform option (e.g. frontend on Vercel, backend on Render), each component's own "platform" must reflect THAT component's own actual platform, not the platform of another component in the same option.`;
 
 let agentSingleton = null;
 let runnerSingleton = null;
@@ -94,42 +97,11 @@ function getRunner() {
   return runnerSingleton;
 }
 
-function cleanJsonString(str) {
-  let cleaned = str;
-  // 1. Strip multi-line comments
-  cleaned = cleaned.replace(/\/\*[\s\S]*?\*\//g, '');
-  
-  // 2. Strip single-line comments (ignoring http:// or https://)
-  cleaned = cleaned.replace(/(?:^|[^:])\/\/.*$/gm, (match) => {
-    if (match.trim().startsWith('//')) return '';
-    const idx = match.indexOf('//');
-    if (idx !== -1) return match.slice(0, idx);
-    return match;
-  });
-
-  // 3. Strip trailing commas before closing braces/brackets
-  cleaned = cleaned.replace(/,\s*([}\]])/g, '$1');
-
-  return cleaned.trim();
-}
-
 function extractJson(rawText) {
-  let text = rawText.trim();
-  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  if (fenceMatch) text = fenceMatch[1].trim();
-
-  const start = text.indexOf('{');
-  const end = text.lastIndexOf('}');
-  if (start === -1 || end === -1 || end <= start) {
-    throw new ArchitectureGenerationError('Architecture Generation Agent returned invalid JSON: no JSON object found.');
-  }
-  
-  const rawObjString = text.slice(start, end + 1);
-  const cleaned = cleanJsonString(rawObjString);
   try {
-    return JSON.parse(cleaned);
+    return extractJsonObject(rawText, 'Architecture Generation Agent returned invalid JSON');
   } catch (err) {
-    throw new ArchitectureGenerationError(`Architecture Generation Agent returned invalid JSON: ${err.message}`);
+    throw new ArchitectureGenerationError(err.message);
   }
 }
 

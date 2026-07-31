@@ -1,5 +1,6 @@
 const { LlmAgent, InMemoryRunner, isFinalResponse, stringifyContent } = require('@google/adk');
 const { RunpodModel } = require('../adk/runpodModel');
+const { extractJsonObject } = require('../utils/llmJson');
 const DeploymentTroubleshooting = require('../models/DeploymentTroubleshooting');
 const Deployment = require('../models/Deployment');
 const Analysis = require('../models/Analysis');
@@ -189,25 +190,11 @@ function getCodeFixRunner() {
   return codeFixRunner;
 }
 
-function cleanJsonString(str) {
-  let cleaned = str.replace(/\/\*[\s\S]*?\*\//g, '');
-  cleaned = cleaned.replace(/,\s*([}\]])/g, '$1');
-  return cleaned.trim();
-}
-
 function extractJson(rawText) {
-  let text = rawText.trim();
-  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  if (fenceMatch) text = fenceMatch[1].trim();
-  const start = text.indexOf('{');
-  const end = text.lastIndexOf('}');
-  if (start === -1 || end === -1 || end <= start) {
-    throw new DeploymentTroubleshootingError('Troubleshooting Agent returned invalid JSON: no JSON object found.');
-  }
   try {
-    return JSON.parse(cleanJsonString(text.slice(start, end + 1)));
+    return extractJsonObject(rawText, 'Troubleshooting Agent returned invalid JSON');
   } catch (err) {
-    throw new DeploymentTroubleshootingError(`Troubleshooting Agent returned invalid JSON: ${err.message}`);
+    throw new DeploymentTroubleshootingError(err.message);
   }
 }
 

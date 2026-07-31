@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/Dashboard/DashboardLayout';
 import './RepositoryAnalysisDetails.css';
@@ -33,7 +33,20 @@ function RepositoryAnalysisDetails() {
   const [error, setError] = useState(null);
   const [interviewStatus, setInterviewStatus] = useState(null);
 
-  const runAnalysis = async (url, force = false) => {
+  // Guards against two failure modes with the same root cause: React
+  // StrictMode double-invoking this effect in dev (firing two concurrent
+  // analyze requests), and a user navigating to a different repo before the
+  // previous analyze request has resolved. Either way, whichever response
+  // lands last used to win and silently overwrite the UI with a stale or
+  // wrong repo's data - each call now stamps a request id, aborts its fetch
+  // if superseded, and any response that isn't still the latest is ignored.
+  const latestRequestIdRef = useRef(0);
+
+  const runAnalysis = async (url, force = false, signal) => {
+    const requestId = latestRequestIdRef.current + 1;
+    latestRequestIdRef.current = requestId;
+    const isStale = () => latestRequestIdRef.current !== requestId;
+
     setIsLoading(true);
     setError(null);
 
@@ -48,9 +61,11 @@ function RepositoryAnalysisDetails() {
           Authorization: `Bearer ${appToken}`,
         },
         body: JSON.stringify({ repoUrl: url, githubToken, force }),
+        signal,
       });
 
       const payload = await response.json();
+      if (isStale()) return;
       if (!response.ok) {
         throw new Error(payload.message || 'Failed to analyze repository.');
       }
@@ -67,9 +82,12 @@ function RepositoryAnalysisDetails() {
           headers: {
             Authorization: `Bearer ${appToken}`,
           },
+          signal,
         });
+        if (isStale()) return;
         if (interviewResponse.ok) {
           const interviewPayload = await interviewResponse.json();
+          if (isStale()) return;
           if (interviewPayload.interview) {
             setInterviewStatus(interviewPayload.interview.status);
           } else {
@@ -77,19 +95,21 @@ function RepositoryAnalysisDetails() {
           }
         }
       } catch (err) {
-        console.error('Failed to pre-fetch interview status:', err);
+        if (!isStale()) console.error('Failed to pre-fetch interview status:', err);
       }
     } catch (err) {
+      if (isStale() || err.name === 'AbortError') return;
       console.error(err);
       setError(err.message);
       setAnalysisData(null);
     } finally {
-      setIsLoading(false);
+      if (!isStale()) setIsLoading(false);
     }
   };
 
   // Trigger a real analysis run whenever the url query changes
   useEffect(() => {
+    const controller = new AbortController();
     if (repoUrl) {
       setEnvStepComplete(false);
       setSavedEnvVariables([]);
@@ -98,7 +118,7 @@ function RepositoryAnalysisDetails() {
       setAnalysisData(null);
       setInterviewStatus(null);
       setActiveTab('architecture');
-      runAnalysis(repoUrl);
+      runAnalysis(repoUrl, false, controller.signal);
     } else {
       setEnvStepComplete(false);
       setSavedEnvVariables([]);
@@ -109,6 +129,7 @@ function RepositoryAnalysisDetails() {
       setError(null);
       setInterviewStatus(null);
     }
+    return () => controller.abort();
   }, [repoUrl]);
 
   const handleAnalyzeNew = (newUrl) => {

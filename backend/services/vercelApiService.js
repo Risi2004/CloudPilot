@@ -54,6 +54,26 @@ async function createProject(apiKey, payload, { teamId } = {}) {
   return vercelFetch(apiKey, withTeam('/v11/projects', teamId), { method: 'POST', body: payload });
 }
 
+// Many Vercel accounts/teams default every new project to Vercel Authentication
+// (Deployment Protection), which puts a vercel.com/login wall in front of
+// every deployment - including production. A deployment behind that wall
+// still resolves with a 200 status (for the login page), so it silently
+// passes naive reachability checks while being completely inaccessible to
+// real visitors. Disable it right after project creation so the site CloudPilot
+// just deployed is actually public, matching what "deploy my app" implies.
+async function disableDeploymentProtection(apiKey, projectIdOrName, { teamId } = {}) {
+  try {
+    await vercelFetch(apiKey, withTeam(`/v9/projects/${encodeURIComponent(projectIdOrName)}`, teamId), {
+      method: 'PATCH',
+      body: { ssoProtection: null },
+    });
+  } catch (err) {
+    // Best-effort - some plans/teams enforce this at the team level and
+    // reject the override; never fail the deployment over it.
+    console.warn(`Could not disable Vercel deployment protection for project ${projectIdOrName}: ${err.message}`);
+  }
+}
+
 async function createEnvVars(apiKey, projectIdOrName, envVars, { teamId } = {}) {
   return vercelFetch(
     apiKey,
@@ -101,6 +121,7 @@ module.exports = {
   VercelApiError,
   getAuthenticatedUser,
   createProject,
+  disableDeploymentProtection,
   createEnvVars,
   listEnvVars,
   createDeployment,

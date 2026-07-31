@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/Dashboard/DashboardLayout';
 import './ArchitectureRecommendation.css';
@@ -29,8 +29,20 @@ function ArchitectureRecommendation() {
   const [error, setError] = useState(null);
   const [selectedOptionId, setSelectedOptionId] = useState(null);
 
-  const loadOrGenerate = useCallback(async (regenerate = false) => {
+  // Same fix as the repository analysis page: without this, React StrictMode
+  // double-invoking the effect below (or the user re-triggering generation
+  // before a prior call resolves) fires two concurrent, expensive RunPod
+  // generation calls, and whichever response lands last silently wins - even
+  // if it's for a stale repoUrl. Stamping each call with a request id and
+  // ignoring any response that isn't still the latest makes that impossible.
+  const latestRequestIdRef = useRef(0);
+
+  const loadOrGenerate = useCallback(async (regenerate = false, signal) => {
     if (!repoUrl) return;
+    const requestId = latestRequestIdRef.current + 1;
+    latestRequestIdRef.current = requestId;
+    const isStale = () => latestRequestIdRef.current !== requestId;
+
     setLoading(!regenerate);
     setGenerating(regenerate);
     setError(null);
@@ -39,8 +51,10 @@ function ArchitectureRecommendation() {
       if (!regenerate) {
         const getRes = await fetch(`${API_URL}/api/architecture?repoUrl=${encodeURIComponent(repoUrl)}`, {
           headers: authHeaders(),
+          signal,
         });
         const getPayload = await getRes.json();
+        if (isStale()) return;
         if (!getRes.ok) throw new Error(getPayload.message || 'Failed to load architecture options.');
 
         if (getPayload.recommendation) {
@@ -56,26 +70,33 @@ function ArchitectureRecommendation() {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({ repoUrl, regenerate }),
+        signal,
       });
       const genPayload = await genRes.json();
+      if (isStale()) return;
       if (!genRes.ok) throw new Error(genPayload.message || 'Failed to generate architecture options.');
 
       setRecommendation(genPayload.recommendation);
       const result = genPayload.recommendation.result || {};
       setSelectedOptionId(result.recommendedOptionId || (result.options && result.options[0] && result.options[0].id) || null);
     } catch (err) {
+      if (isStale() || err.name === 'AbortError') return;
       console.error(err);
       setError(err.message);
     } finally {
-      setLoading(false);
-      setGenerating(false);
+      if (!isStale()) {
+        setLoading(false);
+        setGenerating(false);
+      }
     }
   }, [repoUrl]);
 
   useEffect(() => {
+    const controller = new AbortController();
     setRecommendation(null);
     setSelectedOptionId(null);
-    if (repoUrl) loadOrGenerate(false);
+    if (repoUrl) loadOrGenerate(false, controller.signal);
+    return () => controller.abort();
   }, [repoUrl, loadOrGenerate]);
 
   const result = recommendation && recommendation.result;
