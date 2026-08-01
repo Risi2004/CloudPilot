@@ -122,12 +122,10 @@ function ConnectorList({ rebuildTriggered, onContentsChanged }) {
     fetchContents();
   }, [folderPath]);
 
-  // Sync state if rebuild vector DB is triggered
+  // Refresh the explorer contents whenever a vectorization batch completes
   useEffect(() => {
     if (rebuildTriggered) {
-      setSubfolders((prev) => 
-        prev.map((c) => c.key === 'terraform' ? { ...c, status: 'Synced' } : c)
-      );
+      fetchContents();
       setSuccessMessage('Vector DB rebuilt successfully!');
     }
   }, [rebuildTriggered]);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/Dashboard/DashboardLayout';
 import './RepositoryAnalysisDetails.css';
@@ -7,14 +7,16 @@ import './RepositoryAnalysisDetails.css';
 import AnalysisLoader from '../../components/RepositoryAnalysis/AnalysisLoader';
 import AnalysisHeader from '../../components/RepositoryAnalysis/AnalysisHeader';
 import AnalysisSummary from '../../components/RepositoryAnalysis/AnalysisSummary';
+import TabArchitectureOverview from '../../components/RepositoryAnalysis/TabArchitectureOverview';
 import TabCoreFeatures from '../../components/RepositoryAnalysis/TabCoreFeatures';
 import TabDependencies from '../../components/RepositoryAnalysis/TabDependencies';
 import TabContainerization from '../../components/RepositoryAnalysis/TabContainerization';
 import TabCloudInfrastructure from '../../components/RepositoryAnalysis/TabCloudInfrastructure';
 import EnvUploadPrompt from '../../components/RepositoryAnalysis/EnvUploadPrompt';
+import DeploymentReadinessReport from '../../components/RepositoryAnalysis/DeploymentReadinessReport';
+import TabPlatformSelection from '../../components/RepositoryAnalysis/TabPlatformSelection';
 
-// Helper mock data resolver
-import { getAnalysisResult } from './mockData';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 function RepositoryAnalysisDetails() {
   const [searchParams] = useSearchParams();
@@ -23,29 +25,126 @@ function RepositoryAnalysisDetails() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [envStepComplete, setEnvStepComplete] = useState(false);
-  const [activeTab, setActiveTab] = useState('features');
+  const [savedEnvVariables, setSavedEnvVariables] = useState([]);
+  const [readinessAcknowledged, setReadinessAcknowledged] = useState(false);
+  const [deploymentReadiness, setDeploymentReadiness] = useState(null);
+  const [activeTab, setActiveTab] = useState('architecture');
   const [analysisData, setAnalysisData] = useState(null);
+  const [error, setError] = useState(null);
+  const [interviewStatus, setInterviewStatus] = useState(null);
 
-  // Trigger config setup if url query changes
+  // Guards against two failure modes with the same root cause: React
+  // StrictMode double-invoking this effect in dev (firing two concurrent
+  // analyze requests), and a user navigating to a different repo before the
+  // previous analyze request has resolved. Either way, whichever response
+  // lands last used to win and silently overwrite the UI with a stale or
+  // wrong repo's data - each call now stamps a request id, aborts its fetch
+  // if superseded, and any response that isn't still the latest is ignored.
+  const latestRequestIdRef = useRef(0);
+
+  const runAnalysis = async (url, force = false, signal) => {
+    const requestId = latestRequestIdRef.current + 1;
+    latestRequestIdRef.current = requestId;
+    const isStale = () => latestRequestIdRef.current !== requestId;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const appToken = localStorage.getItem('token');
+      const githubToken = localStorage.getItem('github_token');
+
+      const response = await fetch(`${API_URL}/api/analysis/analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${appToken}`,
+        },
+        body: JSON.stringify({ repoUrl: url, githubToken, force }),
+        signal,
+      });
+
+      const payload = await response.json();
+      if (isStale()) return;
+      if (!response.ok) {
+        throw new Error(payload.message || 'Failed to analyze repository.');
+      }
+
+      setAnalysisData(payload.result);
+      setSavedEnvVariables(payload.envVariables || []);
+      setEnvStepComplete(Boolean(payload.envConfigured));
+      setDeploymentReadiness(payload.deploymentReadiness || null);
+      setReadinessAcknowledged(false);
+
+      // Pre-fetch platform selection interview status
+      try {
+        const interviewResponse = await fetch(`${API_URL}/api/platform-selection?repoUrl=${encodeURIComponent(url)}`, {
+          headers: {
+            Authorization: `Bearer ${appToken}`,
+          },
+          signal,
+        });
+        if (isStale()) return;
+        if (interviewResponse.ok) {
+          const interviewPayload = await interviewResponse.json();
+          if (isStale()) return;
+          if (interviewPayload.interview) {
+            setInterviewStatus(interviewPayload.interview.status);
+          } else {
+            setInterviewStatus(null);
+          }
+        }
+      } catch (err) {
+        if (!isStale()) console.error('Failed to pre-fetch interview status:', err);
+      }
+    } catch (err) {
+      if (isStale() || err.name === 'AbortError') return;
+      console.error(err);
+      setError(err.message);
+      setAnalysisData(null);
+    } finally {
+      if (!isStale()) setIsLoading(false);
+    }
+  };
+
+  // Trigger a real analysis run whenever the url query changes
   useEffect(() => {
+    const controller = new AbortController();
     if (repoUrl) {
       setEnvStepComplete(false);
-      setIsLoading(false);
-      setAnalysisData(getAnalysisResult(repoUrl));
+      setSavedEnvVariables([]);
+      setReadinessAcknowledged(false);
+      setDeploymentReadiness(null);
+      setAnalysisData(null);
+      setInterviewStatus(null);
+      setActiveTab('architecture');
+      runAnalysis(repoUrl, false, controller.signal);
     } else {
       setEnvStepComplete(false);
+      setSavedEnvVariables([]);
+      setReadinessAcknowledged(false);
+      setDeploymentReadiness(null);
       setIsLoading(false);
       setAnalysisData(null);
+      setError(null);
+      setInterviewStatus(null);
     }
+    return () => controller.abort();
   }, [repoUrl]);
 
   const handleAnalyzeNew = (newUrl) => {
-    navigate(`/repository-analysis?url=${encodeURIComponent(newUrl)}`);
+    navigate(`/repositories?url=${encodeURIComponent(newUrl)}`);
+  };
+
+  const handleRetry = () => {
+    if (repoUrl) runAnalysis(repoUrl);
   };
 
   const renderActiveTab = () => {
     if (!analysisData) return null;
     switch (activeTab) {
+      case 'architecture':
+        return <TabArchitectureOverview data={analysisData} />;
       case 'features':
         return <TabCoreFeatures data={analysisData} />;
       case 'dependencies':
@@ -54,37 +153,97 @@ function RepositoryAnalysisDetails() {
         return <TabContainerization data={analysisData} />;
       case 'infra':
         return <TabCloudInfrastructure data={analysisData} />;
+      case 'platform':
+        return (
+          <TabPlatformSelection 
+            repoUrl={repoUrl} 
+            onBack={() => setActiveTab('architecture')} 
+            onStatusChange={setInterviewStatus} 
+          />
+        );
       default:
-        return <TabCoreFeatures data={analysisData} />;
+        return <TabArchitectureOverview data={analysisData} />;
     }
   };
+
+  const envVariables = analysisData?.buildRequirements?.envVariables || [];
+  // Lets the env upload step offer one section per deployable component
+  // (e.g. "Frontend"/"Backend") instead of always dumping every detected
+  // variable into one flat list - excludes managed datastores, since there's
+  // nothing to "upload an env file" for those.
+  const scopeOptions = (analysisData?.architecture?.components || [])
+    .map((c) => c.name)
+    .filter((name) => name && !/postgres|database|mysql|mongo|redis|cache|datastore/i.test(name));
 
   return (
     <DashboardLayout>
       <div className="analysis-details-wrapper">
-        {repoUrl && !envStepComplete ? (
-          analysisData && (
-            <EnvUploadPrompt
-              repoUrl={repoUrl}
-              envVariables={analysisData.buildRequirements.envVariables}
-              onComplete={() => {
-                setEnvStepComplete(true);
-                setIsLoading(true);
-              }}
-            />
-          )
-        ) : isLoading ? (
-          <AnalysisLoader repoUrl={repoUrl} onComplete={() => setIsLoading(false)} />
-        ) : repoUrl ? (
+        {repoUrl && isLoading ? (
+          <AnalysisLoader repoUrl={repoUrl} />
+        ) : repoUrl && error ? (
+          <div className="empty-analysis-container">
+            <div className="empty-card">
+              <div className="empty-icon-wrapper">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+              </div>
+              <h2 className="empty-title">Analysis Failed</h2>
+              <p className="empty-desc">{error}</p>
+              <button type="button" className="empty-submit-btn" onClick={handleRetry}>
+                Retry Analysis
+              </button>
+            </div>
+          </div>
+        ) : repoUrl && analysisData && envVariables.length > 0 && !envStepComplete ? (
+          <EnvUploadPrompt
+            repoUrl={repoUrl}
+            envVariables={envVariables}
+            savedValues={savedEnvVariables}
+            scopeOptions={scopeOptions}
+            onComplete={(updatedEnvVariables) => {
+              setSavedEnvVariables(updatedEnvVariables || []);
+              setEnvStepComplete(true);
+            }}
+          />
+        ) : repoUrl && analysisData && deploymentReadiness && !readinessAcknowledged ? (
+          <DeploymentReadinessReport
+            data={deploymentReadiness}
+            onContinue={() => {
+              setReadinessAcknowledged(true);
+              setActiveTab('platform');
+            }}
+          />
+        ) : repoUrl && analysisData ? (
           <div className="analysis-content-container">
             {/* Top Search & Details Header */}
-            <AnalysisHeader currentUrl={repoUrl} onAnalyzeNew={handleAnalyzeNew} />
+            <AnalysisHeader 
+              currentUrl={repoUrl} 
+              onAnalyzeNew={handleAnalyzeNew} 
+              onPlatformSelectClick={() => setActiveTab('platform')}
+              interviewStatus={interviewStatus}
+              activeTab={activeTab}
+            />
 
             {/* General Metrics summary cards */}
             {analysisData && <AnalysisSummary data={analysisData} />}
 
             {/* Tab Toggles Bar */}
             <div className="analysis-details-tabs-bar">
+              <button
+                className={`tab-toggle-btn ${activeTab === 'architecture' ? 'active' : ''}`}
+                onClick={() => setActiveTab('architecture')}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                  <path d="M12 22.08V12"></path>
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                </svg>
+                <span>Architecture Overview</span>
+              </button>
+
               <button
                 className={`tab-toggle-btn ${activeTab === 'features' ? 'active' : ''}`}
                 onClick={() => setActiveTab('features')}
@@ -144,7 +303,7 @@ function RepositoryAnalysisDetails() {
               </div>
               <h2 className="empty-title">Analyze Repository</h2>
               <p className="empty-desc">No repository URL selected. Enter a GitHub repo URL below to launch CloudPilot telemetry profiling.</p>
-              
+
               <form
                 onSubmit={(e) => {
                   e.preventDefault();

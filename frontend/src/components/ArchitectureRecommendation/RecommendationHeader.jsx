@@ -8,7 +8,7 @@ function RecommendationHeader({ repoUrl }) {
   return (
     <div className="rec-header-wrapper">
       <div className="rec-header-meta">
-        <h1 className="rec-header-title">Target Topology Blueprint</h1>
+        <h1 className="rec-header-title">Deployment Architecture Options</h1>
         <p className="rec-header-active-repo font-mono">
           <span className="rec-repo-label">TARGET REPO:</span>
           <span className="rec-repo-val" title={repoUrl}>{repoUrl}</span>
@@ -27,8 +27,8 @@ function RecommendationHeader({ repoUrl }) {
           <div className="rec-agent-pill recommendation">
             <div className="rec-agent-pill-dot" />
             <div>
-              <div className="rec-agent-pill-title">Architecture Recommendation Agent</div>
-              <div className="rec-agent-pill-status">TOPOLOGY COMPILED</div>
+              <div className="rec-agent-pill-title">Architecture Generation Agent</div>
+              <div className="rec-agent-pill-status">OPTIONS GENERATED</div>
             </div>
           </div>
         </div>

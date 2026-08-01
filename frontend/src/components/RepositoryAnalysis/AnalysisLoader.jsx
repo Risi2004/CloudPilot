@@ -1,9 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './AnalysisLoader.css';
 
-function AnalysisLoader({ repoUrl, onComplete }) {
+function AnalysisLoader({ repoUrl }) {
   const [logs, setLogs] = useState([]);
   const [percent, setPercent] = useState(0);
+  const terminalBodyRef = useRef(null);
+
+  useEffect(() => {
+    if (terminalBodyRef.current) {
+      terminalBodyRef.current.scrollTop = terminalBodyRef.current.scrollHeight;
+    }
+  }, [logs]);
 
   const logMessages = [
     { text: 'Initializing CloudPilot multi-agent engine...', delay: 200 },
@@ -36,26 +43,21 @@ function AnalysisLoader({ repoUrl, onComplete }) {
       logTimers.push(timer);
     });
 
-    // Percentage counter
+    // Percentage counter - real completion is signalled by the parent unmounting
+    // this component once the backend request resolves, so this only ever
+    // approaches 100% and never claims to be finished on its own.
     const progressTimer = setInterval(() => {
       setPercent(prev => {
-        if (prev >= 100) {
-          clearInterval(progressTimer);
-          return 100;
+        if (prev >= 95) {
+          return 95;
         }
         return prev + 1;
       });
     }, 62);
 
-    // Call onComplete after logs complete
-    const completionTimer = setTimeout(() => {
-      onComplete();
-    }, 6800);
-
     return () => {
       logTimers.forEach(clearTimeout);
       clearInterval(progressTimer);
-      clearTimeout(completionTimer);
     };
   }, []);
 
@@ -89,7 +91,7 @@ function AnalysisLoader({ repoUrl, onComplete }) {
           </div>
           <span className="terminal-title">cloudpilot-agent@audit:~</span>
         </div>
-        <div className="terminal-body">
+        <div className="terminal-body" ref={terminalBodyRef}>
           {logs.map((log, index) => (
             <div key={index} className="terminal-line">
               <span className="line-timestamp">[{log.time}]</span>

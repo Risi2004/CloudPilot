@@ -2,6 +2,7 @@ import React from 'react';
 import Navbar from '../../components/LandingPage/Navbar/Navbar';
 import Hero from '../../components/LandingPage/Hero/Hero';
 import CoreIntelligence from '../../components/LandingPage/CoreIntelligence/CoreIntelligence';
+import AgentWorkflow from '../../components/LandingPage/AgentWorkflow/AgentWorkflow';
 import HowItWorks from '../../components/LandingPage/HowItWorks/HowItWorks';
 import Integrations from '../../components/LandingPage/Integrations/Integrations';
 import Pricing from '../../components/LandingPage/Pricing/Pricing';
@@ -17,6 +18,7 @@ function LandingPage() {
             <main className="landing-main-content">
                 <Hero />
                 <CoreIntelligence />
+                <AgentWorkflow />
                 <HowItWorks />
                 <Integrations />
                 <Pricing />

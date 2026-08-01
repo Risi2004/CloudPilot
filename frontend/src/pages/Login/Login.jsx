@@ -19,6 +19,14 @@ function Login() {
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // MFA (authenticator app) challenge state
+  const [mfaModalOpen, setMfaModalOpen] = useState(false);
+  const [mfaToken, setMfaToken] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [rememberDevice, setRememberDevice] = useState(true);
+  const [mfaError, setMfaError] = useState('');
+  const [mfaVerifying, setMfaVerifying] = useState(false);
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -85,10 +93,13 @@ function Login() {
 
     try {
       setIsSubmitting(true);
+      const normalizedEmail = email.toLowerCase().trim();
+      const deviceToken = localStorage.getItem(`mfaDeviceToken:${normalizedEmail}`) || null;
+
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password, deviceToken })
       });
       const data = await res.json();
 
@@ -96,41 +107,86 @@ function Login() {
         throw new Error(data.message || 'Login failed.');
       }
 
-      // Store token and user details
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('email', data.user.email);
-      if (data.user.fullName) {
-        localStorage.setItem('fullName', data.user.fullName);
-      } else {
-        localStorage.removeItem('fullName');
+      if (data.mfaRequired) {
+        setMfaToken(data.mfaToken);
+        setMfaCode('');
+        setMfaError('');
+        setMfaModalOpen(true);
+        return;
       }
-      if (data.user.profileImageKey) {
-        localStorage.setItem('profileImageKey', data.user.profileImageKey);
-      } else {
-        localStorage.removeItem('profileImageKey');
-      }
-      if (data.user.role) {
-        localStorage.setItem('role', data.user.role);
-      } else {
-        localStorage.removeItem('role');
-      }
-      if (data.user.plan) {
-        localStorage.setItem('plan', data.user.plan);
-      } else {
-        localStorage.removeItem('plan');
-      }
-      // Clear any temporary base64 image on new login to avoid stale local images
-      localStorage.removeItem('profileImage');
 
-      if (data.user.role === 'admin') {
-        navigate('/admin/dashboard');
-      } else {
-        navigate('/dashboard');
-      }
+      completeLogin(data);
     } catch (err) {
       alert(err.message);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const completeLogin = (data) => {
+    // Store token and user details
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('email', data.user.email);
+    if (data.user.fullName) {
+      localStorage.setItem('fullName', data.user.fullName);
+    } else {
+      localStorage.removeItem('fullName');
+    }
+    if (data.user.profileImageKey) {
+      localStorage.setItem('profileImageKey', data.user.profileImageKey);
+    } else {
+      localStorage.removeItem('profileImageKey');
+    }
+    if (data.user.role) {
+      localStorage.setItem('role', data.user.role);
+    } else {
+      localStorage.removeItem('role');
+    }
+    if (data.user.plan) {
+      localStorage.setItem('plan', data.user.plan);
+    } else {
+      localStorage.removeItem('plan');
+    }
+    // Clear any temporary base64 image on new login to avoid stale local images
+    localStorage.removeItem('profileImage');
+
+    if (data.user.role === 'admin') {
+      navigate('/admin/dashboard');
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
+  const handleMfaVerify = async (e) => {
+    e.preventDefault();
+    if (!mfaCode) return;
+
+    try {
+      setMfaVerifying(true);
+      setMfaError('');
+
+      const res = await fetch(`${API_URL}/api/auth/mfa/verify-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mfaToken, code: mfaCode, rememberDevice })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Verification failed.');
+      }
+
+      if (data.deviceToken) {
+        const normalizedEmail = email.toLowerCase().trim();
+        localStorage.setItem(`mfaDeviceToken:${normalizedEmail}`, data.deviceToken);
+      }
+
+      setMfaModalOpen(false);
+      completeLogin(data);
+    } catch (err) {
+      setMfaError(err.message);
+    } finally {
+      setMfaVerifying(false);
     }
   };
 
@@ -198,6 +254,59 @@ function Login() {
           </div>
         </div>
       </div>
+
+      {/* MFA Authenticator Code Challenge Modal */}
+      {mfaModalOpen && (
+        <div className="otp-modal-overlay">
+          <div className="otp-modal-card">
+            <h3 className="otp-modal-title">AUTHENTICATOR CODE</h3>
+            <p className="otp-modal-subtitle">
+              Enter the 6-digit code from your authenticator app to complete login.
+            </p>
+
+            <form onSubmit={handleMfaVerify} className="otp-form">
+              <input
+                type="text"
+                placeholder="000000"
+                maxLength={6}
+                value={mfaCode}
+                onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                className="otp-input-element"
+                required
+                autoFocus
+              />
+
+              <div className="mfa-remember-device-row">
+                <input
+                  type="checkbox"
+                  id="remember-device"
+                  checked={rememberDevice}
+                  onChange={(e) => setRememberDevice(e.target.checked)}
+                />
+                <label htmlFor="remember-device">
+                  Remember this device for 7 days (skip authenticator code)
+                </label>
+              </div>
+
+              {mfaError && <p className="otp-error-message">{mfaError}</p>}
+
+              <button type="submit" className="otp-submit-btn" disabled={mfaVerifying}>
+                {mfaVerifying ? 'VERIFYING CODE...' : 'VERIFY & LOGIN'}
+              </button>
+
+              <div className="otp-actions-row">
+                <button
+                  type="button"
+                  className="otp-cancel-btn"
+                  onClick={() => setMfaModalOpen(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </AuthLayout>
   );
 }

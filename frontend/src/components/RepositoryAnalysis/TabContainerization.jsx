@@ -17,6 +17,29 @@ function TabContainerization({ data }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  if (!data.containerization) {
+    return (
+      <div className="tab-pane-content">
+        <div className="tab-pane-header">
+          <h3 className="tab-pane-title">Containerization Blueprint</h3>
+          <p className="tab-pane-subtitle">Optimal Docker configurations generated based on framework type and dependencies.</p>
+        </div>
+        <div className="insights-panel">
+          <div className="insights-panel-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+          </div>
+          <div className="insights-panel-text">
+            <strong>Not yet analyzed.</strong> Dockerfile and docker-compose generation is handled by the upcoming Containerization Agent, not yet part of this analysis.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="tab-pane-content">
       <div className="tab-pane-header">

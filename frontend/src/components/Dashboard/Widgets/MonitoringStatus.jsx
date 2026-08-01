@@ -1,42 +1,65 @@
 import React, { useState, useEffect } from 'react';
 import './MonitoringStatus.css';
 
-function MonitoringStatus() {
-  const [cpu, setCpu] = useState(42);
-  const [ram, setRam] = useState(68);
-  const [networkIn, setNetworkIn] = useState(215);
-  const [networkOut, setNetworkOut] = useState(185);
+function MonitoringStatus({ deployments = [] }) {
+  const hasDeployments = deployments.length > 0;
+  const hasFailed = deployments.some((d) => d.status === 'failed');
+
+  const [cpu, setCpu] = useState(hasDeployments ? 42 : 2);
+  const [ram, setRam] = useState(hasDeployments ? 68 : 11);
+  const [networkIn, setNetworkIn] = useState(hasDeployments ? 215 : 0);
+  const [networkOut, setNetworkOut] = useState(hasDeployments ? 185 : 0);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      // Simulate micro-fluctuations in monitoring metrics
-      setCpu((prev) => {
-        const change = (Math.random() - 0.5) * 6; // +/- 3%
-        const newVal = Math.round(prev + change);
-        return Math.max(10, Math.min(95, newVal));
-      });
+      if (!hasDeployments) {
+        setCpu((prev) => {
+          const target = 2;
+          const change = (Math.random() - 0.5) * 1;
+          return Math.max(1, Math.min(5, Math.round(prev + change)));
+        });
+        setRam((prev) => {
+          const target = 11;
+          const change = (Math.random() - 0.5) * 0.5;
+          return Math.max(9, Math.min(13, Math.round(prev + change)));
+        });
+        setNetworkIn((prev) => {
+          const change = (Math.random() - 0.5) * 0.2;
+          return Math.max(0, Math.min(2, Math.round(prev + change)));
+        });
+        setNetworkOut((prev) => {
+          const change = (Math.random() - 0.5) * 0.2;
+          return Math.max(0, Math.min(2, Math.round(prev + change)));
+        });
+      } else {
+        setCpu((prev) => {
+          const change = (Math.random() - 0.5) * 6; // +/- 3%
+          const newVal = Math.round(prev + change);
+          return Math.max(10, Math.min(95, newVal));
+        });
 
-      setRam((prev) => {
-        const change = (Math.random() - 0.5) * 2; // +/- 1%
-        const newVal = Math.round(prev + change);
-        return Math.max(20, Math.min(99, newVal));
-      });
+        setRam((prev) => {
+          const change = (Math.random() - 0.5) * 2; // +/- 1%
+          const newVal = Math.round(prev + change);
+          return Math.max(20, Math.min(99, newVal));
+        });
 
-      setNetworkIn((prev) => {
-        const change = (Math.random() - 0.5) * 30; // +/- 15 MB/s
-        const newVal = Math.round(prev + change);
-        return Math.max(50, Math.min(800, newVal));
-      });
+        setNetworkIn((prev) => {
+          const change = (Math.random() - 0.5) * 30; // +/- 15 MB/s
+          const newVal = Math.round(prev + change);
+          return Math.max(50, Math.min(800, newVal));
+        });
 
-      setNetworkOut((prev) => {
-        const change = (Math.random() - 0.5) * 20; // +/- 10 MB/s
-        const newVal = Math.round(prev + change);
-        return Math.max(40, Math.min(600, newVal));
-      });
+        setNetworkOut((prev) => {
+          const change = (Math.random() - 0.5) * 20; // +/- 10 MB/s
+          const newVal = Math.round(prev + change);
+          return Math.max(40, Math.min(600, newVal));
+        });
+      }
     }, 3000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [hasDeployments]);
 
   const getMetricClass = (value, warningThreshold, criticalThreshold) => {
     if (value >= criticalThreshold) return 'critical';
@@ -54,8 +77,17 @@ function MonitoringStatus() {
           <h3>Monitoring Status</h3>
         </div>
         <div className="system-health-indicator">
-          <span className="health-dot glow-green"></span>
-          <span className="health-text">All Systems Operational</span>
+          {hasFailed ? (
+            <>
+              <span className="health-dot glow-red" style={{ background: '#ef4444', boxShadow: '0 0 8px #ef4444' }}></span>
+              <span className="health-text" style={{ color: '#ef4444' }}>System Degraded</span>
+            </>
+          ) : (
+            <>
+              <span className="health-dot glow-green"></span>
+              <span className="health-text">All Systems Operational</span>
+            </>
+          )}
         </div>
       </div>
 

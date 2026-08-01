@@ -15,10 +15,20 @@ function DashboardNavbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
-  const [avatar, setAvatar] = useState(profileIcon);
-  const [userName, setUserName] = useState('');
-  const [userEmail, setUserEmail] = useState('');
-  const [userPlan, setUserPlan] = useState('Free');
+  const [avatar, setAvatar] = useState(() => {
+    const savedKey = localStorage.getItem('profileImageKey');
+    const savedImage = localStorage.getItem('profileImage');
+    if (savedKey) {
+      const filename = savedKey.split('/').pop();
+      return `${API_URL}/api/auth/profile-image/${filename}`;
+    } else if (savedImage) {
+      return savedImage;
+    }
+    return profileIcon;
+  });
+  const [userName, setUserName] = useState(() => localStorage.getItem('fullName') || '');
+  const [userEmail, setUserEmail] = useState(() => localStorage.getItem('email') || '');
+  const [userPlan, setUserPlan] = useState(() => localStorage.getItem('plan') || 'Free');
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
   // Notifications State
@@ -220,6 +230,7 @@ function DashboardNavbar() {
         {/* Left Side Logo */}
         <div className="db-navbar-logo" onClick={() => navigate('/')}>
           <img src={logo} alt="CloudPilot Logo" className="db-logo-img" />
+          <span className="logo-version-badge">v1.0.0</span>
         </div>
 
         {/* Center Links */}
@@ -343,7 +354,10 @@ function DashboardNavbar() {
       {/* Mobile Overlay Menu */}
       <div className={`db-navbar-mobile-overlay ${isOverlayOpen ? 'active' : ''}`}>
         <div className="db-overlay-header">
-          <img src={logo} alt="CloudPilot Logo" className="db-logo-img" onClick={() => handleLinkClick('/dashboard')} style={{ cursor: 'pointer' }} />
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <img src={logo} alt="CloudPilot Logo" className="db-logo-img" onClick={() => handleLinkClick('/dashboard')} style={{ cursor: 'pointer' }} />
+            <span className="logo-version-badge">v1.0.0</span>
+          </div>
           <button className="db-close-btn" onClick={() => setIsOverlayOpen(false)}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>

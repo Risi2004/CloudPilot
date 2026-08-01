@@ -2,35 +2,35 @@ import React from 'react';
 import githubIcon from '../../../assets/github.svg';
 import './ConnectedRepositories.css';
 
-const MOCK_REPOSITORIES = [
-  {
-    id: 'repo-1',
-    name: 'Risi2004/CloudPilot',
-    branch: 'main',
-    status: 'Synced',
-    lastAnalyzed: '2 hours ago',
-  },
-  {
-    id: 'repo-2',
-    name: 'facebook/react',
-    branch: 'main',
-    status: 'Synced',
-    lastAnalyzed: '1 day ago',
-  },
-  {
-    id: 'repo-3',
-    name: 'kubernetes/kubernetes',
-    branch: 'master',
-    status: 'Syncing',
-    lastAnalyzed: 'Analyzing...',
-  },
-];
+function formatRelativeTime(dateString) {
+  try {
+    const date = new Date(dateString);
+    const diffMs = Date.now() - date.getTime();
+    if (diffMs < 0) return 'just now';
+    const diffMins = Math.round(diffMs / 60000);
+    const diffHours = Math.round(diffMs / 3600000);
+    const diffDays = Math.round(diffMs / 86400000);
 
-function ConnectedRepositories() {
+    if (diffMins < 60) return `${diffMins || 1} min${diffMins === 1 ? '' : 's'} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+    return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+  } catch {
+    return 'recently';
+  }
+}
+
+function ConnectedRepositories({ analyses = [] }) {
   const handleConnectNew = () => {
-    console.log('Connecting new repository...');
-    alert('Connect repository feature coming soon!');
+    window.location.href = '/repositories';
   };
+
+  const uniqueReposMap = new Map();
+  analyses.forEach((analysis) => {
+    if (!uniqueReposMap.has(analysis.repoUrl)) {
+      uniqueReposMap.set(analysis.repoUrl, analysis);
+    }
+  });
+  const reposList = Array.from(uniqueReposMap.values());
 
   return (
     <section className="widget-card connected-repos-card">
@@ -51,34 +51,40 @@ function ConnectedRepositories() {
       </div>
 
       <div className="repos-list">
-        {MOCK_REPOSITORIES.map((repo) => (
-          <div key={repo.id} className="repo-row">
-            <div className="repo-info">
-              <img src={githubIcon} alt="GitHub" className="repo-git-icon" />
-              <div className="repo-details">
-                <span className="repo-name">{repo.name}</span>
-                <div className="repo-meta">
-                  <span className="repo-branch">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <line x1="6" y1="3" x2="6" y2="15"></line>
-                      <circle cx="18" cy="6" r="3"></circle>
-                      <circle cx="6" cy="18" r="3"></circle>
-                      <path d="M18 9a9 9 0 0 1-9 9"></path>
-                    </svg>
-                    {repo.branch}
-                  </span>
-                  <span className="repo-time">• Analyzed {repo.lastAnalyzed}</span>
+        {reposList.length === 0 ? (
+          <div className="empty-widget-state">
+            <p>No repositories connected yet.</p>
+          </div>
+        ) : (
+          reposList.map((repo) => (
+            <div key={repo._id} className="repo-row" onClick={() => window.location.href = `/repositories?url=${encodeURIComponent(repo.repoUrl)}`} style={{ cursor: 'pointer' }}>
+              <div className="repo-info">
+                <img src={githubIcon} alt="GitHub" className="repo-git-icon" />
+                <div className="repo-details">
+                  <span className="repo-name">{repo.repoFullName || repo.repoUrl.split('/').slice(-2).join('/')}</span>
+                  <div className="repo-meta">
+                    <span className="repo-branch">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="6" y1="3" x2="6" y2="15"></line>
+                        <circle cx="18" cy="6" r="3"></circle>
+                        <circle cx="6" cy="18" r="3"></circle>
+                        <path d="M18 9a9 9 0 0 1-9 9"></path>
+                      </svg>
+                      main
+                    </span>
+                    <span className="repo-time">• Scanned {formatRelativeTime(repo.updatedAt)}</span>
+                  </div>
                 </div>
               </div>
+              <div className="repo-status-container">
+                <span className="status-pill synced">
+                  <span className="status-dot"></span>
+                  Synced
+                </span>
+              </div>
             </div>
-            <div className="repo-status-container">
-              <span className={`status-pill ${repo.status.toLowerCase()}`}>
-                <span className="status-dot"></span>
-                {repo.status}
-              </span>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </section>
   );

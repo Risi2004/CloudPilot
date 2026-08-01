@@ -1,0 +1,258 @@
+.vcv-wrapper {
+  background: rgba(5, 20, 36, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.vcv-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.vcv-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.vcv-status-pill {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  border-radius: 100px;
+  padding: 5px 12px;
+}
+
+.vcv-status-running { color: #00d4ff; background: rgba(0, 212, 255, 0.08); border: 1px solid rgba(0, 212, 255, 0.3); }
+.vcv-status-succeeded { color: #10b981; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); }
+.vcv-status-failed { color: #ef4444; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); }
+.vcv-status-stopping,
+.vcv-status-stopped { color: #f59e0b; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); }
+
+.vcv-attempt-badge {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.vcv-stop-btn {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+  border-radius: 8px;
+  height: 36px;
+  padding: 0 16px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.vcv-stop-btn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.vcv-stop-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.vcv-checks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.vcv-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 10px 12px;
+  flex-wrap: wrap;
+}
+
+.vcv-check-icon {
+  width: 18px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.vcv-check-pending .vcv-check-icon { color: #475569; }
+.vcv-check-running .vcv-check-icon { color: #00d4ff; }
+.vcv-check-pass .vcv-check-icon { color: #10b981; }
+.vcv-check-fail .vcv-check-icon { color: #ef4444; }
+.vcv-check-skipped .vcv-check-icon { color: #64748b; }
+
+.vcv-check-title {
+  font-size: 13px;
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.vcv-check-pending .vcv-check-title { color: #64748b; }
+
+.vcv-fixable-badge {
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 100px;
+  padding: 2px 8px;
+}
+
+.vcv-check-message {
+  font-size: 11px;
+  color: #64748b;
+  width: 100%;
+  padding-left: 28px;
+}
+
+.vcv-history {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 14px;
+}
+
+.vcv-history-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.vcv-attempt-row {
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.vcv-attempt-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 12.5px;
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.vcv-attempt-summary {
+  color: #64748b;
+  font-weight: 400;
+  font-size: 11.5px;
+}
+
+.vcv-attempt-toggle {
+  margin-left: auto;
+  color: #64748b;
+  font-size: 10px;
+}
+
+.vcv-fixes-list {
+  padding: 0 12px 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.vcv-fix-row {
+  display: flex;
+  gap: 10px;
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+.vcv-fix-reason {
+  color: #64748b;
+}
+
+.vcv-test-account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #94a3b8;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 14px;
+}
+
+.vcv-cleanup-ok {
+  color: #10b981;
+}
+
+.vcv-cleanup-warning {
+  color: #f59e0b;
+}
+
+.vcv-success-box {
+  background: rgba(16, 185, 129, 0.06);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 10px;
+  padding: 14px 18px;
+  font-size: 13.5px;
+  color: #10b981;
+  font-weight: 600;
+}
+
+.vcv-failed-box {
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 10px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.vcv-failed-summary {
+  font-size: 13px;
+  color: #ef4444;
+  margin: 0;
+  font-weight: 600;
+}
+
+.vcv-unresolved-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vcv-unresolved-title {
+  font-size: 12.5px;
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.vcv-unresolved-reason {
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+.vcv-stopped-box {
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 10px;
+  padding: 14px 18px;
+  font-size: 13px;
+  color: #f59e0b;
+}
