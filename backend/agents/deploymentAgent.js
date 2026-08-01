@@ -119,7 +119,12 @@ function detectEnvVarCandidates(analysis, componentName) {
   const anyScoped = all.some((v) => v.scope);
 
   return all
-    .filter((v) => !anyScoped || !v.scope || String(v.scope).toLowerCase() === String(componentName).toLowerCase())
+    .filter((v) => {
+      if (!anyScoped || !v.scope) return true;
+      const s1 = String(v.scope).toLowerCase();
+      const s2 = String(componentName).toLowerCase();
+      return s1 === s2 || s1.includes(s2) || s2.includes(s1);
+    })
     .map((v) => ({
       key: v.key,
       value: v.value,
@@ -223,7 +228,7 @@ function buildDeploymentPlan({ analysis, platformInterview, architectureOption }
     } else {
       platform = textPlatform || 'render';
     }
-    const deployable = !DATASTORE_KEYWORDS.test(`${c.name || ''} ${c.service || ''} ${c.role || ''}`);
+    const deployable = !DATASTORE_KEYWORDS.test(`${c.name || ''} ${c.service || ''}`);
     const serviceConfig = findServiceConfigFor(platformInterview, platform);
     const side = classifyComponentSide(c);
 

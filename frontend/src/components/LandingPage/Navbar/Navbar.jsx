@@ -80,7 +80,7 @@ function Navbar() {
         <div className="navbar-container">
           <div className="navbar-logo" onClick={() => handleLinkClick('home')}>
             <img src={logo} alt="CloudPilot Logo" className="logo-img" />
-            <span className="logo-version-badge">v0.1.0 Beta</span>
+            <span className="logo-version-badge">v1.0.0 Beta</span>
           </div>
           
           <div className="navbar-links">
@@ -108,7 +108,7 @@ function Navbar() {
         <div className="overlay-header">
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <img src={logo} alt="CloudPilot Logo" className="logo-img" />
-            <span className="logo-version-badge">v0.1.0 Beta</span>
+            <span className="logo-version-badge">v1.0.0 Beta</span>
           </div>
           <button className="close-btn" onClick={() => setIsOverlayOpen(false)}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

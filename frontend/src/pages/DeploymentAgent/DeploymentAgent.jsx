@@ -45,6 +45,7 @@ function DeploymentAgent() {
   const [optionStale, setOptionStale] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [rollingBack, setRollingBack] = useState(false);
+  const [showVerification, setShowVerification] = useState(false);
 
   const pollRef = useRef(null);
 
@@ -106,6 +107,7 @@ function DeploymentAgent() {
   useEffect(() => {
     setDeployment(null);
     setPlan(null);
+    setShowVerification(false);
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repoUrl, architectureOptionId]);
@@ -264,6 +266,44 @@ function DeploymentAgent() {
             )}
 
             {!loading && !gatingError && deployment && deployment.status === 'succeeded' && (
+              <div className="da-success-actions-card">
+                <div className="da-success-header">
+                  <div className="da-success-icon-ring">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  </div>
+                  <div className="da-success-text">
+                    <h3 className="da-success-title">Deployment Succeeded!</h3>
+                    <p className="da-success-subtitle">Your application is live and running. Choose what to do next.</p>
+                  </div>
+                </div>
+                <div className="da-success-buttons">
+                  <button
+                    type="button"
+                    className={`da-action-btn da-verify-btn ${showVerification ? 'active' : ''}`}
+                    onClick={() => setShowVerification(true)}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '8px' }}>
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                    Verify Deployment
+                  </button>
+                  <button
+                    type="button"
+                    className="da-action-btn da-finish-btn"
+                    onClick={() => navigate('/dashboard')}
+                  >
+                    Finish Deployment
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: '8px' }}>
+                      <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!loading && !gatingError && deployment && deployment.status === 'succeeded' && showVerification && (
               <DeploymentVerificationPanel deploymentId={deployment.id} />
             )}
 
@@ -272,7 +312,7 @@ function DeploymentAgent() {
             )}
 
             {!loading && !gatingError && canRetry && (
-              <button type="button" className="da-retry-btn" onClick={() => setDeployment(null)}>
+              <button type="button" className="da-retry-btn" onClick={() => { setDeployment(null); setShowVerification(false); }}>
                 Start a New Deployment Attempt
               </button>
             )}

@@ -230,7 +230,7 @@ function DashboardNavbar() {
         {/* Left Side Logo */}
         <div className="db-navbar-logo" onClick={() => navigate('/')}>
           <img src={logo} alt="CloudPilot Logo" className="db-logo-img" />
-          <span className="logo-version-badge">v0.1.0 Beta</span>
+          <span className="logo-version-badge">v1.0.0 Beta</span>
         </div>
 
         {/* Center Links */}
@@ -356,7 +356,7 @@ function DashboardNavbar() {
         <div className="db-overlay-header">
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <img src={logo} alt="CloudPilot Logo" className="db-logo-img" onClick={() => handleLinkClick('/dashboard')} style={{ cursor: 'pointer' }} />
-            <span className="logo-version-badge">v0.1.0 Beta</span>
+            <span className="logo-version-badge">v1.0.0 Beta</span>
           </div>
           <button className="db-close-btn" onClick={() => setIsOverlayOpen(false)}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
