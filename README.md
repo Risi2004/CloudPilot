@@ -25,14 +25,14 @@ CloudPilot is built using a modern decoupled architecture:
 
 ```mermaid
 graph TD
-    User([Developer / Admin]) -->|Interacts| FE[React + Vite Frontend]
-    FE -->|API Calls| BE[Express Node.js Backend]
-    BE -->|User Data & MFA Config| Mongo[(MongoDB Database)]
-    BE -->|Knowledge Vector Index| Chroma[(ChromaDB Server)]
-    BE -->|Static Logs & PDF Receipts| R2[(Cloudflare R2 Storage)]
-    BE -->|Identity / Verification| Firebase[Firebase Admin Console]
-    BE -->|Multi-Agent Swarm| RunPod[RunPod AI Engine: Qwen3:14b]
-    RunPod -->|Orchestrated via| ADK[@google/adk]
+    User(["Developer / Admin"]) -->|Interacts| FE["React + Vite Frontend"]
+    FE -->|API Calls| BE["Express Node.js Backend"]
+    BE -->|User Data & MFA Config| Mongo[("MongoDB Database")]
+    BE -->|Knowledge Vector Index| Chroma[("ChromaDB Server")]
+    BE -->|Static Logs & PDF Receipts| R2[("Cloudflare R2 Storage")]
+    BE -->|Identity / Verification| Firebase["Firebase Admin Console"]
+    BE -->|Multi-Agent Swarm| RunPod["RunPod AI Engine: Qwen3:14b"]
+    RunPod -->|Orchestrated via| ADK["@google/adk"]
 ```
 
 ### Tech Stack
@@ -165,9 +165,3 @@ CloudPilot/
 │   └── package.json
 └── docker-compose.yml   # Chroma container configuration
 ```
-
----
-
-## 📄 License
-
-This repository is licensed under the MIT License. See [LICENSE](LICENSE) for details.
