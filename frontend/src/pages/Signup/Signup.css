@@ -274,3 +274,51 @@
 .otp-cancel-btn:hover {
   color: #ffffff;
 }
+
+/* MFA Enrollment Modal Styles */
+.mfa-qr-image {
+  width: 180px;
+  height: 180px;
+  margin: 4px auto 16px;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 8px;
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.15);
+}
+
+.mfa-secret-fallback {
+  font-size: 11px;
+  color: #64748b;
+  margin: -8px 0 20px;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.mfa-secret-fallback code {
+  color: #00d4ff;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.mfa-choice-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.mfa-skip-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 0;
+  transition: color 0.2s ease;
+}
+
+.mfa-skip-btn:hover {
+  color: #ffffff;
+}

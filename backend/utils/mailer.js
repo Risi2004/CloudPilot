@@ -450,6 +450,106 @@ const sendCancelSubscriptionEmail = async (email, fullName, planName, expiresAt)
   }
 };
 
+const sendMfaEnabledEmail = async (email, fullName) => {
+  const transporter = getTransporter();
+  const mailOptions = {
+    from: process.env.SMTP_FROM || '"CloudPilot Security" <security@cloudpilot.io>',
+    to: email,
+    subject: 'CloudPilot Security Alert - Two-Factor Authentication Enabled',
+    text: `Hello ${fullName},\n\nThis email confirms that Multi-Factor Authentication (MFA) has been successfully enabled on your CloudPilot account.\n\nYou will now be required to enter a 6-digit verification code from your authenticator app when signing in from any new or untrusted devices.\n\nIf you did not authorize this change, please secure your account and contact support immediately.`,
+    html: `
+      <div style="background-color: #030712; color: #ffffff; padding: 40px; font-family: sans-serif; border-radius: 12px; max-width: 600px; margin: 0 auto; border: 1px solid #1e293b;">
+        <h2 style="color: #00d4ff; font-size: 24px; font-weight: bold; border-bottom: 1px solid #1e293b; padding-bottom: 10px; margin-bottom: 20px;">SECURITY DESPATCH</h2>
+        
+        <p style="color: #f1f5f9; font-size: 16px; font-weight: 600; margin-top: 20px;">Hello ${fullName},</p>
+        <p style="color: #94a3b8; font-size: 15px; line-height: 1.6;">
+          This message is to confirm that <strong>Multi-Factor Authentication (MFA)</strong> has been successfully enabled on your CloudPilot account.
+        </p>
+        
+        <div style="background: rgba(0, 212, 255, 0.04); border: 1px solid rgba(0, 212, 255, 0.15); border-radius: 8px; padding: 20px; margin: 25px 0;">
+          <h4 style="color: #00d4ff; margin: 0 0 10px 0; font-size: 15px;">What has changed:</h4>
+          <ul style="color: #94a3b8; font-size: 14px; line-height: 1.7; padding-left: 20px; margin: 0;">
+            <li>Your account now requires a 6-digit verification code from your authenticator app (Google Authenticator, Microsoft Authenticator, Authy, etc.) during sign-in.</li>
+            <li>Your active sessions on trusted devices will remain valid, but any new logins from unrecognized browsers or platforms will trigger an MFA verification challenge.</li>
+          </ul>
+        </div>
+
+        <div style="background: rgba(239, 68, 68, 0.04); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 8px; padding: 15px; margin: 20px 0; color: #f87171; font-size: 13px;">
+          <strong>🚨 WARNING:</strong> If you did not authorize this change, someone else may have gained access to your credentials. Please reset your password and contact support immediately to lock your account.
+        </div>
+        
+        <p style="color: #64748b; font-size: 12px; line-height: 1.5; border-top: 1px solid #1e293b; padding-top: 15px; margin-top: 30px;">
+          This is an automated security dispatch. Do not reply to this email.
+        </p>
+      </div>
+    `
+  };
+
+  if (!transporter) {
+    console.log(`[MOCK EMAIL] To: ${email} | Subject: ${mailOptions.subject} | MFA setup complete notification logged`);
+    return;
+  }
+
+  try {
+    await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.error('SMTP MFA activation email dispatch failed. Error:', error.message);
+    console.warn('-------- SMTP FAIL FALLBACK --------');
+    console.warn(`[MOCK EMAIL] To: ${email} | Subject: ${mailOptions.subject} | MFA setup complete notification logged`);
+    console.warn('------------------------------------');
+  }
+};
+
+const sendMfaDisabledEmail = async (email, fullName) => {
+  const transporter = getTransporter();
+  const mailOptions = {
+    from: process.env.SMTP_FROM || '"CloudPilot Security" <security@cloudpilot.io>',
+    to: email,
+    subject: 'CloudPilot Security Alert - Two-Factor Authentication Disabled',
+    text: `Hello ${fullName},\n\nThis email confirms that Multi-Factor Authentication (MFA) has been DISABLED on your CloudPilot account.\n\nYou will no longer be prompted for a 6-digit verification code when logging in.\n\nIf you did not authorize this change, please contact support and secure your account immediately.`,
+    html: `
+      <div style="background-color: #030712; color: #ffffff; padding: 40px; font-family: sans-serif; border-radius: 12px; max-width: 600px; margin: 0 auto; border: 1px solid #1e293b;">
+        <h2 style="color: #ef4444; font-size: 24px; font-weight: bold; border-bottom: 1px solid #1e293b; padding-bottom: 10px; margin-bottom: 20px;">SECURITY DESPATCH</h2>
+        
+        <p style="color: #f1f5f9; font-size: 16px; font-weight: 600; margin-top: 20px;">Hello ${fullName},</p>
+        <p style="color: #94a3b8; font-size: 15px; line-height: 1.6;">
+          This message is to notify you that <strong>Multi-Factor Authentication (MFA)</strong> has been <strong>disabled</strong> on your CloudPilot account.
+        </p>
+        
+        <div style="background: rgba(239, 68, 68, 0.04); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 8px; padding: 20px; margin: 25px 0;">
+          <h4 style="color: #f87171; margin: 0 0 10px 0; font-size: 15px;">What this means:</h4>
+          <ul style="color: #94a3b8; font-size: 14px; line-height: 1.7; padding-left: 20px; margin: 0;">
+            <li>You will no longer be challenged with a 6-digit OTP verification code when signing in.</li>
+            <li>All your trusted browser session histories have been cleared.</li>
+          </ul>
+        </div>
+
+        <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid #ef4444; border-radius: 8px; padding: 15px; margin: 20px 0; color: #f87171; font-size: 13px;">
+          <strong>🚨 WARNING:</strong> Disabling Multi-Factor Authentication reduces your account security. If you did not authorize this request, someone may have compromised your password. Please reset your password and contact security support immediately.
+        </div>
+        
+        <p style="color: #64748b; font-size: 12px; line-height: 1.5; border-top: 1px solid #1e293b; padding-top: 15px; margin-top: 30px;">
+          This is an automated security dispatch. Do not reply to this email.
+        </p>
+      </div>
+    `
+  };
+
+  if (!transporter) {
+    console.log(`[MOCK EMAIL] To: ${email} | Subject: ${mailOptions.subject} | MFA disable notification logged`);
+    return;
+  }
+
+  try {
+    await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.error('SMTP MFA deactivation email dispatch failed. Error:', error.message);
+    console.warn('-------- SMTP FAIL FALLBACK --------');
+    console.warn(`[MOCK EMAIL] To: ${email} | Subject: ${mailOptions.subject} | MFA deactivation notification logged`);
+    console.warn('------------------------------------');
+  }
+};
+
 
 /**
  * Sends an email when a user raises a support ticket, informing them to wait for 2 working days.
@@ -643,6 +743,8 @@ module.exports = {
   sendTicketOpenedEmail,
   sendTicketClosedEmail,
   sendNotificationEmail,
-  sendCancelSubscriptionEmail
+  sendCancelSubscriptionEmail,
+  sendMfaEnabledEmail,
+  sendMfaDisabledEmail
 };
 

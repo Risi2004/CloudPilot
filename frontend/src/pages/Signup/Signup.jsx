@@ -31,6 +31,16 @@ function Signup() {
   const [resendStatus, setResendStatus] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Post-signup MFA (authenticator app) enrollment prompt state
+  const [mfaPromptOpen, setMfaPromptOpen] = useState(false);
+  const [mfaStep, setMfaStep] = useState('ask'); // 'ask' | 'qr'
+  const [mfaQrCode, setMfaQrCode] = useState('');
+  const [mfaSecret, setMfaSecret] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaError, setMfaError] = useState('');
+  const [mfaLoading, setMfaLoading] = useState(false);
+  const [pendingRole, setPendingRole] = useState('user');
+
   // Countdown timer for OTP resend throttle (5 mins = 300s)
   useEffect(() => {
     let timer;
@@ -227,16 +237,81 @@ function Signup() {
       }
 
       setOtpModalOpen(false);
-      if (data.user.role === 'admin') {
-        navigate('/admin/dashboard');
-      } else {
-        navigate('/dashboard');
-      }
+      setPendingRole(data.user.role || 'user');
+      setMfaStep('ask');
+      setMfaError('');
+      setMfaCode('');
+      setMfaPromptOpen(true);
     } catch (err) {
       setOtpError(err.message);
     } finally {
       setIsVerifying(false);
     }
+  };
+
+  const finishAuthFlow = (role) => {
+    setMfaPromptOpen(false);
+    if (role === 'admin') {
+      navigate('/admin/dashboard');
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
+  const handleStartMfaSetup = async () => {
+    try {
+      setMfaLoading(true);
+      setMfaError('');
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/auth/mfa/setup-init`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to start authenticator setup.');
+      }
+
+      setMfaQrCode(data.qrCode);
+      setMfaSecret(data.secret);
+      setMfaStep('qr');
+    } catch (err) {
+      setMfaError(err.message);
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const handleVerifyMfaSetup = async (e) => {
+    e.preventDefault();
+    if (!mfaCode) return;
+
+    try {
+      setMfaLoading(true);
+      setMfaError('');
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/auth/mfa/setup-verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ token: mfaCode })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Invalid authentication code.');
+      }
+
+      finishAuthFlow(pendingRole);
+    } catch (err) {
+      setMfaError(err.message);
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const handleSkipMfa = () => {
+    finishAuthFlow(pendingRole);
   };
 
   const handleResendOtp = async () => {
@@ -431,6 +506,90 @@ function Signup() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Post-Signup MFA Enrollment Modal */}
+      {mfaPromptOpen && (
+        <div className="otp-modal-overlay">
+          <div className="otp-modal-card">
+            {mfaStep === 'ask' ? (
+              <>
+                <h3 className="otp-modal-title">SECURE YOUR ACCOUNT</h3>
+                <p className="otp-modal-subtitle">
+                  Add an authenticator app for two-factor authentication. You'll need a 6-digit
+                  code from it each time you log in for extra protection. You can always set
+                  this up later from your profile.
+                </p>
+
+                {mfaError && <p className="otp-error-message">{mfaError}</p>}
+
+                <div className="mfa-choice-actions">
+                  <button
+                    type="button"
+                    className="otp-submit-btn"
+                    onClick={handleStartMfaSetup}
+                    disabled={mfaLoading}
+                  >
+                    {mfaLoading ? 'PREPARING SETUP...' : 'SET UP AUTHENTICATOR APP'}
+                  </button>
+                  <button type="button" className="mfa-skip-btn" onClick={handleSkipMfa}>
+                    Skip for now
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="otp-modal-title">SCAN QR CODE</h3>
+                <p className="otp-modal-subtitle">
+                  Scan this code with Google Authenticator, Authy, or any TOTP app, then enter the
+                  6-digit code it generates to confirm setup.
+                </p>
+
+                {mfaQrCode && (
+                  <img src={mfaQrCode} alt="MFA QR Code" className="mfa-qr-image" />
+                )}
+
+                {mfaSecret && (
+                  <p className="mfa-secret-fallback">
+                    Can't scan? Enter this key manually: <code>{mfaSecret}</code>
+                  </p>
+                )}
+
+                <form onSubmit={handleVerifyMfaSetup} className="otp-form">
+                  <input
+                    type="text"
+                    placeholder="000000"
+                    maxLength={6}
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                    className="otp-input-element"
+                    required
+                    autoFocus
+                  />
+
+                  {mfaError && <p className="otp-error-message">{mfaError}</p>}
+
+                  <button type="submit" className="otp-submit-btn" disabled={mfaLoading}>
+                    {mfaLoading ? 'VERIFYING...' : 'ENABLE & CONTINUE'}
+                  </button>
+
+                  <div className="otp-actions-row">
+                    <button
+                      type="button"
+                      className="otp-resend-btn"
+                      onClick={() => { setMfaStep('ask'); setMfaError(''); }}
+                    >
+                      ← Back
+                    </button>
+                    <button type="button" className="otp-cancel-btn" onClick={handleSkipMfa}>
+                      Skip for now
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
           </div>
         </div>
       )}

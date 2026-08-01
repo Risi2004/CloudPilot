@@ -1,0 +1,884 @@
+/* AgentWorkflow.css */
+
+.agent-workflow {
+  width: 100%;
+  background-color: #030712;
+  display: flex;
+  justify-content: center;
+  padding: 100px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+  position: relative;
+}
+
+.agent-workflow .section-container {
+  width: 100%;
+  max-width: 1200px;
+}
+
+.workflow-header {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.workflow-badge {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #00d4ff;
+  letter-spacing: 2px;
+  background: rgba(0, 212, 255, 0.1);
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  display: inline-block;
+  margin-bottom: 16px;
+}
+
+.workflow-title {
+  font-size: 36px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 16px;
+  letter-spacing: -0.5px;
+}
+
+.workflow-subtitle {
+  font-size: 16px;
+  color: #9ca3af;
+  max-width: 700px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.workflow-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 40px;
+  align-items: stretch;
+}
+
+/* Left Stepper Layout */
+.workflow-stepper {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.workflow-step-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.workflow-step-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateX(4px);
+}
+
+.workflow-step-card.active {
+  background: rgba(0, 212, 255, 0.02);
+  border-color: rgba(0, 212, 255, 0.3);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 212, 255, 0.03);
+}
+
+.step-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.step-badge {
+  font-size: 11px;
+  font-family: 'Courier New', Courier, monospace;
+  color: #9ca3af;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.workflow-step-card.active .step-badge {
+  color: #00d4ff;
+  background: rgba(0, 212, 255, 0.1);
+}
+
+.step-index {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.15);
+}
+
+.workflow-step-card.active .step-index {
+  color: rgba(0, 212, 255, 0.6);
+}
+
+.step-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #f3f4f6;
+  margin-bottom: 8px;
+}
+
+.workflow-step-card.active .step-title {
+  color: #ffffff;
+}
+
+.step-description {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #9ca3af;
+}
+
+.workflow-step-card.active .step-description {
+  color: #d1d5db;
+}
+
+.step-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.step-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00d4ff, #0077ff);
+  box-shadow: 0 0 8px #00d4ff;
+  transition: width 0.1s linear;
+}
+
+/* Right Sandbox Layout */
+.workflow-sandbox {
+  background: rgba(10, 15, 30, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  backdrop-filter: blur(12px);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-height: 480px;
+}
+
+.sandbox-inner {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.sandbox-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 20px;
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulse 1.8s infinite;
+}
+
+.status-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #e5e7eb;
+  letter-spacing: 0.5px;
+}
+
+.header-metric code {
+  color: #9ca3af;
+  font-size: 12px;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.sandbox-screen {
+  flex: 1;
+  background: #040815;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  padding: 20px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* 1. Code Analysis Styling */
+.sim-code-analysis {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 16px;
+  height: 100%;
+  align-items: stretch;
+}
+
+.analysis-explorer {
+  background: #02050c;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 12px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  color: #9ca3af;
+  overflow-y: auto;
+}
+
+.explorer-title {
+  text-transform: uppercase;
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.folder-item {
+  margin-bottom: 6px;
+  color: #ffffff;
+}
+
+.file-item {
+  margin-bottom: 6px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+
+.file-item.highlight {
+  color: #00d4ff;
+  background: rgba(0, 212, 255, 0.1);
+  font-weight: bold;
+  box-shadow: inset 0 0 5px rgba(0, 212, 255, 0.2);
+}
+
+.indent { margin-left: 12px; }
+.indent-2 { margin-left: 24px; }
+
+.analysis-viewer {
+  background: #02050c;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.viewer-tab {
+  background: #070e1b;
+  padding: 6px 12px;
+  font-size: 11px;
+  color: #9ca3af;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  position: relative;
+}
+
+.tab-dot {
+  color: #00d4ff;
+}
+
+.laser-scanner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: #00d4ff;
+  box-shadow: 0 0 10px #00d4ff, 0 0 20px #00d4ff;
+  opacity: 0.8;
+  animation: scanLaser 2s linear infinite;
+  z-index: 10;
+}
+
+.code-editor-content {
+  flex: 1;
+  padding: 12px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  color: #a7f3d0;
+  overflow-y: auto;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.terminal-log-panel {
+  background: #010307;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px;
+  height: 110px;
+  overflow-y: auto;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+.terminal-log-line {
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+.log-arrow {
+  color: #10b981;
+}
+
+/* 2. Platform & Architecture Selection */
+.sim-platform-arch {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.arch-canvas {
+  width: 100%;
+  height: 300px;
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+}
+
+.arch-node {
+  background: #090e1c;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 5;
+  width: 120px;
+  text-align: center;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s ease;
+}
+
+.node-icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #9ca3af;
+}
+
+.node-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.node-source {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.node-source .node-icon {
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+
+.node-orchestrator {
+  border-color: rgba(0, 212, 255, 0.4);
+  background: rgba(0, 212, 255, 0.03);
+}
+
+.node-orchestrator .node-icon {
+  background: rgba(0, 212, 255, 0.1);
+  color: #00d4ff;
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+}
+
+.pulse-glow {
+  animation: glowOrch 3s infinite ease-in-out;
+}
+
+.destinations-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.node-dest {
+  width: 155px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+
+.node-dest.selected {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.03);
+}
+
+.node-dest.idle-node {
+  opacity: 0.4;
+  background: rgba(255, 255, 255, 0.01);
+  border-color: rgba(255, 255, 255, 0.03);
+}
+
+.dest-badge {
+  font-size: 9px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.dest-badge.vercel {
+  background: #ffffff;
+  color: #000000;
+}
+
+.dest-badge.render {
+  background: #3b82f6;
+  color: #ffffff;
+}
+
+.dest-badge.aws {
+  background: #f97316;
+  color: #ffffff;
+}
+
+.node-label-small {
+  font-size: 10px;
+  font-weight: 500;
+  color: #f3f4f6;
+}
+
+.check-indicator {
+  color: #10b981;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.check-indicator-idle {
+  color: #4b5563;
+  font-size: 13px;
+}
+
+.connections-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.flow-path {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.05);
+  stroke-width: 2;
+}
+
+.path-main {
+  stroke: rgba(0, 212, 255, 0.2);
+  stroke-dasharray: 4, 4;
+  animation: pathDash 15s linear infinite;
+}
+
+.path-vercel, .path-render {
+  stroke: rgba(16, 185, 129, 0.2);
+  stroke-dasharray: 4, 4;
+  animation: pathDash 10s linear infinite;
+}
+
+/* 3. Cost Optimization */
+.sim-cost-optimizer {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.cost-panel-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 24px;
+  width: 100%;
+  align-items: center;
+}
+
+.cost-chart-box {
+  background: #02050c;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 24px;
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  height: 220px;
+}
+
+.chart-bar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 80px;
+  height: 100%;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.chart-bar {
+  width: 44px;
+  border-radius: 6px 6px 0 0;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  transition: height 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bar-red {
+  background: linear-gradient(180deg, #ef4444, #b91c1c);
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+}
+
+.bar-green {
+  background: linear-gradient(180deg, #10b981, #047857);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+}
+
+.bar-label {
+  position: absolute;
+  top: -24px;
+  font-size: 11px;
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.bar-title {
+  font-size: 11px;
+  color: #9ca3af;
+  text-align: center;
+}
+
+.cost-savings-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.savings-title-glow {
+  font-size: 24px;
+  color: #ffffff;
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+}
+
+.savings-pct {
+  color: #10b981;
+  font-size: 32px;
+  font-weight: 800;
+}
+
+.savings-details-card {
+  background: #02050c;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.detail-item .lbl {
+  color: #9ca3af;
+}
+
+.detail-item .val.green {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.divider-line {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 4px 0;
+}
+
+.detail-item.total {
+  font-size: 13px;
+}
+
+.font-bold {
+  font-weight: bold;
+}
+
+/* 4. Deployment */
+.sim-deployment {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.deploy-steps-timeline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 10px;
+  background: #02050c;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.timeline-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.3;
+  transition: all 0.3s ease;
+  flex: 1;
+}
+
+.timeline-node.completed {
+  opacity: 1;
+}
+
+.timeline-node.current {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.timeline-node.current .step-num-circle {
+  background: #00d4ff;
+  border-color: #00d4ff;
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+  color: #040815;
+}
+
+.timeline-node.completed .step-num-circle {
+  background: #10b981;
+  border-color: #10b981;
+  color: #ffffff;
+}
+
+.step-num-circle {
+  width: 22px;
+  height: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 10px;
+  font-weight: bold;
+  color: #e5e7eb;
+  transition: all 0.3s ease;
+}
+
+.step-lbl {
+  font-size: 10px;
+  color: #9ca3af;
+  text-align: center;
+}
+
+.timeline-node.completed .step-lbl {
+  color: #ffffff;
+}
+
+.timeline-node.current .step-lbl {
+  color: #00d4ff;
+  font-weight: 600;
+}
+
+.timeline-connector {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  width: 30px;
+}
+
+.deploy-terminal {
+  background: #02050c;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 160px;
+}
+
+.deploy-terminal-header {
+  background: #070e1b;
+  padding: 6px 12px;
+  font-size: 10px;
+  color: #9ca3af;
+  font-family: 'Courier New', Courier, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.deploy-terminal-body {
+  padding: 12px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  color: #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  line-height: 1.4;
+}
+
+.term-line.success {
+  color: #34d399;
+}
+
+.term-line.info-pulse {
+  color: #60a5fa;
+  animation: pulse 1s infinite alternate;
+}
+
+.term-line.bold-live {
+  color: #00d4ff;
+  font-weight: bold;
+  text-shadow: 0 0 5px rgba(0, 212, 255, 0.2);
+}
+
+/* Animations Keyframes */
+@keyframes pulse {
+  0% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+@keyframes scanLaser {
+  0% { top: 0%; }
+  50% { top: 100%; }
+  100% { top: 0%; }
+}
+
+@keyframes glowOrch {
+  0%, 100% {
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5), 0 0 10px rgba(0, 212, 255, 0.05);
+  }
+  50% {
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5), 0 0 25px rgba(0, 212, 255, 0.2);
+  }
+}
+
+@keyframes pathDash {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+/* Responsive Scaling */
+@media (max-width: 1024px) {
+  .workflow-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  
+  .workflow-sandbox {
+    min-height: 450px;
+  }
+}
+
+@media (max-width: 768px) {
+  .agent-workflow {
+    padding: 60px 16px;
+  }
+  
+  .workflow-title {
+    font-size: 28px;
+  }
+  
+  .workflow-subtitle {
+    font-size: 14px;
+  }
+
+  .sim-code-analysis {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .analysis-explorer {
+    height: 100px;
+  }
+
+  .arch-canvas {
+    flex-direction: column;
+    justify-content: center;
+    gap: 20px;
+    height: auto;
+    padding: 20px 0;
+  }
+  
+  .connections-overlay {
+    display: none; /* Hide paths on mobile due to stacking */
+  }
+
+  .destinations-column {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .cost-panel-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .cost-chart-box {
+    height: 180px;
+  }
+}
+
+/* Hide scrollbars for simulator panels while preserving scrollability */
+.analysis-explorer,
+.code-editor-content,
+.terminal-log-panel,
+.deploy-terminal-body {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.analysis-explorer::-webkit-scrollbar,
+.code-editor-content::-webkit-scrollbar,
+.terminal-log-panel::-webkit-scrollbar,
+.deploy-terminal-body::-webkit-scrollbar {
+  display: none; /* WebKit (Safari, Chrome, etc.) */
+}
+

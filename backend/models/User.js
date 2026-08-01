@@ -56,6 +56,29 @@ const userSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  mfaEnabled: {
+    type: Boolean,
+    default: false
+  },
+  mfaSecret: {
+    type: String,
+    default: null
+  },
+  mfaTempSecret: {
+    type: String,
+    default: null
+  },
+  trustedDevices: {
+    type: [
+      {
+        tokenHash: { type: String, required: true },
+        label: { type: String, default: 'Unknown device' },
+        createdAt: { type: Date, default: Date.now },
+        expiresAt: { type: Date, required: true }
+      }
+    ],
+    default: []
   }
 });
 

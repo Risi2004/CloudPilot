@@ -1,18 +1,33 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const speakeasy = require('speakeasy');
+const qrcode = require('qrcode');
 const User = require('../models/User');
 const PendingUser = require('../models/PendingUser');
 const { uploadBase64Image, getPrivateImageStream, deleteImage } = require('../config/s3');
-const { sendOtpEmail, sendOnboardEmail } = require('../utils/mailer');
+const { sendOtpEmail, sendOnboardEmail, sendMfaEnabledEmail, sendMfaDisabledEmail } = require('../utils/mailer');
 const { verifyIdToken } = require('../config/firebase');
 
 // Regular Expressions for field validation
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d).{8,}$/;
 
+// Trusted-device "remember me" window for skipping MFA on subsequent logins
+const TRUSTED_DEVICE_DAYS = 7;
+
 // Helper to generate 6-digit verification code
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+// Helper to hash a raw device token before persisting (never store the raw token)
+const hashDeviceToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
+
+// Helper to derive a human-readable device label from the request's User-Agent
+const generateDeviceLabel = (req) => {
+  const ua = req.headers['user-agent'] || 'Unknown device';
+  return ua.length > 120 ? ua.slice(0, 120) : ua;
 };
 
 /**
@@ -261,7 +276,7 @@ const verifyOtp = async (req, res, next) => {
  */
 const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, deviceToken } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ message: 'Access Identifier and Encryption Key are required.' });
@@ -295,6 +310,29 @@ const login = async (req, res, next) => {
       await user.save();
     }
 
+    // If MFA is enabled, require a verified authenticator code unless this device
+    // was already trusted (remembered) within the last TRUSTED_DEVICE_DAYS days.
+    if (user.mfaEnabled) {
+      const now = new Date();
+      const isDeviceTrusted = !!(deviceToken && user.trustedDevices.some(
+        (d) => d.tokenHash === hashDeviceToken(deviceToken) && new Date(d.expiresAt) > now
+      ));
+
+      if (!isDeviceTrusted) {
+        const mfaToken = jwt.sign(
+          { id: user._id, purpose: 'mfa' },
+          process.env.JWT_SECRET || 'jwt_secret_fallback',
+          { expiresIn: '10m' }
+        );
+
+        return res.status(200).json({
+          mfaRequired: true,
+          mfaToken,
+          message: 'Enter the code from your authenticator app to continue.'
+        });
+      }
+    }
+
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'jwt_secret_fallback',
@@ -311,6 +349,286 @@ const login = async (req, res, next) => {
         role: user.role,
         plan: user.plan
       }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Complete login after a valid MFA code is provided, issuing the final JWT.
+ * Optionally remembers this device for TRUSTED_DEVICE_DAYS to skip future MFA prompts.
+ */
+const mfaVerifyLogin = async (req, res, next) => {
+  try {
+    const { mfaToken, code, rememberDevice } = req.body;
+
+    if (!mfaToken || !code) {
+      return res.status(400).json({ message: 'MFA session token and authentication code are required.' });
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(mfaToken, process.env.JWT_SECRET || 'jwt_secret_fallback');
+    } catch (e) {
+      return res.status(401).json({ message: 'MFA session expired. Please log in again.' });
+    }
+
+    if (decoded.purpose !== 'mfa') {
+      return res.status(401).json({ message: 'Invalid MFA session token.' });
+    }
+
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(401).json({ message: 'Unauthorized: User no longer exists.' });
+    }
+
+    if (user.status === 'Suspended') {
+      return res.status(403).json({ message: 'Your account has been suspended by an administrator. For further information, please contact support.' });
+    }
+
+    if (!user.mfaEnabled || !user.mfaSecret) {
+      return res.status(400).json({ message: 'Multi-factor authentication is not enabled on this account.' });
+    }
+
+    const cleanCode = String(code).replace(/\D/g, '').padStart(6, '0');
+    const verified = speakeasy.totp.verify({
+      secret: user.mfaSecret,
+      encoding: 'base32',
+      token: cleanCode,
+      window: 6
+    });
+
+    if (!verified) {
+      return res.status(401).json({ message: 'Invalid authentication code.' });
+    }
+
+    let deviceToken = null;
+    if (rememberDevice) {
+      const now = new Date();
+      // Prune expired entries before adding a new one
+      user.trustedDevices = user.trustedDevices.filter((d) => new Date(d.expiresAt) > now);
+
+      deviceToken = crypto.randomBytes(32).toString('hex');
+      user.trustedDevices.push({
+        tokenHash: hashDeviceToken(deviceToken),
+        label: generateDeviceLabel(req),
+        expiresAt: new Date(now.getTime() + TRUSTED_DEVICE_DAYS * 24 * 60 * 60 * 1000)
+      });
+    }
+
+    await user.save();
+
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || 'jwt_secret_fallback',
+      { expiresIn: '7d' }
+    );
+
+    res.status(200).json({
+      message: 'Login successful.',
+      token,
+      deviceToken,
+      user: {
+        email: user.email,
+        fullName: user.fullName,
+        profileImageKey: user.profileImageKey,
+        role: user.role,
+        plan: user.plan
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Begin MFA enrollment: generate a TOTP secret and return a scannable QR code.
+ * The secret is held as "temp" until confirmed via mfaSetupVerify.
+ */
+const mfaSetupInit = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    if (user.mfaEnabled) {
+      return res.status(400).json({ message: 'Multi-factor authentication is already enabled.' });
+    }
+
+    const secret = speakeasy.generateSecret({
+      name: `CloudPilot:${user.email}`,
+      length: 20
+    });
+
+    const otpauthUrl = speakeasy.otpauthURL({
+      secret: secret.base32,
+      label: `CloudPilot:${user.email}`,
+      issuer: 'CloudPilot',
+      encoding: 'base32'
+    });
+
+    user.mfaTempSecret = secret.base32;
+    await user.save();
+
+    const qrCode = await qrcode.toDataURL(otpauthUrl);
+
+    res.status(200).json({
+      message: 'Scan the QR code with your authenticator app, then enter the generated code to confirm.',
+      qrCode,
+      secret: secret.base32
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Confirm MFA enrollment by validating a code generated from the pending secret.
+ */
+const mfaSetupVerify = async (req, res, next) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ message: 'Authentication code is required.' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    if (!user.mfaTempSecret) {
+      return res.status(400).json({ message: 'No pending MFA setup found. Please restart setup.' });
+    }
+
+    const cleanToken = String(token).replace(/\D/g, '').padStart(6, '0');
+    const verified = speakeasy.totp.verify({
+      secret: user.mfaTempSecret,
+      encoding: 'base32',
+      token: cleanToken,
+      window: 6
+    });
+
+    if (!verified) {
+      return res.status(400).json({ message: 'Invalid authentication code. Please try again.' });
+    }
+
+    user.mfaSecret = user.mfaTempSecret;
+    user.mfaTempSecret = null;
+    user.mfaEnabled = true;
+    await user.save();
+
+    // Dispatch security notification email
+    await sendMfaEnabledEmail(user.email, user.fullName);
+
+    res.status(200).json({ message: 'Two-factor authentication has been enabled.', mfaEnabled: true });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Disable MFA on the account (requires password confirmation) and clear trusted devices.
+ */
+const mfaDisable = async (req, res, next) => {
+  try {
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ message: 'Password confirmation is required to disable MFA.' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    if (!user.password) {
+      return res.status(400).json({ message: 'Password confirmation is unavailable for OAuth-only accounts.' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid password.' });
+    }
+
+    user.mfaEnabled = false;
+    user.mfaSecret = null;
+    user.mfaTempSecret = null;
+    user.trustedDevices = [];
+    await user.save();
+
+    // Dispatch security deactivation email
+    await sendMfaDisabledEmail(user.email, user.fullName);
+
+    res.status(200).json({ message: 'Two-factor authentication has been disabled.', mfaEnabled: false });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Return the current MFA status and list of active trusted devices for the profile page.
+ */
+const mfaStatus = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    const now = new Date();
+    const trustedDevices = user.trustedDevices
+      .filter((d) => new Date(d.expiresAt) > now)
+      .map((d) => ({
+        id: d._id,
+        label: d.label,
+        createdAt: d.createdAt,
+        expiresAt: d.expiresAt
+      }));
+
+    res.status(200).json({ mfaEnabled: user.mfaEnabled, trustedDevices });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Revoke a single trusted device (or all of them), forcing an MFA prompt on its next login.
+ */
+const mfaRevokeDevice = async (req, res, next) => {
+  try {
+    const { deviceId, all } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    if (all) {
+      user.trustedDevices = [];
+    } else {
+      if (!deviceId) {
+        return res.status(400).json({ message: 'Device ID is required.' });
+      }
+      user.trustedDevices = user.trustedDevices.filter((d) => d._id.toString() !== deviceId);
+    }
+
+    await user.save();
+
+    const now = new Date();
+    const trustedDevices = user.trustedDevices
+      .filter((d) => new Date(d.expiresAt) > now)
+      .map((d) => ({
+        id: d._id,
+        label: d.label,
+        createdAt: d.createdAt,
+        expiresAt: d.expiresAt
+      }));
+
+    res.status(200).json({
+      message: all ? 'All trusted devices have been revoked.' : 'Device has been revoked.',
+      trustedDevices
     });
   } catch (err) {
     next(err);
@@ -553,5 +871,11 @@ module.exports = {
   getProfileImage,
   verifyToken,
   updateProfile,
-  updateUserActivity
+  updateUserActivity,
+  mfaVerifyLogin,
+  mfaSetupInit,
+  mfaSetupVerify,
+  mfaDisable,
+  mfaStatus,
+  mfaRevokeDevice
 };

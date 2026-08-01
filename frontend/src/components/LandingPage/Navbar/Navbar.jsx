@@ -15,7 +15,7 @@ function Navbar() {
   }, []);
 
   useEffect(() => {
-    const sections = ['core-intelligence', 'how-it-works', 'pricing', 'faq', 'contact'];
+    const sections = ['core-intelligence', 'agent-workflow', 'how-it-works', 'pricing', 'faq', 'contact'];
     
     const observerOptions = {
       root: null,
@@ -80,12 +80,13 @@ function Navbar() {
         <div className="navbar-container">
           <div className="navbar-logo" onClick={() => handleLinkClick('home')}>
             <img src={logo} alt="CloudPilot Logo" className="logo-img" />
-            <span className="logo-version-badge">v1.0.0 Beta</span>
+            <span className="logo-version-badge">v1.0.0</span>
           </div>
           
           <div className="navbar-links">
             <button onClick={() => handleLinkClick('home')} className={`nav-link ${activeSection === 'home' ? 'active' : ''}`}>Home</button>
             <button onClick={() => handleLinkClick('core-intelligence')} className={`nav-link ${activeSection === 'core-intelligence' ? 'active' : ''}`}>CoreIntelligence</button>
+            <button onClick={() => handleLinkClick('agent-workflow')} className={`nav-link ${activeSection === 'agent-workflow' ? 'active' : ''}`}>Agent Swarm</button>
             <button onClick={() => handleLinkClick('how-it-works')} className={`nav-link ${activeSection === 'how-it-works' ? 'active' : ''}`}>HowItWorks</button>
             <button onClick={() => handleLinkClick('pricing')} className={`nav-link ${activeSection === 'pricing' ? 'active' : ''}`}>Pricings</button>
             <button onClick={() => handleLinkClick('faq')} className={`nav-link ${activeSection === 'faq' ? 'active' : ''}`}>FAQ</button>
@@ -108,7 +109,7 @@ function Navbar() {
         <div className="overlay-header">
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <img src={logo} alt="CloudPilot Logo" className="logo-img" />
-            <span className="logo-version-badge">v1.0.0 Beta</span>
+            <span className="logo-version-badge">v1.0.0</span>
           </div>
           <button className="close-btn" onClick={() => setIsOverlayOpen(false)}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -121,6 +122,7 @@ function Navbar() {
         <div className="overlay-links">
           <button onClick={() => handleLinkClick('home')} className={`overlay-link ${activeSection === 'home' ? 'active' : ''}`}>Home</button>
           <button onClick={() => handleLinkClick('core-intelligence')} className={`overlay-link ${activeSection === 'core-intelligence' ? 'active' : ''}`}>CoreIntelligence</button>
+          <button onClick={() => handleLinkClick('agent-workflow')} className={`overlay-link ${activeSection === 'agent-workflow' ? 'active' : ''}`}>Agent Swarm</button>
           <button onClick={() => handleLinkClick('how-it-works')} className={`overlay-link ${activeSection === 'how-it-works' ? 'active' : ''}`}>HowItWorks</button>
           <button onClick={() => handleLinkClick('pricing')} className={`overlay-link ${activeSection === 'pricing' ? 'active' : ''}`}>Pricings</button>
           <button onClick={() => handleLinkClick('faq')} className={`overlay-link ${activeSection === 'faq' ? 'active' : ''}`}>FAQ</button>
